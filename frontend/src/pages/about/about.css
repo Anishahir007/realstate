@@ -1,0 +1,64 @@
+.About{padding:28px 0}
+.About-hero{position:relative;border-radius:24px;overflow:hidden;background:linear-gradient(135deg,#eef2ff,#fdf2f8)}
+.About-heroInner{padding:40px 18px;max-width:1100px;margin:0 auto}
+.About-title{margin:0 0 8px;font-size:32px;font-weight:900;color:#0b1530}
+.About-sub{margin:0;color:#475569;max-width:760px}
+.About-heroArt{position:absolute;inset:auto 0 0;height:120px;background:radial-gradient(closest-side at 20% 50%,rgba(99,102,241,.35),transparent 60%),radial-gradient(closest-side at 80% 40%,rgba(236,72,153,.35),transparent 60%)}
+
+.About-stats{max-width:1100px;margin:16px auto}
+.About-statsGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.About-stat{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:14px;text-align:center}
+.About-statValue{display:block;font-weight:900;font-size:22px;color:#0b1530}
+.About-statLabel{display:block;color:#64748b}
+
+.About-mission{max-width:1100px;margin:18px auto;display:grid;grid-template-columns:1.6fr .9fr;gap:16px}
+.About-missionCopy{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:16px}
+.About-missionCard{background:#0b1530;color:#fff;border-radius:14px;padding:16px}
+.About-bullets{margin:8px 0 0;padding-left:18px}
+.About-bullets li{margin:6px 0}
+
+.About-values{max-width:1100px;margin:18px auto}
+.About-valuesGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.About-value{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:14px}
+.About-valueTitle{margin:0 0 6px;font-weight:800}
+.About-valueDesc{margin:0;color:#475569}
+.About-h2{margin:0 0 10px;font-size:20px;font-weight:900}
+
+.About-team{max-width:1100px;margin:18px auto}
+.About-teamGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;list-style:none;margin:0;padding:0}
+.About-member{display:flex;gap:10px;align-items:center;background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:12px}
+.About-avatar{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#60a5fa,#a78bfa)}
+.About-memberName{font-weight:800}
+.About-memberRole{color:#64748b;font-size:12px}
+
+.About-cta{max-width:1100px;margin:22px auto}
+.About-ctaCard{background:linear-gradient(135deg,#111827,#0b1530);color:#fff;border-radius:16px;padding:18px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.About-btn{background:#ef4444;color:#fff;border-radius:999px;padding:10px 16px;text-decoration:none;font-weight:800}
+
+/* brands */
+.About-brands{max-width:1100px;margin:18px auto}
+.About-brandsRow{display:flex;flex-wrap:wrap;gap:10px;list-style:none;padding:0;margin:0}
+.About-brand{padding:8px 12px;border:1px solid #e5e7eb;border-radius:999px;background:#fff;color:#0b1530;font-weight:700}
+
+/* timeline */
+.About-timeline{max-width:1100px;margin:18px auto}
+.About-steps{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.About-step{display:grid;grid-template-columns:90px 1fr;gap:12px;background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:12px}
+.About-stepYear{font-weight:900;color:#0b1530}
+.About-stepTitle{font-weight:800}
+.About-stepDesc{margin:4px 0 0;color:#475569}
+
+/* faq */
+.About-faq{max-width:1100px;margin:18px auto}
+.About-faqGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.About-faqItem{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:14px}
+.About-faqQ{margin:0 0 6px;font-weight:800}
+.About-faqA{margin:0;color:#475569}
+
+@media(max-width:900px){
+  .About-mission{grid-template-columns:1fr}
+  .About-valuesGrid{grid-template-columns:1fr}
+  .About-teamGrid{grid-template-columns:1fr}
+  .About-faqGrid{grid-template-columns:1fr}
+}
+

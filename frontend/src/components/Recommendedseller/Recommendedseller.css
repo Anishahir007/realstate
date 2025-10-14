@@ -1,0 +1,143 @@
+.rs {
+  position: relative;
+  padding: 28px 0 8px;
+  max-width: 90%;
+  margin: 0 auto;
+}
+.rs-head {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+  justify-content: space-between;
+  margin: 0 8px 14px;
+}
+.rs-title {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0;
+}
+.rs-sub {
+  margin: 2px 0 0;
+  color: #6b7280;
+  font-size: 13px;
+}
+.rs-ctrls {
+  display: flex;
+  gap: 8px;
+}
+.rs-btn {
+  appearance: none;
+  border: 0;
+  background: #111827;
+  color: #fff;
+  border-radius: 999px;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: transform 0.18s ease, opacity 0.18s ease;
+}
+.rs-btn:hover {
+  transform: translateY(-1px);
+}
+.rs-icon {
+  font-size: 14px;
+}
+
+.rs-swiper {
+  padding: 6px 8px 8px;
+}
+
+.rs-cardInner {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: 12px;
+  box-shadow: 0 6px 24px rgba(17, 24, 39, 0.08);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.rs-cardInner:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 28px rgba(17, 24, 39, 0.12);
+}
+
+.rs-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.rs-avatarWrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #e5e7eb;
+  flex: 0 0 44px;
+}
+.rs-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.rs-main {
+  display: flex;
+  flex-direction: column;
+}
+.rs-name {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+.rs-badge {
+  margin-top: 6px;
+  display: inline-block;
+  background: #ffe7dc;
+  color: #ef6c00;
+  border: 1px solid #ffccaa;
+  border-radius: 999px;
+  font-size: 10px;
+  padding: 4px 8px;
+  font-weight: 700;
+}
+
+.rs-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 10px 0 8px;
+}
+.rs-chip {
+  display: inline-block;
+  background: #f1f5f9;
+  color: #0b0f1a;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  font-size: 11px;
+  padding: 4px 8px;
+}
+
+.rs-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: #4b5563;
+  font-size: 12px;
+  margin-top: 6px;
+}
+.rs-meta strong {
+  color: #0b0f1a;
+}
+
+@media (min-width: 1024px) {
+  .rs-title {
+    font-size: 26px;
+  }
+}

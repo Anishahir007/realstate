@@ -1,0 +1,104 @@
+.PopularOwner {
+  padding: 26px 0;
+  max-width: 90%;
+  margin: 0 auto;
+}
+.PopularOwner-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  margin: 0 0 12px;
+}
+.PopularOwner-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+}
+.PopularOwner-see {
+  text-decoration: none;
+  color: #ef4444;
+  font-weight: 700;
+}
+
+.PopularOwner-swiper {
+  padding: 6px 2px 10px;
+}
+.PopularOwner-cardInner {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(17, 24, 39, 0.06);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.PopularOwner-cardInner:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(17, 24, 39, 0.12);
+}
+.PopularOwner-media {
+  position: relative;
+  aspect-ratio: 16/9;
+  background: #e5e7eb;
+}
+.PopularOwner-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.PopularOwner-badge {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+.PopularOwner-body {
+  padding: 10px;
+}
+.PopularOwner-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-weight: 800;
+}
+.PopularOwner-price {
+  color: #0b0f1a;
+}
+.PopularOwner-sqft {
+  color: #475569;
+}
+.PopularOwner-loc {
+  margin: 6px 0 0;
+  color: #475569;
+}
+.PopularOwner-status {
+  margin: 2px 0 0;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.PopularOwner-ctrls {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+.PopularOwner-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  cursor: pointer;
+}
+
+@media (min-width: 1024px) {
+  .PopularOwner-title {
+    font-size: 26px;
+  }
+}

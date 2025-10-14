@@ -1,0 +1,36 @@
+.superadminviewprofile-root {
+  padding: 24px;
+}
+.superadminviewprofile-title {
+  margin-bottom: 16px;
+}
+.superadminviewprofile-header {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.superadminviewprofile-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #eee;
+}
+.superadminviewprofile-name {
+  font-weight: 700;
+  font-size: 18px;
+}
+.superadminviewprofile-email {
+  color: #6b7280;
+}
+.superadminviewprofile-grid {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  row-gap: 10px;
+  column-gap: 20px;
+  max-width: 680px;
+}
+.superadminviewprofile-label {
+  color: #6b7280;
+}

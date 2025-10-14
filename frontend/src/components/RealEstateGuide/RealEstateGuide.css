@@ -1,0 +1,121 @@
+.RealEstateGuide {
+  padding: 26px 0;
+  max-width: 90%;
+  margin: 0 auto;
+}
+.RealEstateGuide-title {
+  margin: 0 0 10px;
+  font-size: 22px;
+  font-weight: 800;
+}
+.RealEstateGuide-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.RealEstateGuide-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: 0 8px 24px rgba(17, 24, 39, 0.06);
+}
+.RealEstateGuide-card--left {
+  border-top: 2px solid #ef4444;
+}
+.RealEstateGuide-card--right {
+  border-top: 2px solid #ef4444;
+}
+.RealEstateGuide-cardHead {
+  margin-bottom: 10px;
+}
+.RealEstateGuide-cardTitle {
+  margin: 0;
+  font-weight: 800;
+  color: #0b0f1a;
+}
+
+.RealEstateGuide-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.RealEstateGuide-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 8px 8px;
+  border-radius: 10px;
+  transition: background-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+.RealEstateGuide-item:hover { background: #f8fafc; box-shadow: 0 6px 14px rgba(17,24,39,.08); transform: translateY(-1px); }
+.RealEstateGuide-ico {
+  width: 22px;
+  height: 22px;
+  line-height: 1;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  background: #fee2e2;
+  color: #ef4444;
+  font-size: 12px;
+  flex: 0 0 22px;
+  margin-top: 1px;
+}
+.RealEstateGuide-link {
+  text-decoration: none;
+  color: #0b1530;
+  line-height: 1.35;
+}
+.RealEstateGuide-link:hover {
+  text-decoration: none;
+}
+.RealEstateGuide-see {
+  margin-top: 8px;
+  display: inline-block;
+  color: #ef4444;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.RealEstateGuide-legal {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.RealEstateGuide-legalItem {
+  display: flex;
+  gap: 10px;
+}
+.RealEstateGuide-thumb { width: 96px; height: 64px; border-radius: 10px; background-size: cover; background-position: center; }
+.RealEstateGuide-legalBody {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.RealEstateGuide-legalTitle {
+  margin: 0;
+  font-weight: 700;
+}
+.RealEstateGuide-cta {
+  color: #ef4444;
+  text-decoration: none;
+  font-weight: 700;
+}
+.RealEstateGuide-cta:hover { text-decoration: none; }
+.RealEstateGuide-actions {
+  margin-top: 8px;
+}
+.RealEstateGuide-btn { background: #ef4444; color: #fff; border-radius: 999px; padding: 8px 14px; text-decoration: none; font-weight: 800; margin-right: 8px; }
+.RealEstateGuide-see--right { margin-left: 8px; }
+
+@media (min-width: 980px) {
+  .RealEstateGuide-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}

@@ -1,0 +1,128 @@
+.superadminlogin-root {
+  position: relative;
+  min-height: 100vh;
+  background: #0b0e11; /* fallback while image loads */
+  overflow: hidden;
+}
+
+.superadminlogin-hero {
+  position: absolute;
+  inset: 0;
+  background-image: url('https://images.unsplash.com/photo-1501594907352-04cda38ebc29?q=80&w=2070&auto=format&fit=crop');
+  background-size: cover;
+  background-position: center;
+}
+
+.superadminlogin-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(210deg, rgba(0,0,0,0.15), rgba(0,0,0,0.45));
+}
+
+.superadminlogin-panel {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 100vh;
+  padding: 24px 32px;
+  /* transparent overlay container; card will be white */
+}
+
+.superadminlogin-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 24px 24px 28px;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 18px 36px rgba(0,0,0,0.22);
+}
+
+.superadminlogin-brand { display: flex; }
+.superadminlogin-logo { height: 28px; }
+
+.superadminlogin-title {
+  margin: 16px 0 4px;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.superadminlogin-subtitle {
+  margin: 0 0 20px;
+  color: #555;
+  font-size: 14px;
+}
+
+.superadminlogin-error {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.superadminlogin-form { display: flex; flex-direction: column; }
+.superadminlogin-label { margin: 10px 0 6px; font-weight: 600; }
+
+.superadminlogin-input {
+  width: 100%;
+  padding: 12px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  outline: none;
+  background: #fff;
+  box-sizing: border-box;
+}
+.superadminlogin-input:focus { border-color: #111; box-shadow: 0 0 0 3px rgba(0,0,0,0.08); }
+
+.superadminlogin-password { position: relative; }
+.superadminlogin-input-password { padding-right: 44px; }
+.superadminlogin-eye {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: #111;
+  padding: 0;
+}
+
+.superadminlogin-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 12px 0 16px;
+  font-size: 14px;
+}
+
+.superadminlogin-remember { display: inline-flex; align-items: center; gap: 8px; }
+.superadminlogin-link { color: #555; text-decoration: none; }
+.superadminlogin-link:hover { text-decoration: underline; }
+
+.superadminlogin-button {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: none;
+  background: #000;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+}
+.superadminlogin-button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+@media (max-width: 900px) {
+  .superadminlogin-panel { justify-content: center; padding: 16px; }
+}
+
+

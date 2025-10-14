@@ -1,0 +1,20 @@
+.BlogNews{padding:26px 0}
+.BlogNews-head{display:flex;justify-content:space-between;align-items:end;margin:0 0 12px}
+.BlogNews-title{margin:0;font-size:22px;font-weight:800}
+.BlogNews-see{text-decoration:none;color:#ef4444;font-weight:700}
+
+.BlogNews-swiper{padding:6px 2px 10px}
+.BlogNews-cardInner{background:#fff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;box-shadow:0 8px 24px rgba(17,24,39,.06);transition:transform .25s ease,box-shadow .25s ease}
+.BlogNews-cardInner:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(17,24,39,.12)}
+.BlogNews-media{position:relative;aspect-ratio:16/9;background:#e5e7eb}
+.BlogNews-img{width:100%;height:100%;object-fit:cover;display:block}
+.BlogNews-tag{position:absolute;left:10px;top:10px;background:#111827;color:#fff;border-radius:999px;padding:4px 8px;font-size:12px}
+.BlogNews-body{padding:10px}
+.BlogNews-name{margin:0 0 8px;font-size:16px;line-height:1.35}
+.BlogNews-meta{color:#64748b;font-size:12px}
+
+.BlogNews-ctrls{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.BlogNews-btn{width:36px;height:36px;border-radius:999px;border:1px solid #d1d5db;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.06);cursor:pointer}
+
+@media(min-width:1024px){.BlogNews-title{font-size:26px}}
+
