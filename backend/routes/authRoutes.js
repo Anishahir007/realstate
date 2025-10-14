@@ -9,6 +9,7 @@ import {
   createBrokerByAdmin,
   whoami,
   updateSuperAdminProfile,
+  updateBrokerProfile,
 } from '../controllers/authController.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { upload } from '../middleware/multer.js';
@@ -25,6 +26,8 @@ router.put('/super-admin/profile', requireAuth, requireRole('super_admin'), uplo
 router.post('/broker/signup', signupBroker);
 router.post('/broker/login', loginBroker);
 router.post('/broker', requireAuth, requireRole('super_admin'), createBrokerByAdmin);
+// Broker self profile update (JSON or multipart)
+router.put('/broker/profile', requireAuth, requireRole('broker'), upload.single('photo', 'profiles'), updateBrokerProfile);
 
 // User
 router.post('/user/signup', signupUser);

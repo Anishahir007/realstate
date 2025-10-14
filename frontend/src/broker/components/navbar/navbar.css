@@ -1,0 +1,65 @@
+/* Broker panel navbar styles */
+.brokerpanelnavbar-sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  background: #fff;
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+.brokerpanelnavbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+.brokerpanelnavbar-brand img { height: 22px; }
+.brokerpanelnavbar-brand span { font-weight: 700; color: #000; }
+
+.brokerpanelnavbar-nav { display: flex; flex-direction: column; margin-top: 18px; gap: 6px; flex: 1 1 auto; }
+.brokerpanelnavbar-link {
+  color: #111;
+  text-decoration: none;
+  padding: 10px 12px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.brokerpanelnavbar-icon { width: 18px; display: inline-flex; align-items: center; justify-content: center; }
+.brokerpanelnavbar-link:hover { background: rgba(0,0,0,0.06); color: #000; }
+.brokerpanelnavbar-link-active { background: #111318; color: #fff; }
+
+.brokerpanelnavbar-profile {
+  margin-top: 16px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.08);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.brokerpanelnavbar-profile-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #111318;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+.brokerpanelnavbar-profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.brokerpanelnavbar-profile-info { min-width: 0; }
+.brokerpanelnavbar-profile-name { font-weight: 600; color: #000; line-height: 1.1; }
+.brokerpanelnavbar-profile-email { color: #666; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 1024px) {
+  .brokerpanelnavbar-brand span { display: none; }
+}

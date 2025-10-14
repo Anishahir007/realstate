@@ -1,0 +1,16 @@
+/* Broker view profile */
+.brokerviewprofile-root { padding: 20px; }
+.brokerviewprofile-titlebar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.brokerviewprofile-title { margin: 0; font-size: 20px; }
+.brokerviewprofile-actions { display: flex; gap: 10px; }
+.brokerviewprofile-btn { border: 1px solid #dde3ee; background: #f6f8fb; color: #203048; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
+.brokerviewprofile-btn:hover { background: #eef2f8; }
+
+.brokerviewprofile-header { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+.brokerviewprofile-avatar { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; }
+.brokerviewprofile-name { font-weight: 700; }
+.brokerviewprofile-email { color: #6b7280; font-size: 13px; }
+
+.brokerviewprofile-grid { display: grid; grid-template-columns: 160px 1fr; gap: 10px 16px; background: #fff; border: 1px solid #eef0f2; border-radius: 12px; padding: 14px; }
+.brokerviewprofile-label { color: #6b7280; }
+

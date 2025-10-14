@@ -1,0 +1,25 @@
+/* Broker layout, self-contained */
+.brokerlayout-root {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  min-height: 100vh;
+  background: #f6f7f9;
+}
+
+.brokerlayout-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.brokerlayout-content {
+  padding: 20px;
+}
+
+@media (max-width: 1024px) {
+  .brokerlayout-root { grid-template-columns: 64px 1fr; }
+}
+
+@media (max-width: 720px) {
+  .brokerlayout-root { grid-template-columns: 1fr; }
+}

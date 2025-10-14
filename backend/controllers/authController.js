@@ -402,3 +402,86 @@ export async function updateSuperAdminProfile(req, res) {
 }
 
 
+export async function updateBrokerProfile(req, res) {
+  try {
+    const { role, id } = req.user || {};
+    if (!role || role !== 'broker' || !id) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    const { full_name, email, phone, license_no } = req.body || {};
+    // If file upload present, map to photo URL
+    let photo = undefined;
+    if (req.file) {
+      const relPath = `/${req.file.destination.replace(/\\/g, '/').replace(/^public\//, '')}/${req.file.filename}`;
+      photo = relPath;
+    } else if (Object.prototype.hasOwnProperty.call(req.body, 'photo')) {
+      // allow JSON payload to set/reset photo as URL
+      photo = req.body.photo;
+    }
+
+    const updates = [];
+    const params = [];
+
+    if (full_name !== undefined) {
+      if (!isNonEmptyString(full_name)) return res.status(400).json({ message: 'Invalid full_name' });
+      updates.push('full_name = ?');
+      params.push(sanitizeName(full_name));
+    }
+
+    if (email !== undefined) {
+      if (!validateEmail(email)) return res.status(400).json({ message: 'Invalid email' });
+      const [dupes] = await pool.query('SELECT id FROM brokers WHERE email = ? AND id <> ? LIMIT 1', [email, id]);
+      if (dupes[0]) return res.status(409).json({ message: 'Email already exists' });
+      updates.push('email = ?');
+      params.push(email);
+    }
+
+    if (phone !== undefined) {
+      updates.push('phone = ?');
+      params.push(isNonEmptyString(phone) ? phone : null);
+    }
+
+    if (license_no !== undefined) {
+      updates.push('license_no = ?');
+      params.push(isNonEmptyString(license_no) ? license_no : null);
+    }
+
+    if (photo !== undefined) {
+      updates.push('photo = ?');
+      params.push(isNonEmptyString(photo) ? photo : null);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ message: 'No fields to update' });
+    }
+
+    params.push(id);
+    await pool.query(`UPDATE brokers SET ${updates.join(', ')} WHERE id = ?`, params);
+
+    const [rows] = await pool.query(
+      'SELECT id, full_name, email, phone, photo, license_no, tenant_db, created_by_admin_id, last_login_at FROM brokers WHERE id = ? LIMIT 1',
+      [id]
+    );
+    const row = rows[0];
+    return res.json({
+      data: {
+        id: row.id,
+        role: 'broker',
+        name: row.full_name,
+        email: row.email,
+        phone: row.phone,
+        photo: row.photo,
+        licenseNo: row.license_no,
+        tenantDb: row.tenant_db,
+        createdByAdminId: row.created_by_admin_id,
+        lastLoginAt: row.last_login_at,
+      },
+    });
+  } catch (err) {
+    const isProd = process.env.NODE_ENV === 'production';
+    return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
+  }
+}
+
+
