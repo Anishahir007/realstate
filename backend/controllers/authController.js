@@ -3,6 +3,7 @@ import { validateEmail, validatePassword, isNonEmptyString, sanitizeName, toSafe
 import { hashPassword, comparePassword } from '../utils/hash.js';
 import { signJwt } from '../utils/jwt.js';
 import { createBrokerDatabaseIfNotExists } from '../utils/tenant.js';
+import { sendSignupOtp, verifySignupOtp, consumeOtp } from '../utils/otp.js';
 
 async function findUserByEmail(table, email) {
   const [rows] = await pool.query(`SELECT * FROM ${table} WHERE email = ? LIMIT 1`, [email]);
@@ -66,37 +67,52 @@ export async function loginSuperAdmin(req, res) {
 
 export async function signupBroker(req, res) {
   try {
-    const { full_name, email, phone, photo, password, license_no, created_by_admin_id } = req.body || {};
-    if (!isNonEmptyString(full_name) || !validateEmail(email) || !validatePassword(password)) {
+    const { full_name, email, phone, photo, password, license_no, created_by_admin_id, otpId, otpCode } = req.body || {};
+    if (!isNonEmptyString(full_name) || !validateEmail(email) || !validatePassword(password) || !isNonEmptyString(phone)) {
       const pwdErr = getPasswordValidationError(password);
-      return res.status(400).json({ message: 'Invalid input', errors: { password: pwdErr || 'Invalid password', email: validateEmail(email) ? undefined : 'Invalid email', full_name: isNonEmptyString(full_name) ? undefined : 'Name is required' } });
+      return res.status(400).json({ message: 'Invalid input', errors: { password: pwdErr || 'Invalid password', email: validateEmail(email) ? undefined : 'Invalid email', full_name: isNonEmptyString(full_name) ? undefined : 'Name is required', phone: isNonEmptyString(phone) ? undefined : 'Phone is required' } });
     }
     const existsAnywhere = await emailExistsAnywhere(email);
     if (existsAnywhere.exists) return res.status(409).json({ message: 'Email already in use' });
+    
+    // Step 1: Send OTP if otpId/otpCode not provided
+    if (!otpId || !otpCode) {
+      console.log('[signupBroker] Sending OTP to', phone);
+      const { otpId: createdOtpId } = await sendSignupOtp({
+        phone,
+        purpose: 'broker_signup',
+        meta: { full_name, email, phone, photo: photo || null, password, license_no, created_by_admin_id: created_by_admin_id ?? null },
+      });
+      return res.status(202).json({ otpId: createdOtpId, message: 'OTP sent to phone' });
+    }
+
+    // Step 2: Verify OTP and create broker
+    const verification = await verifySignupOtp({ otpId, code: otpCode, expectedPurpose: 'broker_signup' });
+    console.log('[signupBroker] OTP verify result', verification);
+    if (!verification.ok) return res.status(400).json({ message: 'OTP verification failed', reason: verification.reason });
+    const meta = verification.meta || {};
 
     // Validate foreign key if provided
     let adminIdToUse = null;
-    if (created_by_admin_id !== undefined && created_by_admin_id !== null && created_by_admin_id !== '') {
-      const [adminRows] = await pool.query('SELECT id FROM super_admins WHERE id = ? LIMIT 1', [created_by_admin_id]);
+    if (meta.created_by_admin_id !== undefined && meta.created_by_admin_id !== null && meta.created_by_admin_id !== '') {
+      const [adminRows] = await pool.query('SELECT id FROM super_admins WHERE id = ? LIMIT 1', [meta.created_by_admin_id]);
       if (!adminRows[0]) {
         return res.status(400).json({ message: 'Invalid created_by_admin_id (super admin not found)' });
       }
-      adminIdToUse = created_by_admin_id;
+      adminIdToUse = meta.created_by_admin_id;
     }
 
-    const password_hash = await hashPassword(password);
-    const safeName = sanitizeName(full_name);
+    const password_hash = await hashPassword(meta.password);
+    const safeName = sanitizeName(meta.full_name);
     const tenant_db = toSafeDbName(`${safeName}_${Date.now()}`);
 
-    // Create tenant database first
     await createBrokerDatabaseIfNotExists(tenant_db);
 
     const [result] = await pool.query(
       `INSERT INTO brokers (full_name, email, phone, photo, password_hash, license_no, tenant_db, created_by_admin_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [safeName, email, phone || null, photo || null, password_hash, license_no || null, tenant_db, adminIdToUse]
+      [safeName, meta.email, meta.phone || null, meta.photo || null, password_hash, meta.license_no || null, tenant_db, adminIdToUse]
     );
     const id = result.insertId;
-    // Create a super admin notification for new broker signup
     try {
       await pool.query(
         `INSERT INTO super_admin_notifications (type, title, message, actor_broker_id, actor_broker_name, actor_broker_email)
@@ -107,18 +123,18 @@ export async function signupBroker(req, res) {
           `${safeName} has signed up as a broker`,
           id,
           safeName,
-          email,
+          meta.email,
         ]
       );
     } catch (e) {
-      // non-fatal
     }
-    const token = signJwt({ role: 'broker', id, email, tenant_db });
+    await consumeOtp(otpId);
+    const token = signJwt({ role: 'broker', id, email: meta.email, tenant_db });
     return res.status(201).json({ id, tenant_db, token });
   } catch (err) {
     console.error('signupBroker error:', err);
     const isProd = process.env.NODE_ENV === 'production';
-    return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
+    return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err), stack: isProd ? undefined : err?.stack });
   }
 }
 
@@ -177,24 +193,43 @@ export async function loginBroker(req, res) {
 
 export async function signupUser(req, res) {
   try {
-    const { full_name, email, phone, photo, password, broker_id } = req.body || {};
-    if (!isNonEmptyString(full_name) || !validateEmail(email) || !validatePassword(password)) {
+    const { full_name, email, phone, photo, password, broker_id, otpId, otpCode } = req.body || {};
+    if (!isNonEmptyString(full_name) || !validateEmail(email) || !validatePassword(password) || !isNonEmptyString(phone)) {
       const pwdErr = getPasswordValidationError(password);
-      return res.status(400).json({ message: 'Invalid input', errors: { password: pwdErr || 'Invalid password', email: validateEmail(email) ? undefined : 'Invalid email', full_name: isNonEmptyString(full_name) ? undefined : 'Name is required' } });
+      return res.status(400).json({ message: 'Invalid input', errors: { password: pwdErr || 'Invalid password', email: validateEmail(email) ? undefined : 'Invalid email', full_name: isNonEmptyString(full_name) ? undefined : 'Name is required', phone: isNonEmptyString(phone) ? undefined : 'Phone is required' } });
     }
     const existsAnywhere = await emailExistsAnywhere(email);
     if (existsAnywhere.exists) return res.status(409).json({ message: 'Email already in use' });
-    const password_hash = await hashPassword(password);
-    const safeName = sanitizeName(full_name);
+
+    if (!otpId || !otpCode) {
+      console.log('[signupUser] Sending OTP to', phone);
+      const { otpId: createdOtpId } = await sendSignupOtp({
+        phone,
+        purpose: 'user_signup',
+        meta: { full_name, email, phone, photo: photo || null, password, broker_id: broker_id ?? null },
+      });
+      return res.status(202).json({ otpId: createdOtpId, message: 'OTP sent to phone' });
+    }
+
+    const verification = await verifySignupOtp({ otpId, code: otpCode, expectedPurpose: 'user_signup' });
+    console.log('[signupUser] OTP verify result', verification);
+    if (!verification.ok) return res.status(400).json({ message: 'OTP verification failed', reason: verification.reason });
+    const meta = verification.meta || {};
+
+    const password_hash = await hashPassword(meta.password);
+    const safeName = sanitizeName(meta.full_name);
     const [result] = await pool.query(
       `INSERT INTO users (full_name, email, phone, photo, password_hash, broker_id) VALUES (?, ?, ?, ?, ?, ?)`,
-      [safeName, email, phone || null, photo || null, password_hash, broker_id || null]
+      [safeName, meta.email, meta.phone || null, meta.photo || null, password_hash, meta.broker_id || null]
     );
     const id = result.insertId;
-    const token = signJwt({ role: 'user', id, email, broker_id: broker_id || null });
+    await consumeOtp(otpId);
+    const token = signJwt({ role: 'user', id, email: meta.email, broker_id: meta.broker_id || null });
     return res.status(201).json({ id, token });
   } catch (err) {
-    return res.status(500).json({ message: 'Server error' });
+    console.error('signupUser error:', err);
+    const isProd = process.env.NODE_ENV === 'production';
+    return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err), stack: isProd ? undefined : err?.stack });
   }
 }
 

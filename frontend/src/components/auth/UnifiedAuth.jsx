@@ -1,9 +1,6 @@
 import React, { useMemo, useState } from "react";
 import "./UnifiedAuth.css";
-import {
-  SuperAdminProvider,
-  useSuperAdmin,
-} from "../../context/SuperAdminContext.jsx";
+import { SuperAdminProvider } from "../../context/SuperAdminContext.jsx";
 import { BrokerProvider, useBroker } from "../../context/BrokerContext.jsx";
 import { AppUserProvider, useAppUser } from "../../context/UserRoleContext.jsx";
 
@@ -12,7 +9,6 @@ import { AppUserProvider, useAppUser } from "../../context/UserRoleContext.jsx";
    { value: "broker", label: "Agent/Broker" },
    // Super admin hidden in UI per requirement; can be exposed later if needed
  ];
-
 function PasswordHint() {
   return (
     <ul style={{ margin: "8px 0 0 16px", color: "#666", fontSize: 12 }}>
@@ -24,13 +20,6 @@ function PasswordHint() {
 }
 
 function UnifiedAuthInner() {
-  const sa = (() => {
-    try {
-      return useSuperAdmin();
-    } catch {
-      return {};
-    }
-  })();
   const broker = (() => {
     try {
       return useBroker();
@@ -56,9 +45,10 @@ function UnifiedAuthInner() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [otpId, setOtpId] = useState("");
+  const [otpCode, setOtpCode] = useState("");
 
   const apiBase =
-    sa?.apiBase ||
     broker?.apiBase ||
     appUser?.apiBase ||
     import.meta.env.VITE_API_BASE ||
@@ -70,7 +60,6 @@ function UnifiedAuthInner() {
   }, [mode, role]);
 
   async function handleLogin() {
-    if (role === "super_admin") return sa.login(email, password);
     if (role === "broker") return broker.login(email, password);
     return appUser.login(email, password);
   }
@@ -96,26 +85,31 @@ function UnifiedAuthInner() {
     }
     const payload = { full_name: fullName, email, phone, password };
     const url =
-      role === "super_admin"
-        ? `${apiBase}/api/auth/super-admin/signup`
-        : role === "broker"
+      role === "broker"
         ? `${apiBase}/api/auth/broker/signup`
         : `${apiBase}/api/auth/user/signup`;
+
+    // User/Broker two-step: send OTP or verify
+    const body = otpId ? { ...payload, otpId, otpCode } : payload;
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(body),
     });
     const data = await res.json();
+    if (res.status === 202) {
+      setOtpId(data?.otpId || "");
+      setMessage("OTP sent to your phone");
+      return { step: "otp_sent" };
+    }
     if (!res.ok) {
-      // Prefer backend specific error
       const backendPwdErr = data?.errors?.password;
       if (backendPwdErr) setPasswordError(backendPwdErr);
-      const msg = backendPwdErr || data?.message || "Signup failed";
+      const msg = data?.message || "Signup failed";
       throw new Error(msg);
     }
-    // Auto-login after signup
-    return handleLogin();
+    await handleLogin();
+    return { step: "done" };
   }
 
   async function onSubmit(e) {
@@ -125,16 +119,18 @@ function UnifiedAuthInner() {
     setPasswordError("");
     setLoading(true);
     try {
+      let result;
       if (mode === "login") {
         await handleLogin();
+        result = { step: "done" };
       } else {
-        await handleSignup();
+        result = await handleSignup();
       }
-      // Redirect by role
-      if (role === "super_admin")
-        window.location.href = "/superadmin/dashboard";
-      else if (role === "broker") window.location.href = "/broker/dashboard";
-      else window.location.href = "/";
+      // Only redirect when flow completed
+      if (result?.step === "done") {
+        if (role === "broker") window.location.href = "/broker/dashboard";
+        else window.location.href = "/";
+      }
     } catch (err) {
       setError(err.message || "Action failed");
     } finally {
@@ -170,7 +166,6 @@ function UnifiedAuthInner() {
           />{" "}
           Agent
         </label>
-         {/* Super Admin selection intentionally hidden */}
       </div>
 
       {error && <div className="uauth-alert-error">{error}</div>}
@@ -239,13 +234,51 @@ function UnifiedAuthInner() {
           </>
         )}
 
-        <button type="submit" disabled={loading} className="uauth-button">
-          {loading
-            ? "Please wait…"
-            : mode === "login"
-            ? "CONTINUE ➜"
-            : "SIGN UP ➜"}
-        </button>
+        {otpId && mode === "signup" ? (
+          <>
+            <label className="uauth-label">Enter OTP</label>
+            <input
+              type="text"
+              value={otpCode}
+              onChange={(e) => setOtpCode(e.target.value)}
+              placeholder="6-digit code"
+              className="uauth-input"
+            />
+            <button type="submit" disabled={loading || !otpCode} className="uauth-button">
+              {loading ? "Please wait…" : "VERIFY OTP ➜"}
+            </button>
+            <div style={{ marginTop: 8 }}>
+              <button
+                type="button"
+                className="uauth-link"
+                onClick={async () => {
+                  try {
+                    setError("");
+                    setMessage("");
+                    setLoading(true);
+                    // Resend request: call send step again
+                    setOtpId("");
+                    await handleSignup();
+                  } catch (e) {
+                    setError(e.message || "Failed to resend OTP");
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+              >
+                Resend OTP
+              </button>
+            </div>
+          </>
+        ) : (
+          <button type="submit" disabled={loading} className="uauth-button">
+            {loading
+              ? "Please wait…"
+              : mode === "login"
+              ? "CONTINUE ➜"
+              : "SIGN UP ➜"}
+          </button>
+        )}
       </form>
 
       <div className="uauth-foot">
