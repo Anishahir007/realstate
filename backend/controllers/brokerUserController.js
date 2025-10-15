@@ -22,7 +22,6 @@ export async function signupTenantUser(req, res) {
     }
 
     const tenantPool = await getTenantPool(tenantDb);
-    try {
       // Check existing
       const [existing] = await tenantPool.query('SELECT id FROM users WHERE email = ? LIMIT 1', [email]);
       if (existing[0]) return res.status(409).json({ message: 'Email already exists' });
@@ -36,9 +35,7 @@ export async function signupTenantUser(req, res) {
       const id = result.insertId;
       const token = signJwt({ role: 'tenant_user', id, email, tenant_db: tenantDb });
       return res.status(201).json({ id, token });
-    } finally {
-      await tenantPool.end();
-    }
+    
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';
     return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
@@ -56,7 +53,6 @@ export async function loginTenantUser(req, res) {
     }
 
     const tenantPool = await getTenantPool(tenantDb);
-    try {
       const [rows] = await tenantPool.query('SELECT * FROM users WHERE email = ? LIMIT 1', [email]);
       const user = rows[0];
       if (!user) return res.status(401).json({ message: 'Invalid credentials' });
@@ -65,9 +61,7 @@ export async function loginTenantUser(req, res) {
       await tenantPool.query('UPDATE users SET last_login_at = NOW() WHERE id = ?', [user.id]);
       const token = signJwt({ role: 'tenant_user', id: user.id, email: user.email, tenant_db: tenantDb });
       return res.json({ token });
-    } finally {
-      await tenantPool.end();
-    }
+    
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';
     return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
@@ -95,7 +89,6 @@ export async function listTenantUsers(req, res) {
     const where = whereClauses.length ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
     const tenantPool = await getTenantPool(tenantDb);
-    try {
       const [rows] = await tenantPool.query(
         `SELECT id, full_name, email, phone, photo, status, last_login_at, created_at, updated_at
          FROM users ${where}
@@ -121,9 +114,7 @@ export async function listTenantUsers(req, res) {
         })),
         meta: { page, limit, total: countRows[0]?.total || 0 }
       });
-    } finally {
-      await tenantPool.end();
-    }
+    
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';
     return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
@@ -139,7 +130,6 @@ export async function getTenantUserById(req, res) {
     if (!id) return res.status(400).json({ message: 'Invalid id' });
 
     const tenantPool = await getTenantPool(tenantDb);
-    try {
       const [rows] = await tenantPool.query(
         'SELECT id, full_name, email, phone, photo, status, last_login_at, created_at, updated_at FROM users WHERE id = ? LIMIT 1',
         [id]
@@ -157,9 +147,7 @@ export async function getTenantUserById(req, res) {
         createdAt: r.created_at,
         updatedAt: r.updated_at,
       } });
-    } finally {
-      await tenantPool.end();
-    }
+    
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';
     return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
@@ -212,7 +200,6 @@ export async function updateTenantUser(req, res) {
     if (updates.length === 0) return res.status(400).json({ message: 'No fields to update' });
 
     const tenantPool = await getTenantPool(tenantDb);
-    try {
       params.push(id);
       await tenantPool.query(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, params);
       const [rows] = await tenantPool.query(
@@ -232,9 +219,7 @@ export async function updateTenantUser(req, res) {
         createdAt: r.created_at,
         updatedAt: r.updated_at,
       } });
-    } finally {
-      await tenantPool.end();
-    }
+    
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';
     return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });

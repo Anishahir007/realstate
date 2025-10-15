@@ -1,5 +1,5 @@
 import pool from '../config/database.js';
-import { getTenantPool } from '../utils/tenant.js';
+import { getTenantPool, ensureTenantLeadsTableExists } from '../utils/tenant.js';
 import { isNonEmptyString, validateEmail } from '../utils/validation.js';
 import { notifySuperAdmin } from '../utils/notifications.js';
 
@@ -122,13 +122,18 @@ export async function listBrokerLeads(req, res) {
     const tenantDb = req.user?.tenant_db;
     if (!tenantDb) return res.status(400).json({ message: 'Missing tenant' });
     const tenantPool = await getTenantPool(tenantDb);
+    // Ensure table exists to avoid intermittent ER_NO_SUCH_TABLE
+    await ensureTenantLeadsTableExists(tenantPool);
     // Be tolerant to older schemas: select * and map
     let rows = [];
     try {
       const [r] = await tenantPool.query('SELECT * FROM leads ORDER BY id DESC');
       rows = r;
     } catch (e) {
-      return res.status(500).json({ message: 'Server error' });
+      // Log and surface a stable error
+      // eslint-disable-next-line no-console
+      console.error('listBrokerLeads query error:', e?.code || e?.message || e);
+      return res.status(500).json({ message: 'Failed to fetch leads' });
     }
     const cols = await getTenantLeadColumns(tenantPool, tenantDb);
     const data = rows.map(r => ({
@@ -148,7 +153,9 @@ export async function listBrokerLeads(req, res) {
     }));
     return res.json({ data });
   } catch (err) {
-    return res.status(500).json({ message: 'Server error' });
+    // eslint-disable-next-line no-console
+    console.error('listBrokerLeads fatal error:', err?.code || err?.message || err);
+    return res.status(500).json({ message: 'Failed to fetch leads' });
   }
 }
 
@@ -161,6 +168,7 @@ export async function createBrokerLead(req, res) {
       return res.status(400).json({ message: 'Invalid input' });
     }
     const tenantPool = await getTenantPool(tenantDb);
+    await ensureTenantLeadsTableExists(tenantPool);
     await ensureTenantLeadsSchema(tenantPool, tenantDb);
     const cols = await getTenantLeadColumns(tenantPool, tenantDb);
     // Build insert dynamically based on available columns
@@ -187,7 +195,9 @@ export async function createBrokerLead(req, res) {
     });
     return res.status(201).json({ id: result.insertId });
   } catch (err) {
-    return res.status(500).json({ message: 'Server error' });
+    // eslint-disable-next-line no-console
+    console.error('createBrokerLead error:', err?.code || err?.message || err);
+    return res.status(500).json({ message: 'Failed to create lead' });
   }
 }
 
@@ -238,6 +248,7 @@ export async function updateBrokerLead(req, res) {
     if (updates.length === 0) return res.status(400).json({ message: 'No fields to update' });
     params.push(id);
     const tenantPool = await getTenantPool(tenantDb);
+    await ensureTenantLeadsTableExists(tenantPool);
     await ensureTenantLeadsSchema(tenantPool, tenantDb);
     await tenantPool.query(`UPDATE leads SET ${updates.join(', ')} WHERE id = ?`, params);
     await notifySuperAdmin({
@@ -249,7 +260,9 @@ export async function updateBrokerLead(req, res) {
     });
     return res.json({ ok: true });
   } catch (err) {
-    return res.status(500).json({ message: 'Server error' });
+    // eslint-disable-next-line no-console
+    console.error('updateBrokerLead error:', err?.code || err?.message || err);
+    return res.status(500).json({ message: 'Failed to update lead' });
   }
 }
 
