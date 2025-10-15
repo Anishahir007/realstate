@@ -20,14 +20,18 @@ export default function SuperAdminBroker() {
     email: '',
     phone: '',
     password: '',
-    license_no: ''
+    license_no: '',
+    status: 'active',
+    photo: null,
   });
   const [formEdit, setFormEdit] = useState({
     id: null,
     full_name: '',
     email: '',
     phone: '',
-    license_no: ''
+    license_no: '',
+    status: 'active',
+    photo: null,
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -86,7 +90,15 @@ export default function SuperAdminBroker() {
     if (!token) return;
     setSubmitting(true);
     try {
-      await axios.post(`${apiBase}/api/broker/createbroker`, formAdd, { headers: { ...headers, 'Content-Type': 'application/json' } });
+      const fd = new FormData();
+      fd.append('full_name', formAdd.full_name);
+      fd.append('email', formAdd.email);
+      fd.append('phone', formAdd.phone || '');
+      fd.append('password', formAdd.password);
+      fd.append('license_no', formAdd.license_no || '');
+      fd.append('status', formAdd.status || 'active');
+      if (formAdd.photo) fd.append('photo', formAdd.photo);
+      await axios.post(`${apiBase}/api/broker/createbroker`, fd, { headers: { ...headers } });
       setShowAdd(false);
       await refreshList();
     } catch (e) {
@@ -113,7 +125,7 @@ export default function SuperAdminBroker() {
       const resp = await axios.get(`${apiBase}/api/broker/getbroker/${brokerId}`, { headers });
       const b = resp.data?.data;
       if (b) {
-        setFormEdit({ id: b.id, full_name: b.name || '', email: b.email || '', phone: b.phone || '', license_no: b.licenseNo || '' });
+        setFormEdit({ id: b.id, full_name: b.name || '', email: b.email || '', phone: b.phone || '', license_no: b.licenseNo || '', status: b.status || 'active', photo: null });
         setShowEdit(true);
       }
     } catch (e) {
@@ -126,8 +138,14 @@ export default function SuperAdminBroker() {
     if (!token || !formEdit.id) return;
     setSubmitting(true);
     try {
-      const payload = { full_name: formEdit.full_name, email: formEdit.email, phone: formEdit.phone, license_no: formEdit.license_no };
-      await axios.put(`${apiBase}/api/broker/updatebroker/${formEdit.id}`, payload, { headers: { ...headers, 'Content-Type': 'application/json' } });
+      const fd = new FormData();
+      fd.append('full_name', formEdit.full_name);
+      fd.append('email', formEdit.email);
+      fd.append('phone', formEdit.phone || '');
+      fd.append('license_no', formEdit.license_no || '');
+      fd.append('status', formEdit.status || 'active');
+      if (formEdit.photo) fd.append('photo', formEdit.photo);
+      await axios.put(`${apiBase}/api/broker/updatebroker/${formEdit.id}`, fd, { headers: { ...headers } });
       setShowEdit(false);
       await refreshList();
     } catch (e) {
@@ -234,6 +252,18 @@ export default function SuperAdminBroker() {
                 <label>License No</label>
                 <input value={formAdd.license_no} onChange={(e) => setFormAdd({ ...formAdd, license_no: e.target.value })} />
               </div>
+              <div className="superadminbroker-formrow">
+                <label>Status</label>
+                <select value={formAdd.status} onChange={(e) => setFormAdd({ ...formAdd, status: e.target.value })}>
+                  <option value="active">Active</option>
+                  <option value="suspended">Suspended</option>
+                  <option value="pending" disabled>Pending (auto)</option>
+                </select>
+              </div>
+              <div className="superadminbroker-formrow">
+                <label>Photo</label>
+                <input type="file" accept="image/*" onChange={(e) => setFormAdd({ ...formAdd, photo: e.target.files?.[0] || null })} />
+              </div>
               <div className="superadminbroker-modal-actions">
                 <button type="button" className="btn-light" onClick={() => setShowAdd(false)} disabled={submitting}>Cancel</button>
                 <button type="submit" className="btn-dark" disabled={submitting}>{submitting ? 'Saving...' : 'Save'}</button>
@@ -258,6 +288,16 @@ export default function SuperAdminBroker() {
               <div><strong>License No:</strong> {selected.licenseNo || '-'}</div>
               <div><strong>Status:</strong> {selected.status}</div>
               <div><strong>Tenant DB:</strong> {selected.tenantDb}</div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <strong>Photo:</strong>
+                {selected.photo ? (
+                  <div style={{ marginTop: 8 }}>
+                    <img src={`${apiBase}${selected.photo}`} alt="Broker" style={{ width: 96, height: 96, objectFit: 'cover', borderRadius: 8 }} />
+                  </div>
+                ) : (
+                  <span> -</span>
+                )}
+              </div>
             </div>
             <div className="superadminbroker-modal-actions">
               <button className="btn-dark" onClick={() => setShowView(false)}>Close</button>
@@ -289,6 +329,17 @@ export default function SuperAdminBroker() {
               <div className="superadminbroker-formrow">
                 <label>License No</label>
                 <input value={formEdit.license_no} onChange={(e) => setFormEdit({ ...formEdit, license_no: e.target.value })} />
+              </div>
+              <div className="superadminbroker-formrow">
+                <label>Status</label>
+                <select value={formEdit.status} onChange={(e) => setFormEdit({ ...formEdit, status: e.target.value })}>
+                  <option value="active">Active</option>
+                  <option value="suspended">Suspended</option>
+                </select>
+              </div>
+              <div className="superadminbroker-formrow">
+                <label>Photo</label>
+                <input type="file" accept="image/*" onChange={(e) => setFormEdit({ ...formEdit, photo: e.target.files?.[0] || null })} />
               </div>
               <div className="superadminbroker-modal-actions">
                 <button type="button" className="btn-light" onClick={() => setShowEdit(false)} disabled={submitting}>Cancel</button>

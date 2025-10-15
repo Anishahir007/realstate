@@ -22,12 +22,27 @@ function mapBrokerRow(row) {
 export async function listBrokers(req, res) {
   try {
     const q = (req.query.q || '').toString().trim();
+    const status = (req.query.status || '').toString().trim().toLowerCase();
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
     const offset = (page - 1) * limit;
 
-    const where = q ? 'WHERE full_name LIKE ? OR email LIKE ? OR phone LIKE ?' : '';
-    const params = q ? [`%${q}%`, `%${q}%`, `%${q}%`] : [];
+    const whereClauses = [];
+    const params = [];
+    if (q) {
+      whereClauses.push('(full_name LIKE ? OR email LIKE ? OR phone LIKE ?)');
+      params.push(`%${q}%`, `%${q}%`, `%${q}%`);
+    }
+    if (status) {
+      if (status === 'active' || status === 'suspended') {
+        whereClauses.push('status = ?');
+        params.push(status);
+      } else if (status === 'pending') {
+        // Treat as not logged in yet
+        whereClauses.push('last_login_at IS NULL');
+      }
+    }
+    const where = whereClauses.length ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
     const [rows] = await pool.query(
       `SELECT id, full_name, email, phone, photo, license_no, tenant_db, status, created_by_admin_id, last_login_at
@@ -36,7 +51,7 @@ export async function listBrokers(req, res) {
     );
 
     const [countRows] = await pool.query(
-      `SELECT COUNT(*) as total FROM brokers ${q ? 'WHERE full_name LIKE ? OR email LIKE ? OR phone LIKE ?' : ''}`,
+      `SELECT COUNT(*) as total FROM brokers ${where}`,
       params
     );
 
@@ -89,7 +104,7 @@ export async function getBrokerById(req, res) {
 
 export async function createBroker(req, res) {
   try {
-    const { full_name, email, phone, photo, password, license_no } = req.body || {};
+    const { full_name, email, phone, password, license_no, status } = req.body || {};
     if (!isNonEmptyString(full_name) || !validateEmail(email) || !validatePassword(password)) {
       return res.status(400).json({ message: 'Invalid input' });
     }
@@ -101,9 +116,11 @@ export async function createBroker(req, res) {
     await createBrokerDatabaseIfNotExists(tenant_db);
 
     const password_hash = await hashPassword(password);
+    const photoPath = req.file ? `/profiles/${req.file.originalname}` : null;
+    const normalizedStatus = (status && ['active', 'suspended'].includes(String(status).toLowerCase())) ? String(status).toLowerCase() : undefined;
     const [result] = await pool.query(
-      `INSERT INTO brokers (full_name, email, phone, photo, password_hash, license_no, tenant_db, created_by_admin_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [safeName, email, phone || null, photo || null, password_hash, license_no || null, tenant_db, req.user?.id || null]
+      `INSERT INTO brokers (full_name, email, phone, photo, password_hash, license_no, tenant_db, created_by_admin_id${normalizedStatus ? ', status' : ''}) VALUES (?, ?, ?, ?, ?, ?, ?, ?${normalizedStatus ? ', ?' : ''})`,
+      [safeName, email, phone || null, photoPath, password_hash, license_no || null, tenant_db, req.user?.id || null, ...(normalizedStatus ? [normalizedStatus] : [])]
     );
     const id = result.insertId;
     const [rows] = await pool.query(
@@ -122,7 +139,7 @@ export async function updateBroker(req, res) {
     const id = parseInt(req.params.id, 10);
     if (!id) return res.status(400).json({ message: 'Invalid id' });
 
-    const { full_name, email, phone, photo, license_no } = req.body || {};
+    const { full_name, email, phone, license_no, status } = req.body || {};
     const updates = [];
     const params = [];
 
@@ -142,13 +159,22 @@ export async function updateBroker(req, res) {
       updates.push('phone = ?');
       params.push(isNonEmptyString(phone) ? phone : null);
     }
-    if (photo !== undefined) {
+    // photo from multipart
+    if (req.file) {
       updates.push('photo = ?');
-      params.push(isNonEmptyString(photo) ? photo : null);
+      params.push(`/profiles/${req.file.originalname}`);
     }
     if (license_no !== undefined) {
       updates.push('license_no = ?');
       params.push(isNonEmptyString(license_no) ? license_no : null);
+    }
+    if (status !== undefined) {
+      const normalized = String(status).toLowerCase();
+      if (!['active', 'suspended'].includes(normalized)) {
+        return res.status(400).json({ message: 'Invalid status' });
+      }
+      updates.push('status = ?');
+      params.push(normalized);
     }
 
     if (updates.length === 0) {

@@ -29,6 +29,9 @@
 .superadminbroker-formrow { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
 .superadminbroker-formrow label { font-size: 13px; color: #374151; }
 .superadminbroker-formrow input { border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 10px; }
+.superadminbroker-formrow select { border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 10px; background: #fff; }
+.superadminbroker-formrow input[type="file"] { border: 1px solid #e5e7eb; border-radius: 8px; padding: 7px 10px; background: #fafafa; }
+.superadminbroker-photo-preview { width: 96px; height: 96px; object-fit: cover; border-radius: 8px; border: 1px solid #e5e7eb; }
 .superadminbroker-viewgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
 .superadminbroker-modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
