@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import axios from 'axios';
 import { FiBell } from 'react-icons/fi';
 import { useSuperAdmin } from '../../../context/SuperAdminContext.jsx';
 import './notification.css';
@@ -13,11 +14,11 @@ export default function Notification() {
 
   async function loadNotifications() {
     try {
-      const res = await fetch(`${superAdmin.apiBase}/api/notifications/super-admin?limit=10`, {
+      const { data } = await axios.get(`${superAdmin.apiBase}/api/notifications/super-admin`, {
+        params: { limit: 10 },
         headers: { Authorization: `Bearer ${superAdmin.token}` },
       });
-      const json = await res.json();
-      if (res.ok && Array.isArray(json?.data)) setItems(json.data.filter((n) => !n.is_read));
+      if (data && Array.isArray(data?.data)) setItems(data.data.filter((n) => !n.is_read));
       else setItems([]);
     } catch {
       setItems([]);
@@ -28,14 +29,9 @@ export default function Notification() {
     // Optimistically remove then confirm with server
     setItems((prev) => prev.filter((n) => n.id !== id));
     try {
-      const res = await fetch(`${superAdmin.apiBase}/api/notifications/super-admin/${id}/read`, {
-        method: 'POST',
+      await axios.post(`${superAdmin.apiBase}/api/notifications/super-admin/${id}/read`, null, {
         headers: { Authorization: `Bearer ${superAdmin.token}` },
       });
-      if (!res.ok) {
-        // if failed, reload list to sync
-        await loadNotifications();
-      }
     } catch {
       await loadNotifications();
     }

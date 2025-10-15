@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import axios from 'axios';
 
 const AppUserContext = createContext(null);
 const STORAGE_KEY = 'realestate_user_auth';
@@ -31,15 +32,16 @@ export function AppUserProvider({ children }) {
   }, [state]);
 
   async function login(email, password) {
-    const res = await fetch(`${apiBase}/api/auth/user/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      const message = data?.message || 'Login failed';
-      throw new Error(message);
+    let data;
+    try {
+      ({ data } = await axios.post(`${apiBase}/api/auth/user/login`, { email, password }, {
+        headers: { 'Content-Type': 'application/json' },
+      }));
+    } catch (err) {
+      const status = err?.response?.status;
+      const serverMsg = err?.response?.data?.message;
+      const msg = status === 401 ? 'Invalid email or password' : (serverMsg || err?.message || 'Login failed');
+      throw new Error(msg);
     }
     const token = data.token;
     const name = data?.user?.name || data?.name;

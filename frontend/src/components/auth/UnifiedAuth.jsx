@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import axios from "axios";
 import "./UnifiedAuth.css";
 import { SuperAdminProvider } from "../../context/SuperAdminContext.jsx";
 import { BrokerProvider, useBroker } from "../../context/BrokerContext.jsx";
@@ -60,8 +61,14 @@ function UnifiedAuthInner() {
   }, [mode, role]);
 
   async function handleLogin() {
-    if (role === "broker") return broker.login(email, password);
-    return appUser.login(email, password);
+    try {
+      if (role === "broker") return await broker.login(email, password);
+      return await appUser.login(email, password);
+    } catch (err) {
+      const status = err?.response?.status;
+      const msg = status === 401 ? 'Invalid email or password' : (err?.message || 'Login failed');
+      throw new Error(msg);
+    }
   }
 
   function clientValidatePassword(pwd) {
@@ -91,25 +98,22 @@ function UnifiedAuthInner() {
 
     // User/Broker two-step: send OTP or verify
     const body = otpId ? { ...payload, otpId, otpCode } : payload;
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    if (res.status === 202) {
-      setOtpId(data?.otpId || "");
-      setMessage("OTP sent to your phone");
-      return { step: "otp_sent" };
-    }
-    if (!res.ok) {
+    try {
+      const { status, data } = await axios.post(url, body, { headers: { "Content-Type": "application/json" } });
+      if (status === 202) {
+        setOtpId(data?.otpId || "");
+        setMessage("OTP sent to your phone");
+        return { step: "otp_sent" };
+      }
+      await handleLogin();
+      return { step: "done" };
+    } catch (err) {
+      const data = err?.response?.data;
       const backendPwdErr = data?.errors?.password;
       if (backendPwdErr) setPasswordError(backendPwdErr);
-      const msg = data?.message || "Signup failed";
+      const msg = data?.message || err?.message || "Signup failed";
       throw new Error(msg);
     }
-    await handleLogin();
-    return { step: "done" };
   }
 
   async function onSubmit(e) {
@@ -132,7 +136,8 @@ function UnifiedAuthInner() {
         else window.location.href = "/";
       }
     } catch (err) {
-      setError(err.message || "Action failed");
+      const msg = err?.message || "Action failed";
+      setError(msg);
     } finally {
       setLoading(false);
     }

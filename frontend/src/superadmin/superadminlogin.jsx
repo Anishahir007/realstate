@@ -21,7 +21,10 @@ export default function SuperAdminLogin() {
       await login(email, password);
       window.location.href = '/superadmin/dashboard';
     } catch (err) {
-      setError(err?.message || 'Login failed');
+      const msg = err?.message || 'Login failed';
+      // Normalize any raw 401 messages
+      const pretty = /401/.test(msg) ? 'Invalid email or password' : msg;
+      setError(pretty);
     } finally {
       setLoading(false);
     }

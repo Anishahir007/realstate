@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import axios from 'axios';
 
 const SuperAdminContext = createContext(null);
 const STORAGE_KEY = 'realestate_superadmin_auth';
@@ -34,12 +35,10 @@ export function SuperAdminProvider({ children }) {
   useEffect(() => {
     async function fetchProfile(activeToken) {
       try {
-        const profileRes = await fetch(`${apiBase}/api/auth/whoami`, {
-          method: 'GET',
+        const { data: profileJson } = await axios.get(`${apiBase}/api/auth/whoami`, {
           headers: { Authorization: `Bearer ${activeToken}` }
         });
-        const profileJson = await profileRes.json();
-        if (profileRes.ok && profileJson && profileJson.data) {
+        if (profileJson && profileJson.data) {
           const profile = profileJson.data;
           setState(prev => ({
             ...(prev || {}),
@@ -63,27 +62,26 @@ export function SuperAdminProvider({ children }) {
   }, [state?.token, state?.profile, apiBase]);
 
   async function login(email, password) {
-    const res = await fetch(`${apiBase}/api/auth/super-admin/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      const message = data?.message || 'Login failed';
-      throw new Error(message);
+    let data;
+    try {
+      ({ data } = await axios.post(`${apiBase}/api/auth/super-admin/login`, { email, password }, {
+        headers: { 'Content-Type': 'application/json' }
+      }));
+    } catch (err) {
+      const status = err?.response?.status;
+      const serverMsg = err?.response?.data?.message;
+      const msg = status === 401 ? 'Invalid email or password' : (serverMsg || err?.message || 'Login failed');
+      throw new Error(msg);
     }
     const token = data.token;
     const next = { token };
     setState(next);
 
     try {
-      const profileRes = await fetch(`${apiBase}/api/auth/whoami`, {
-        method: 'GET',
+      const { data: profileJson } = await axios.get(`${apiBase}/api/auth/whoami`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      const profileJson = await profileRes.json();
-      if (profileRes.ok && profileJson && profileJson.data) {
+      if (profileJson && profileJson.data) {
         const profile = profileJson.data;
         const updated = {
           token,
@@ -109,12 +107,10 @@ export function SuperAdminProvider({ children }) {
   async function refreshProfile() {
     if (!state?.token) return null;
     try {
-      const profileRes = await fetch(`${apiBase}/api/auth/whoami`, {
-        method: 'GET',
+      const { data: profileJson } = await axios.get(`${apiBase}/api/auth/whoami`, {
         headers: { Authorization: `Bearer ${state.token}` }
       });
-      const profileJson = await profileRes.json();
-      if (profileRes.ok && profileJson && profileJson.data) {
+      if (profileJson && profileJson.data) {
         const p = profileJson.data;
         const updated = {
           token: state.token,
@@ -136,21 +132,12 @@ export function SuperAdminProvider({ children }) {
 
   async function updateProfile(payload) {
     if (!state?.token) throw new Error('Not authenticated');
-    const res = await fetch(`${apiBase}/api/auth/super-admin/profile`, {
-      method: 'PUT',
+    const { data } = await axios.put(`${apiBase}/api/auth/super-admin/profile`, payload, {
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${state.token}`,
       },
-      body: JSON.stringify(payload),
     });
-    const ct = res.headers.get('content-type') || '';
-    const data = ct.includes('application/json') ? await res.json() : null;
-    if (!res.ok) {
-      if (data?.message) throw new Error(data.message);
-      const text = !ct.includes('application/json') ? await res.text() : '';
-      throw new Error(text ? `Unexpected response (${res.status})` : 'Update failed');
-    }
     if (data && data.data) {
       const p = data.data;
       const updated = {

@@ -1,4 +1,5 @@
 import React from 'react';
+import axios from 'axios';
 import './user.css';
 import { useBroker } from '../../../context/BrokerContext.jsx';
 
@@ -49,20 +50,15 @@ const UserPage = () => {
     setLoading(true);
     setError('');
     try {
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('limit', String(meta.limit || 20));
-      if (dq) params.set('q', dq);
-      const res = await fetch(`${apiBase}/api/broker-users?${params.toString()}`, {
-        method: 'GET',
+      const res = await axios.get(`${apiBase}/api/broker-users`, {
+        params: { page, limit: meta.limit || 20, q: dq || undefined },
         headers: { Authorization: `Bearer ${token}` },
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.message || 'Failed to load users');
-      setList(Array.isArray(json.data) ? json.data : []);
-      setMeta(json.meta || { page, limit: meta.limit || 20, total: 0 });
+      setList(Array.isArray(res.data?.data) ? res.data.data : []);
+      setMeta(res.data?.meta || { page, limit: meta.limit || 20, total: 0 });
     } catch (e) {
-      setError(e?.message || 'Failed to load users');
+      const msg = e?.response?.data?.message || e?.message || 'Failed to load users';
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -86,21 +82,13 @@ const UserPage = () => {
       if (editing.status) payload.status = editing.status;
 
       const endpoint = isEdit ? `${apiBase}/api/broker-users/${editing.id}` : `${apiBase}/api/broker-users/broker/create`;
-      const method = isEdit ? 'PUT' : 'POST';
-      const res = await fetch(endpoint, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.message || 'Save failed');
+      const method = isEdit ? 'put' : 'post';
+      await axios({ url: endpoint, method, data: payload, headers: { Authorization: `Bearer ${token}` } });
       setEditing(null);
       fetchUsers(meta.page || 1);
     } catch (e) {
-      setError(e?.message || 'Save failed');
+      const msg = e?.response?.data?.message || e?.message || 'Save failed';
+      setError(msg);
     }
   }
 

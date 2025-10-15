@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import axios from 'axios';
 
 const BrokerContext = createContext(null);
 const STORAGE_KEY = 'realestate_broker_auth';
@@ -34,13 +35,11 @@ export function BrokerProvider({ children }) {
   useEffect(() => {
     async function fetchProfile(activeToken) {
       try {
-        const res = await fetch(`${apiBase}/api/auth/whoami`, {
-          method: 'GET',
+        const { data } = await axios.get(`${apiBase}/api/auth/whoami`, {
           headers: { Authorization: `Bearer ${activeToken}` },
         });
-        const json = await res.json();
-        if (res.ok && json && json.data && json.data.role === 'broker') {
-          const p = json.data;
+        if (data && data.data && data.data.role === 'broker') {
+          const p = data.data;
           setState(prev => ({
             ...(prev || {}),
             token: activeToken,
@@ -85,27 +84,26 @@ export function BrokerProvider({ children }) {
   }, [state?.token]);
 
   async function login(email, password) {
-    const res = await fetch(`${apiBase}/api/auth/broker/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      const message = data?.message || 'Login failed';
-      throw new Error(message);
+    let data;
+    try {
+      ({ data } = await axios.post(`${apiBase}/api/auth/broker/login`, { email, password }, {
+        headers: { 'Content-Type': 'application/json' },
+      }));
+    } catch (err) {
+      const status = err?.response?.status;
+      const serverMsg = err?.response?.data?.message;
+      const msg = status === 401 ? 'Invalid email or password' : (serverMsg || err?.message || 'Login failed');
+      throw new Error(msg);
     }
     const token = data.token;
     const next = { token };
     setState(next);
     try {
-      const res2 = await fetch(`${apiBase}/api/auth/whoami`, {
-        method: 'GET',
+      const { data: data2 } = await axios.get(`${apiBase}/api/auth/whoami`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const json2 = await res2.json();
-      if (res2.ok && json2 && json2.data && json2.data.role === 'broker') {
-        const p = json2.data;
+      if (data2 && data2.data && data2.data.role === 'broker') {
+        const p = data2.data;
         const updated = {
           token,
           profile: p,
@@ -134,13 +132,11 @@ export function BrokerProvider({ children }) {
   async function refreshProfile() {
     if (!state?.token) return null;
     try {
-      const res = await fetch(`${apiBase}/api/auth/whoami`, {
-        method: 'GET',
+      const { data } = await axios.get(`${apiBase}/api/auth/whoami`, {
         headers: { Authorization: `Bearer ${state.token}` },
       });
-      const json = await res.json();
-      if (res.ok && json && json.data && json.data.role === 'broker') {
-        const p = json.data;
+      if (data && data.data && data.data.role === 'broker') {
+        const p = data.data;
         const updated = {
           token: state.token,
           profile: p,
@@ -164,21 +160,12 @@ export function BrokerProvider({ children }) {
 
   async function updateProfile(payload) {
     if (!state?.token) throw new Error('Not authenticated');
-    const res = await fetch(`${apiBase}/api/auth/broker/profile`, {
-      method: 'PUT',
+    const { data } = await axios.put(`${apiBase}/api/auth/broker/profile`, payload, {
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${state.token}`,
       },
-      body: JSON.stringify(payload),
     });
-    const ct = res.headers.get('content-type') || '';
-    const data = ct.includes('application/json') ? await res.json() : null;
-    if (!res.ok) {
-      if (data?.message) throw new Error(data.message);
-      const text = !ct.includes('application/json') ? await res.text() : '';
-      throw new Error(text ? `Unexpected response (${res.status})` : 'Update failed');
-    }
     if (data && data.data) {
       const p = data.data;
       const updated = {
@@ -199,7 +186,7 @@ export function BrokerProvider({ children }) {
   }
 
   const value = useMemo(() => ({
-    ...state,
+    ...(state || {}),
     isAuthenticated: Boolean(state?.token),
     login,
     logout,

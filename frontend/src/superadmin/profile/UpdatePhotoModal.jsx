@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import './profile.css';
 import { useSuperAdmin } from '../../context/SuperAdminContext.jsx';
 
@@ -19,22 +20,14 @@ export default function UpdatePhotoModal({ onClose }) {
     try {
       const form = new FormData();
       form.append('photo', file);
-      const res = await fetch(`${sa.apiBase}/api/auth/super-admin/profile`, {
-        method: 'PUT',
+      await axios.put(`${sa.apiBase}/api/auth/super-admin/profile`, form, {
         headers: { Authorization: `Bearer ${sa.token}` },
-        body: form,
       });
-      const ct = res.headers.get('content-type') || '';
-      const data = ct.includes('application/json') ? await res.json() : null;
-      if (!res.ok) {
-        if (data?.message) throw new Error(data.message);
-        const text = !ct.includes('application/json') ? await res.text() : '';
-        throw new Error(text ? `Unexpected response (${res.status})` : 'Upload failed');
-      }
       await sa.refreshProfile();
       onClose();
     } catch (err) {
-      setError(err?.message || 'Update failed');
+      const msg = err?.response?.data?.message || err?.message || 'Update failed';
+      setError(msg);
     } finally {
       setLoading(false);
     }

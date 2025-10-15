@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import axios from 'axios';
 import './header.css';
 import { useSuperAdmin } from '../../../context/SuperAdminContext.jsx';
 import { useNavigate } from 'react-router-dom';
@@ -23,11 +24,11 @@ export default function Header() {
   function toggleMenu() { setIsMenuOpen((v) => !v); }
   async function loadNotifications() {
     try {
-      const res = await fetch(`${superAdmin.apiBase}/api/notifications/super-admin?limit=10`, {
+      const { data } = await axios.get(`${superAdmin.apiBase}/api/notifications/super-admin`, {
+        params: { limit: 10 },
         headers: { Authorization: `Bearer ${superAdmin.token}` },
       });
-      const json = await res.json();
-      if (res.ok && json && Array.isArray(json.data)) setNotifications(json.data);
+      if (data && Array.isArray(data.data)) setNotifications(data.data);
     } catch {}
   }
 
