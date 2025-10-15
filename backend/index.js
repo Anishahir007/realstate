@@ -25,8 +25,12 @@ app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 
-const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 });
-app.use(limiter);
+const isProd = process.env.NODE_ENV === 'production';
+const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true, legacyHeaders: false });
+if (isProd) {
+  // Only enforce rate limits in production
+  app.use('/api', limiter);
+}
 
 // Measure response time (simple middleware)
 app.use((req, res, next) => {
