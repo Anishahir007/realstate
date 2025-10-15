@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { FiGrid, FiSettings } from 'react-icons/fi';
+import { FiGrid, FiSettings, FiUsers } from 'react-icons/fi';
 import './navbar.css';
 import { useBroker } from '../../../context/BrokerContext.jsx';
 
@@ -27,6 +27,10 @@ const BrokerPanelNavbar = () => {
         <NavLink to="/broker/dashboard" className={({ isActive }) => `brokerpanelnavbar-link${isActive ? ' brokerpanelnavbar-link-active' : ''}`}>
           <span className="brokerpanelnavbar-icon"><FiGrid /></span>
           <span>Dashboard</span>
+        </NavLink>
+        <NavLink to="/broker/users" className={({ isActive }) => `brokerpanelnavbar-link${isActive ? ' brokerpanelnavbar-link-active' : ''}`}>
+          <span className="brokerpanelnavbar-icon"><FiUsers /></span>
+          <span>Users</span>
         </NavLink>
         <NavLink to="/broker/settings/view-profile" className={({ isActive }) => `brokerpanelnavbar-link${isActive ? ' brokerpanelnavbar-link-active' : ''}`}>
           <span className="brokerpanelnavbar-icon"><FiSettings /></span>

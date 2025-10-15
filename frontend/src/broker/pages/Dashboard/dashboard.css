@@ -1,0 +1,105 @@
+.brokerpanelDashboard-container {
+  padding: 24px;
+  background: #f4f7fc;
+  min-height: 100%;
+}
+
+.brokerpanelDashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.brokerpanelDashboard-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1f2a37;
+}
+
+.brokerpanelDashboard-filterBtn {
+  background: #1a56db;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brokerpanelDashboard-filterBtn:hover {
+  background: #174bb3;
+}
+
+.brokerpanelDashboard-caret {
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.brokerpanelDashboard-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 1100px) {
+  .brokerpanelDashboard-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  .brokerpanelDashboard-cards { grid-template-columns: 1fr; }
+}
+
+.brokerpanelDashboard-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  padding: 18px;
+}
+
+.brokerpanelDashboard-cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.brokerpanelDashboard-cardIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  font-size: 18px;
+}
+
+.brokerpanelDashboard-iconBlue { background: #e6efff; color: #1a56db; }
+.brokerpanelDashboard-iconOrange { background: #fff1e6; color: #e46a11; }
+.brokerpanelDashboard-iconPink { background: #ffe8f3; color: #db2777; }
+.brokerpanelDashboard-iconGreen { background: #e8fff1; color: #0f9d58; }
+
+.brokerpanelDashboard-cardTitle {
+  font-weight: 700;
+  color: #1f2a37;
+}
+
+.brokerpanelDashboard-cardValue {
+  font-size: 28px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.brokerpanelDashboard-cardDelta {
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+.brokerpanelDashboard-up { color: #10b981; }
+.brokerpanelDashboard-down { color: #ef4444; }
+
+

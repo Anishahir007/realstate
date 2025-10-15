@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { signupTenantUser, loginTenantUser } from '../controllers/brokerUserController.js';
+import { signupTenantUser, loginTenantUser, listTenantUsers, getTenantUserById, updateTenantUser } from '../controllers/brokerUserController.js';
 
 const router = Router();
 
@@ -10,6 +10,11 @@ router.post('/login', loginTenantUser);   // expects x-tenant-db header
 
 // Example: broker can onboard users explicitly (auth optional since controller reads tenant from token if present)
 router.post('/broker/create', requireAuth, requireRole('broker'), signupTenantUser);
+
+// Broker-authenticated tenant user management
+router.get('/', requireAuth, requireRole('broker'), listTenantUsers);
+router.get('/:id', requireAuth, requireRole('broker'), getTenantUserById);
+router.put('/:id', requireAuth, requireRole('broker'), updateTenantUser);
 
 export default router;
 

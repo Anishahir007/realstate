@@ -75,3 +75,170 @@ export async function loginTenantUser(req, res) {
 }
 
 
+// List all tenant users for the authenticated broker's tenant
+export async function listTenantUsers(req, res) {
+  try {
+    const tenantDb = (req.user && req.user.tenant_db) ? req.user.tenant_db : (req.headers['x-tenant-db'] || req.headers['x-tenant'] || '').toString();
+    if (!tenantDb) return res.status(400).json({ message: 'Missing tenant' });
+
+    const q = (req.query.q || '').toString().trim();
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+    const offset = (page - 1) * limit;
+
+    const whereClauses = [];
+    const params = [];
+    if (q) {
+      whereClauses.push('(full_name LIKE ? OR email LIKE ? OR phone LIKE ?)');
+      params.push(`%${q}%`, `%${q}%`, `%${q}%`);
+    }
+    const where = whereClauses.length ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+    const tenantPool = await getTenantPool(tenantDb);
+    try {
+      const [rows] = await tenantPool.query(
+        `SELECT id, full_name, email, phone, photo, status, last_login_at, created_at, updated_at
+         FROM users ${where}
+         ORDER BY id DESC
+         LIMIT ? OFFSET ?`,
+        [...params, limit, offset]
+      );
+      const [countRows] = await tenantPool.query(
+        `SELECT COUNT(*) as total FROM users ${where}`,
+        params
+      );
+      return res.json({
+        data: rows.map(r => ({
+          id: r.id,
+          name: r.full_name,
+          email: r.email,
+          phone: r.phone,
+          photo: r.photo,
+          status: r.status,
+          lastLoginAt: r.last_login_at,
+          createdAt: r.created_at,
+          updatedAt: r.updated_at,
+        })),
+        meta: { page, limit, total: countRows[0]?.total || 0 }
+      });
+    } finally {
+      await tenantPool.end();
+    }
+  } catch (err) {
+    const isProd = process.env.NODE_ENV === 'production';
+    return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
+  }
+}
+
+// Get a single tenant user by id
+export async function getTenantUserById(req, res) {
+  try {
+    const tenantDb = (req.user && req.user.tenant_db) ? req.user.tenant_db : (req.headers['x-tenant-db'] || req.headers['x-tenant'] || '').toString();
+    if (!tenantDb) return res.status(400).json({ message: 'Missing tenant' });
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.status(400).json({ message: 'Invalid id' });
+
+    const tenantPool = await getTenantPool(tenantDb);
+    try {
+      const [rows] = await tenantPool.query(
+        'SELECT id, full_name, email, phone, photo, status, last_login_at, created_at, updated_at FROM users WHERE id = ? LIMIT 1',
+        [id]
+      );
+      const r = rows[0];
+      if (!r) return res.status(404).json({ message: 'Not found' });
+      return res.json({ data: {
+        id: r.id,
+        name: r.full_name,
+        email: r.email,
+        phone: r.phone,
+        photo: r.photo,
+        status: r.status,
+        lastLoginAt: r.last_login_at,
+        createdAt: r.created_at,
+        updatedAt: r.updated_at,
+      } });
+    } finally {
+      await tenantPool.end();
+    }
+  } catch (err) {
+    const isProd = process.env.NODE_ENV === 'production';
+    return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
+  }
+}
+
+// Update a tenant user's profile (by broker within same tenant)
+export async function updateTenantUser(req, res) {
+  try {
+    const tenantDb = (req.user && req.user.tenant_db) ? req.user.tenant_db : (req.headers['x-tenant-db'] || req.headers['x-tenant'] || '').toString();
+    if (!tenantDb) return res.status(400).json({ message: 'Missing tenant' });
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.status(400).json({ message: 'Invalid id' });
+
+    const { full_name, email, phone, photo, password, status } = req.body || {};
+    const updates = [];
+    const params = [];
+
+    if (full_name !== undefined) {
+      if (!isNonEmptyString(full_name)) return res.status(400).json({ message: 'Invalid full_name' });
+      updates.push('full_name = ?');
+      params.push(sanitizeName(full_name));
+    }
+    if (email !== undefined) {
+      if (!validateEmail(email)) return res.status(400).json({ message: 'Invalid email' });
+      updates.push('email = ?');
+      params.push(email);
+    }
+    if (phone !== undefined) {
+      updates.push('phone = ?');
+      params.push(isNonEmptyString(phone) ? phone : null);
+    }
+    if (photo !== undefined) {
+      updates.push('photo = ?');
+      params.push(isNonEmptyString(photo) ? photo : null);
+    }
+    if (password !== undefined) {
+      if (!validatePassword(password)) return res.status(400).json({ message: 'Invalid password' });
+      const password_hash = await hashPassword(password);
+      updates.push('password_hash = ?');
+      params.push(password_hash);
+    }
+    if (status !== undefined) {
+      const normalized = String(status).toLowerCase();
+      if (!['active','inactive'].includes(normalized)) return res.status(400).json({ message: 'Invalid status' });
+      updates.push('status = ?');
+      params.push(normalized);
+    }
+
+    if (updates.length === 0) return res.status(400).json({ message: 'No fields to update' });
+
+    const tenantPool = await getTenantPool(tenantDb);
+    try {
+      params.push(id);
+      await tenantPool.query(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, params);
+      const [rows] = await tenantPool.query(
+        'SELECT id, full_name, email, phone, photo, status, last_login_at, created_at, updated_at FROM users WHERE id = ? LIMIT 1',
+        [id]
+      );
+      const r = rows[0];
+      if (!r) return res.status(404).json({ message: 'Not found' });
+      return res.json({ data: {
+        id: r.id,
+        name: r.full_name,
+        email: r.email,
+        phone: r.phone,
+        photo: r.photo,
+        status: r.status,
+        lastLoginAt: r.last_login_at,
+        createdAt: r.created_at,
+        updatedAt: r.updated_at,
+      } });
+    } finally {
+      await tenantPool.end();
+    }
+  } catch (err) {
+    const isProd = process.env.NODE_ENV === 'production';
+    return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
+  }
+}
+
+

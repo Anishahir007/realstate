@@ -1,7 +1,8 @@
 import React from 'react';
 import { Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from './ProtectedRoute.jsx';
-import BrokerDashboard from '../broker/pages/Dashboard.jsx';
+import BrokerDashboard from '../broker/pages/Dashboard/Dashboard.jsx';
+import BrokerUsers from '../broker/pages/users/User.jsx';
 import BrokerLayout from '../broker/components/Layout.jsx';
 import BrokerViewProfile from '../broker/pages/settings/view-profile/ViewProfile.jsx';
 import { BrokerProvider } from '../context/BrokerContext.jsx';
@@ -22,6 +23,7 @@ export function BrokerRoutes() {
         }
       >
         <Route path="dashboard" element={<BrokerDashboard />} />
+        <Route path="users" element={<BrokerUsers />} />
         <Route path="settings/view-profile" element={<BrokerViewProfile />} />
       </Route>
       <Route
