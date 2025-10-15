@@ -1,6 +1,7 @@
 import pool from '../config/database.js';
 import { getTenantPool } from '../utils/tenant.js';
 import { isNonEmptyString, validateEmail } from '../utils/validation.js';
+import { notifySuperAdmin } from '../utils/notifications.js';
 
 // Admin (super admin) — operates on main DB leads table
 export async function listAdminLeads(req, res) {
@@ -27,6 +28,8 @@ export async function createAdminLead(req, res) {
        VALUES (?, ?, ?, ?, ?, COALESCE(?, 'website'), COALESCE(?, 'new'), ?, ?)`,
       [full_name, email, phone, city || null, property_interest || null, source || null, status || null, message || null, assigned_to || null]
     );
+    // Notify super admin about new main-site lead
+    await notifySuperAdmin({ type: 'lead_created', title: 'New main website lead', message: `${full_name} (${email})` });
     return res.status(201).json({ id: result.insertId });
   } catch (err) {
     return res.status(500).json({ message: 'Server error' });
@@ -77,6 +80,7 @@ export async function updateAdminLead(req, res) {
     if (updates.length === 0) return res.status(400).json({ message: 'No fields to update' });
     params.push(id);
     await pool.query(`UPDATE leads SET ${updates.join(', ')} WHERE id = ?`, params);
+    await notifySuperAdmin({ type: 'lead_updated', title: 'Main website lead updated', message: `Lead #${id} updated` });
     return res.json({ ok: true });
   } catch (err) {
     return res.status(500).json({ message: 'Server error' });
@@ -113,6 +117,15 @@ export async function createBrokerLead(req, res) {
        VALUES (?, ?, ?, ?, ?, COALESCE(?, 'website'), COALESCE(?, 'new'), ?, ?)`,
       [full_name, email, phone, city || null, property_interest || null, source || null, status || null, message || null, assigned_to || null]
     );
+    // Notify super admin with broker actor context
+    await notifySuperAdmin({
+      type: 'broker_lead_created',
+      title: 'New broker lead',
+      message: `${full_name} (${email})`,
+      actorBrokerId: req.user?.id || null,
+      actorBrokerName: req.user?.email ? undefined : null,
+      actorBrokerEmail: req.user?.email || null,
+    });
     return res.status(201).json({ id: result.insertId });
   } catch (err) {
     return res.status(500).json({ message: 'Server error' });
@@ -167,6 +180,13 @@ export async function updateBrokerLead(req, res) {
     params.push(id);
     const tenantPool = await getTenantPool(tenantDb);
     await tenantPool.query(`UPDATE leads SET ${updates.join(', ')} WHERE id = ?`, params);
+    await notifySuperAdmin({
+      type: 'broker_lead_updated',
+      title: 'Broker lead updated',
+      message: `Lead #${id} updated`,
+      actorBrokerId: req.user?.id || null,
+      actorBrokerEmail: req.user?.email || null,
+    });
     return res.json({ ok: true });
   } catch (err) {
     return res.status(500).json({ message: 'Server error' });

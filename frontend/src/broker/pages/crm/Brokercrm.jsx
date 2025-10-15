@@ -15,6 +15,7 @@ export default function BrokerPanelBrokercrm() {
 
   const [showAdd, setShowAdd] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
+  const [showView, setShowView] = useState(false);
   const [selected, setSelected] = useState(null);
 
   const [formAdd, setFormAdd] = useState({
@@ -61,6 +62,11 @@ export default function BrokerPanelBrokercrm() {
     setShowEdit(true);
   }
 
+  function openView(lead) {
+    setSelected(lead);
+    setShowView(true);
+  }
+
   async function submitAdd(e) {
     e?.preventDefault?.(); if (!token) return;
     try {
@@ -78,6 +84,19 @@ export default function BrokerPanelBrokercrm() {
     } catch (e) { alert(e?.response?.data?.message || e?.message || 'Update failed'); }
   }
 
+  function exportCsv() {
+    const headersCsv = ['id','full_name','email','phone','city','property_interest','source','status','assigned_to','created_at'];
+    const rows = filtered.map((r) => headersCsv.map((h) => toCsv(String(r[h] ?? ''))).join(','));
+    const csv = [headersCsv.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'my-leads.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="brokerpanelbrokercrm-root">
       <div className="brokerpanelbrokercrm-head">
@@ -86,6 +105,7 @@ export default function BrokerPanelBrokercrm() {
           <p className="brokerpanelbrokercrm-sub">Manage your website leads</p>
         </div>
         <div className="brokerpanelbrokercrm-actions">
+          <button className="brokerpanelbrokercrm-btn" onClick={exportCsv}>Export Leads</button>
           <button className="brokerpanelbrokercrm-btn primary" onClick={openAdd}>+ Add Lead</button>
         </div>
       </div>
@@ -139,6 +159,7 @@ export default function BrokerPanelBrokercrm() {
                   <td>{l.property_interest || '-'}</td>
                   <td>{labelize(l.source)}</td>
                   <td>
+                    <button className="brokerpanelbrokercrm-link" onClick={() => openView(l)}>View</button>
                     <button className="brokerpanelbrokercrm-link" onClick={() => openEdit(l)}>Edit</button>
                   </td>
                 </tr>
@@ -223,6 +244,33 @@ export default function BrokerPanelBrokercrm() {
           </div>
         </div>
       )}
+
+      {showView && selected && (
+        <div className="brokerpanelbrokercrm-modal-overlay" onClick={() => setShowView(false)}>
+          <div className="brokerpanelbrokercrm-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="brokerpanelbrokercrm-modal-header">
+              <h3>Lead Details</h3>
+              <button className="brokerpanelbrokercrm-iconbtn" onClick={() => setShowView(false)} aria-label="Close">×</button>
+            </div>
+            <div className="brokerpanelbrokercrm-formgrid">
+              <div><strong>Name:</strong> {selected.full_name}</div>
+              <div><strong>Email:</strong> {selected.email}</div>
+              <div><strong>Phone:</strong> {selected.phone || '-'}</div>
+              <div><strong>City:</strong> {selected.city || '-'}</div>
+              <div><strong>Interest:</strong> {selected.property_interest || '-'}</div>
+              <div><strong>Source:</strong> {labelize(selected.source)}</div>
+              <div><strong>Status:</strong> {labelize(selected.status)}</div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <strong>Message:</strong>
+                <div style={{ marginTop: 6 }}>{selected.message || '-'}</div>
+              </div>
+            </div>
+            <div className="brokerpanelbrokercrm-modal-actions">
+              <button className="btn-dark" onClick={() => setShowView(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -239,5 +287,6 @@ function filterLeads(list, q, status) {
 
 function labelize(v) { if (!v) return '-'; return String(v).replace(/_/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase()); }
 function initials(name) { const parts = String(name || '').trim().split(/\s+/).slice(0, 2); return parts.map((p) => p[0]?.toUpperCase?.() || '').join('') || 'NA'; }
+function toCsv(v) { if (v.includes(',') || v.includes('\n') || v.includes('"')) { return `"${v.replace(/\"/g, '""')}"`; } return v; }
 
 

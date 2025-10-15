@@ -6,7 +6,7 @@ import axios from 'axios';
 export default function Dashboard() { 
   const superAdmin = useSuperAdmin();
   const [sys, setSys] = useState({ serverUptimePct: 99.9, dbPerformancePct: 95.5, apiResponseMs: 150, storageUsagePct: 60 });
-  const [counts, setCounts] = useState({ totalBrokers: 0 });
+  const [counts, setCounts] = useState({ totalBrokers: 0, totalLeads: 0 });
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -31,12 +31,32 @@ export default function Dashboard() {
         const { data: json } = await axios.get(`${superAdmin.apiBase}/api/broker/listbroker?limit=1`, {
           headers: { Authorization: `Bearer ${superAdmin.token}` },
         });
-        if (!cancelled) setCounts({ totalBrokers: json?.meta?.total ?? 0 });
+        if (!cancelled) setCounts((c) => ({ ...c, totalBrokers: json?.meta?.total ?? 0 }));
       } catch {
-        if (!cancelled) setCounts({ totalBrokers: 0 });
+        if (!cancelled) setCounts((c) => ({ ...c, totalBrokers: 0 }));
       }
     }
     if (superAdmin?.token) loadCount();
+    return () => { cancelled = true; };
+  }, [superAdmin?.token, superAdmin?.apiBase]);
+
+  // Load total leads count (admin + all brokers)
+  useEffect(() => {
+    let cancelled = false;
+    async function loadLeads() {
+      try {
+        const { data: json } = await axios.get(`${superAdmin.apiBase}/api/leads/admin/all-sources`, {
+          headers: { Authorization: `Bearer ${superAdmin.token}` },
+        });
+        if (!cancelled) {
+          const arr = Array.isArray(json?.data) ? json.data : [];
+          setCounts((c) => ({ ...c, totalLeads: arr.length }));
+        }
+      } catch {
+        if (!cancelled) setCounts((c) => ({ ...c, totalLeads: 0 }));
+      }
+    }
+    if (superAdmin?.token) loadLeads();
     return () => { cancelled = true; };
   }, [superAdmin?.token, superAdmin?.apiBase]);
   const data = [
@@ -124,9 +144,9 @@ export default function Dashboard() {
                   <path d="M7 6h10M7 10h8M7 6c0 4 4 4 4 4m0 0c3 0 5 2 5 4s-2 4-5 4H8" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>
                 </svg>
               </div>
-              <div className="superadmindashboard-card-title">Total Sales</div>
+              <div className="superadmindashboard-card-title">Total Leads</div>
             </div>
-            <div className="superadmindashboard-metric superadmindashboard-rupee">₹2,45,600</div>
+            <div className="superadmindashboard-metric">{(counts.totalLeads || 0).toLocaleString()}</div>
             <div className="superadmindashboard-delta superadmindashboard-delta-up">+23.1% from last month</div>
           </div>
         </section>
