@@ -62,25 +62,20 @@ export async function createBrokerDatabaseIfNotExists(dbName) {
         // Leads table
         `CREATE TABLE IF NOT EXISTS \`leads\` (
           id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-          name VARCHAR(255) NOT NULL,
-          email VARCHAR(255) NULL,
-          phone VARCHAR(50) NULL,
-          category_id BIGINT UNSIGNED NULL,
-          sub_category_id BIGINT UNSIGNED NULL,
-          status ENUM('new','contacted','qualified','won','lost') NOT NULL DEFAULT 'new',
-          source VARCHAR(100) NULL,
-          notes TEXT NULL,
-          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-          PRIMARY KEY (id),
-          KEY idx_leads_category_id (category_id),
-          KEY idx_leads_sub_category_id (sub_category_id),
-          CONSTRAINT fk_leads_category
-            FOREIGN KEY (category_id) REFERENCES \`categories\` (id)
-            ON DELETE SET NULL ON UPDATE CASCADE,
-          CONSTRAINT fk_leads_sub_category
-            FOREIGN KEY (sub_category_id) REFERENCES \`sub_categories\` (id)
-            ON DELETE SET NULL ON UPDATE CASCADE
+          full_name VARCHAR(255) NOT NULL,
+          email VARCHAR(255) NOT NULL,
+          phone VARCHAR(50) NOT NULL,
+          city VARCHAR(100) DEFAULT NULL,
+          property_interest VARCHAR(255) DEFAULT NULL,
+          source ENUM('website', 'call', 'social_media', 'referral') DEFAULT 'website',
+          status ENUM('new', 'contacted', 'qualified', 'proposal', 'closed', 'lost') DEFAULT 'new',
+          message TEXT DEFAULT NULL,
+          lead_source_type ENUM('main', 'broker') DEFAULT 'main',
+          broker_id BIGINT UNSIGNED DEFAULT NULL,
+          assigned_to VARCHAR(255) DEFAULT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          PRIMARY KEY (id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
       ];
 

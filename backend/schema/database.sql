@@ -76,6 +76,26 @@ CREATE TABLE IF NOT EXISTS users (
 
 
 -- =========================
+-- leads (global/admin scope)
+-- =========================
+CREATE TABLE IF NOT EXISTS leads (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  full_name VARCHAR(255) NOT NULL,
+  email VARCHAR(255) NOT NULL,
+  phone VARCHAR(50) NOT NULL,
+  city VARCHAR(100) DEFAULT NULL,
+  property_interest VARCHAR(255) DEFAULT NULL,
+  source ENUM('website', 'call', 'social_media', 'referral') DEFAULT 'website',
+  status ENUM('new', 'contacted', 'qualified', 'proposal', 'closed', 'lost') DEFAULT 'new',
+  message TEXT DEFAULT NULL,
+  assigned_to VARCHAR(255) DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id)
+);
+
+
+-- =========================
 -- super_admin_notifications
 -- =========================
 CREATE TABLE IF NOT EXISTS super_admin_notifications (

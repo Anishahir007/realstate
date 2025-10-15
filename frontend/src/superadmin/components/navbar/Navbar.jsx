@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { FiGrid, FiUsers, FiHome, FiGlobe, FiBarChart2, FiBell, FiSettings } from 'react-icons/fi';
+import { FiGrid, FiUsers, FiHome, FiGlobe, FiBarChart2, FiBell, FiSettings, FiClipboard } from 'react-icons/fi';
 import './navbar.css';
 import { useSuperAdmin } from '../../../context/SuperAdminContext.jsx';
 
@@ -32,6 +32,11 @@ export default function Navbar() {
         <NavLink to="/superadmin/brokers" className={({ isActive }) => `superadminnavbar-link${isActive ? ' superadminnavbar-link-active' : ''}`}>
           <span className="superadminnavbar-icon"><FiUsers /></span>
           <span>Brokers</span>
+        </NavLink>
+
+        <NavLink to="/superadmin/crm" className={({ isActive }) => `superadminnavbar-link${isActive ? ' superadminnavbar-link-active' : ''}`}>
+          <span className="superadminnavbar-icon"><FiClipboard /></span>
+          <span>CRM</span>
         </NavLink>
 
         <NavLink to="/superadmin/manage-property" className={({ isActive }) => `superadminnavbar-link${isActive ? ' superadminnavbar-link-active' : ''}`}>

@@ -9,6 +9,7 @@ import authRoutes from './routes/authRoutes.js';
 import brokerRoutes from './routes/brokerRoutes.js';
 import brokerUserRoutes from './routes/brokerUserRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
+import leadsRoutes from './routes/leadsRoutes.js';
 import systemRoutes from './routes/systemRoutes.js';
 import { recordResponseMs } from './utils/metrics.js';
 
@@ -52,6 +53,7 @@ app.use('/api/broker', brokerRoutes);
 app.use('/api/broker-users', brokerUserRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/system', systemRoutes);
+app.use('/api/leads', leadsRoutes);
 // Serve uploaded profile images
 app.use('/profiles', express.static('public/profiles'));  
 
