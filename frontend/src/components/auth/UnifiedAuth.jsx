@@ -52,8 +52,7 @@ function UnifiedAuthInner() {
   const apiBase =
     broker?.apiBase ||
     appUser?.apiBase ||
-    import.meta.env.VITE_API_BASE ||
-    "http://localhost:8000";
+    import.meta.env.VITE_API_BASE;
 
   const heading = useMemo(() => {
     const r = ROLE_OPTIONS.find((r) => r.value === role)?.label || "User";

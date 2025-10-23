@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const BrokerContext = createContext(null);
 const STORAGE_KEY = 'realestate_broker_auth';
-const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000';
+const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE;
 
 function readPersistedAuth() {
   try {

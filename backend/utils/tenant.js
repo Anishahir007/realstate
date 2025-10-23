@@ -63,6 +63,134 @@ export async function createBrokerDatabaseIfNotExists(dbName) {
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
           PRIMARY KEY (id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+        // Properties (core listing)
+        `CREATE TABLE IF NOT EXISTS \`properties\` (
+          id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+          user_id BIGINT UNSIGNED NOT NULL,
+          property_for ENUM('sell') DEFAULT 'sell',
+          building_type ENUM('residential', 'commercial') NOT NULL,
+          property_type ENUM('flat','independent_house','builder_floor','farm_house','residential_land','penthouse','studio_apartment','villa','commercial_shop','showroom','office_space','business_center','farm_agricultural_land','commercial_plot','industrial_land','guest_house','hotel_restaurant','warehouse_godown','factory') NOT NULL,
+          title VARCHAR(255) NOT NULL,
+          description TEXT NULL,
+          state VARCHAR(100) NOT NULL,
+          city VARCHAR(100) NOT NULL,
+          locality VARCHAR(255) NULL,
+          sub_locality VARCHAR(255) NULL,
+          society_name VARCHAR(255) NULL,
+          address TEXT NULL,
+          status ENUM('active','sold','inactive') DEFAULT 'active',
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          PRIMARY KEY (id),
+          KEY idx_properties_user_id (user_id),
+          KEY idx_properties_location (city, state),
+          KEY idx_properties_filters (status, property_for, building_type, property_type),
+          KEY idx_properties_created_at (created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+        // Property features (pricing/specs)
+        `CREATE TABLE IF NOT EXISTS \`property_features\` (
+          id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+          property_id BIGINT UNSIGNED NOT NULL,
+          built_up_area DECIMAL(10,2) NOT NULL,
+          area_unit VARCHAR(32) DEFAULT 'sqft',
+          carpet_area DECIMAL(10,2) NULL,
+          carpet_area_unit VARCHAR(32) DEFAULT NULL,
+          super_area DECIMAL(10,2) NULL,
+          super_area_unit VARCHAR(32) DEFAULT NULL,
+          expected_price DECIMAL(12,2) NOT NULL,
+          booking_amount DECIMAL(12,2) DEFAULT 0,
+          maintenance_charges DECIMAL(12,2) DEFAULT 0,
+          sale_type ENUM('resale','new_property') DEFAULT 'new_property',
+          no_of_floors INT DEFAULT 1,
+          availability ENUM('under_construction','ready_to_move','upcoming') DEFAULT 'ready_to_move',
+          possession_by VARCHAR(100) NULL,
+          property_on_floor VARCHAR(50) NULL,
+          furnishing_status ENUM('furnished','semi_furnished','unfurnished') DEFAULT 'unfurnished',
+          facing VARCHAR(50) NULL,
+          flooring_type VARCHAR(50) NULL,
+          age_years VARCHAR(50) NULL,
+          additional_rooms JSON NULL,
+          approving_authority VARCHAR(50) NULL,
+          ownership ENUM('freehold','leasehold','power_of_attorney','cooperative_society') DEFAULT 'freehold',
+          rera_status ENUM('registered','applied','not_applicable') DEFAULT 'not_applicable',
+          rera_number VARCHAR(100) NULL,
+          num_bedrooms DECIMAL(3,1) DEFAULT NULL,
+          num_bathrooms INT DEFAULT NULL,
+          num_balconies INT DEFAULT NULL,
+          PRIMARY KEY (id),
+          KEY idx_prop_features_prop_id (property_id),
+          KEY idx_prop_features_price (expected_price),
+          KEY idx_prop_features_area (built_up_area),
+          KEY idx_prop_features_filters (furnishing_status, availability),
+          UNIQUE KEY uq_prop_features_property_id (property_id),
+          CONSTRAINT fk_prop_features_property FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+        // Highlights (badges)
+        `CREATE TABLE IF NOT EXISTS \`property_highlights\` (
+          id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+          property_id BIGINT UNSIGNED NOT NULL,
+          highlights JSON NULL,
+          PRIMARY KEY (id),
+          KEY idx_prop_highlights_property (property_id),
+          UNIQUE KEY uq_prop_highlights_property_id (property_id),
+          CONSTRAINT fk_prop_highlights_property FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+        // Amenities (multi-select)
+        `CREATE TABLE IF NOT EXISTS \`property_amenities\` (
+          id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+          property_id BIGINT UNSIGNED NOT NULL,
+          amenities JSON NULL,
+          PRIMARY KEY (id),
+          KEY idx_prop_amenities_property (property_id),
+          UNIQUE KEY uq_prop_amenities_property_id (property_id),
+          CONSTRAINT fk_prop_amenities_property FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+        // Media (photos/videos by category)
+        `CREATE TABLE IF NOT EXISTS \`property_media\` (
+          id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+          property_id BIGINT UNSIGNED NOT NULL,
+          media_type ENUM('image','video') DEFAULT 'image',
+          file_url VARCHAR(500) NOT NULL,
+          category ENUM('exterior','bedroom','bathroom','kitchen','floor_plan','location_map','other') DEFAULT 'exterior',
+          is_primary TINYINT(1) NOT NULL DEFAULT 0,
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (id),
+          KEY idx_prop_media_property (property_id),
+          KEY idx_prop_media_category (category),
+          CONSTRAINT fk_prop_media_property FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+        // Nearby landmarks
+        `CREATE TABLE IF NOT EXISTS \`property_landmarks\` (
+          id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+          property_id BIGINT UNSIGNED NOT NULL,
+          nearby_landmarks JSON NULL,
+          PRIMARY KEY (id),
+          KEY idx_prop_landmarks_property (property_id),
+          UNIQUE KEY uq_prop_landmarks_property_id (property_id),
+          CONSTRAINT fk_prop_landmarks_property FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+        // Inquiries per property (contact requests)
+        `CREATE TABLE IF NOT EXISTS \`property_inquiries\` (
+          id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+          property_id BIGINT UNSIGNED NOT NULL,
+          full_name VARCHAR(255) NOT NULL,
+          email VARCHAR(255) NULL,
+          phone VARCHAR(50) NULL,
+          message TEXT NULL,
+          source ENUM('website','call','social_media','referral') DEFAULT 'website',
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (id),
+          KEY idx_prop_inquiries_property (property_id),
+          KEY idx_prop_inquiries_created (created_at),
+          CONSTRAINT fk_prop_inquiries_property FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
       ];
 

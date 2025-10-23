@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import pool from './config/database.js';
 import authRoutes from './routes/authRoutes.js';
 import brokerRoutes from './routes/brokerRoutes.js';
+import propertyRoutes from './routes/propertyRoutes.js';
 import brokerUserRoutes from './routes/brokerUserRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import leadsRoutes from './routes/leadsRoutes.js';
@@ -54,12 +55,14 @@ app.get('/health', async (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/broker', brokerRoutes);
+app.use('/api/properties', propertyRoutes);
 app.use('/api/broker-users', brokerUserRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api/leads', leadsRoutes);
-// Serve uploaded profile images
-app.use('/profiles', express.static('public/profiles'));  
+// Serve uploaded images
+app.use('/profiles', express.static('public/profiles'));
+app.use('/properties', express.static('public/properties'));  
 
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => {

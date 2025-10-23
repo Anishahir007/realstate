@@ -16,6 +16,8 @@ router.get('/mybroker', requireAuth, requireRole('broker'), getMyBrokerProfile);
 router.get('/getbroker/:id', requireAuth, requireRole('super_admin'), getBrokerById);
 router.put('/updatebroker/:id', requireAuth, requireRole('super_admin'), upload.single('photo', 'profiles'), updateBroker);
 
+// Removed property routes (moved to /api/properties)
+
 export default router;
 
 

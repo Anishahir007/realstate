@@ -2,7 +2,7 @@ import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
 
-const ALLOWED_FOLDERS = new Set(['profiles']);
+const ALLOWED_FOLDERS = new Set(['profiles', 'properties']);
 
 function ensureDir(dirPath) {
   if (!fs.existsSync(dirPath)) {

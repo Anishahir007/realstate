@@ -1,0 +1,258 @@
+.pl-wrap {
+  padding: 16px;
+}
+.pl-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.pl-search {
+  display: flex;
+  gap: 8px;
+}
+.pl-search input {
+  padding: 8px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  min-width: 260px;
+}
+.pl-search button {
+  padding: 8px 12px;
+  background: #111827;
+  color: white;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.pl-search button:hover {
+  background: #0b1220;
+}
+
+.pl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+.pl-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 2px 6px rgba(17, 24, 39, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pl-card-title {
+  font-weight: 700;
+  color: #0f172a;
+}
+.pl-card-sub {
+  font-size: 12px;
+  color: #64748b;
+}
+.pl-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pl-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 14px;
+  color: #111827;
+}
+.pl-row span {
+  color: #6b7280;
+}
+.pl-card-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.pl-card-actions button {
+  padding: 8px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f8fafc;
+  cursor: pointer;
+}
+.pl-card-actions button:hover {
+  background: #eef2f7;
+}
+
+.pl-muted {
+  color: #64748b;
+}
+.pl-error {
+  color: #ef4444;
+}
+
+/* Modal */
+.pl-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+  padding: 20px;
+}
+.pl-modal {
+  width: min(1100px, 96vw);
+  max-height: 90vh;
+  overflow: auto;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.25);
+}
+.pl-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+.pl-modal-title {
+  font-weight: 800;
+  font-size: 18px;
+  color: #0f172a;
+}
+.pl-close {
+  border: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #f3f4f6;
+  cursor: pointer;
+}
+.pl-close:hover {
+  background: #e5e7eb;
+}
+.pl-modal-sub {
+  padding: 10px 16px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.pl-detail-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 16px;
+  padding: 14px 16px 20px;
+}
+.pl-media-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 10px;
+}
+.pl-thumb {
+  width: 100%;
+  aspect-ratio: 4/3;
+  object-fit: cover;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  font-size: 12px;
+}
+.pl-thumb--primary {
+  outline: 2px solid #111827;
+}
+.pl-thumb--placeholder {
+  font-weight: 600;
+}
+
+.pl-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.pl-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pl-field--full {
+  grid-column: 1 / -1;
+}
+.pl-field label {
+  font-size: 12px;
+  color: #6b7280;
+}
+.pl-input {
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #f9fafb;
+  color: #111827;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+}
+.pl-input--textarea {
+  min-height: 80px;
+  align-items: flex-start;
+}
+
+.pl-chip-group {
+  grid-column: 1 / -1;
+  background: #f9fafb;
+  border: 1px dashed #e5e7eb;
+  border-radius: 10px;
+  padding: 10px;
+}
+.pl-chip-title {
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 8px;
+}
+.pl-chip-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pl-chip {
+  background: #0f172a;
+  color: white;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+}
+
+.pl-tags {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.pl-tag-group {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px;
+}
+.pl-tag-title {
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 8px;
+}
+.pl-tag-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pl-tag {
+  background: #111827;
+  color: white;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+}
