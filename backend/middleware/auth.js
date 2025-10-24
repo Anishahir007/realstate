@@ -2,7 +2,11 @@ import { verifyJwt } from '../utils/jwt.js';
 
 export function requireAuth(req, res, next) {
   const auth = req.headers.authorization || '';
-  const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+  let token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+  // Allow token via query param for preview links and simple GETs (dev convenience)
+  if (!token && req.query && req.query.token) {
+    token = String(req.query.token);
+  }
   if (!token) return res.status(401).json({ message: 'Unauthorized' });
   try {
     const payload = verifyJwt(token);

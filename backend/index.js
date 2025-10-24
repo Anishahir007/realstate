@@ -12,6 +12,7 @@ import brokerUserRoutes from './routes/brokerUserRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import leadsRoutes from './routes/leadsRoutes.js';
 import systemRoutes from './routes/systemRoutes.js';
+import templatesRoutes from './routes/templatesRoutes.js';
 import { recordResponseMs } from './utils/metrics.js';
 
 dotenv.config();
@@ -60,9 +61,11 @@ app.use('/api/broker-users', brokerUserRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api/leads', leadsRoutes);
+app.use('/api/templates', templatesRoutes);
 // Serve uploaded images
 app.use('/profiles', express.static('public/profiles'));
 app.use('/properties', express.static('public/properties'));  
+// Frontend renders templates now; no static template assets from backend
 
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => {
