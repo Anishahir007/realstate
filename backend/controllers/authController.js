@@ -91,6 +91,20 @@ export async function signupBroker(req, res) {
     console.log('[signupBroker] OTP verify result', verification);
     if (!verification.ok) return res.status(400).json({ message: 'OTP verification failed', reason: verification.reason });
     const meta = verification.meta || {};
+    // Merge fields from current request if meta is missing (handles cases where OTP was sent without full payload)
+    const merged = {
+      full_name: req.body?.full_name ?? meta.full_name,
+      email: req.body?.email ?? meta.email,
+      phone: req.body?.phone ?? meta.phone ?? verification.phone,
+      photo: req.body?.photo ?? meta.photo,
+      password: req.body?.password ?? meta.password,
+      license_no: req.body?.license_no ?? meta.license_no,
+      created_by_admin_id: req.body?.created_by_admin_id ?? meta.created_by_admin_id,
+    };
+    if (!isNonEmptyString(merged.full_name) || !validateEmail(merged.email) || !validatePassword(merged.password) || !isNonEmptyString(merged.phone)) {
+      const pwdErr = getPasswordValidationError(merged.password);
+      return res.status(400).json({ message: 'Invalid input', errors: { password: pwdErr || 'Invalid password', email: validateEmail(merged.email) ? undefined : 'Invalid email', full_name: isNonEmptyString(merged.full_name) ? undefined : 'Name is required', phone: isNonEmptyString(merged.phone) ? undefined : 'Phone is required' } });
+    }
 
     // Validate foreign key if provided
     let adminIdToUse = null;
@@ -102,15 +116,15 @@ export async function signupBroker(req, res) {
       adminIdToUse = meta.created_by_admin_id;
     }
 
-    const password_hash = await hashPassword(meta.password);
-    const safeName = sanitizeName(meta.full_name);
+    const password_hash = await hashPassword(merged.password);
+    const safeName = sanitizeName(merged.full_name);
     const tenant_db = toSafeDbName(`${safeName}_${Date.now()}`);
 
     await createBrokerDatabaseIfNotExists(tenant_db);
 
     const [result] = await pool.query(
       `INSERT INTO brokers (full_name, email, phone, photo, password_hash, license_no, tenant_db, created_by_admin_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [safeName, meta.email, meta.phone || null, meta.photo || null, password_hash, meta.license_no || null, tenant_db, adminIdToUse]
+      [safeName, merged.email, merged.phone || null, merged.photo || null, password_hash, merged.license_no || null, tenant_db, adminIdToUse]
     );
     const id = result.insertId;
     try {
@@ -123,7 +137,7 @@ export async function signupBroker(req, res) {
           `${safeName} has signed up as a broker`,
           id,
           safeName,
-          meta.email,
+          merged.email,
         ]
       );
     } catch (e) {

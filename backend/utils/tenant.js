@@ -6,9 +6,9 @@ const tenantPools = new Map();
 export async function createBrokerDatabaseIfNotExists(dbName) {
   if (!dbName) throw new Error('tenant dbName required');
   const rootPool = mysql.createPool({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
     waitForConnections: true,
     connectionLimit: 5,
     queueLimit: 0
@@ -19,9 +19,9 @@ export async function createBrokerDatabaseIfNotExists(dbName) {
     // Initialize tenant schema (idempotent)
     // Use a one-off pool to avoid interfering with cached pool lifecycle
     const tenantPool = mysql.createPool({
-      host: process.env.DB_HOST || 'localhost',
-      user: process.env.DB_USER || 'root',
-      password: process.env.DB_PASSWORD || '',
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
       database: dbName,
       waitForConnections: true,
       connectionLimit: 5,
@@ -221,9 +221,9 @@ export async function getTenantPool(dbName) {
     }
   }
   const pool = mysql.createPool({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
     database: dbName,
     waitForConnections: true,
     connectionLimit: 10,
