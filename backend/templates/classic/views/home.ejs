@@ -10,10 +10,10 @@
     <div class="classic-layout">
       <header class="classic-navbar">
         <div class="classic-navbar__brand">
-          <% if (site?.broker?.photo) { %>
-            <img class="classic-navbar__avatar" src="<%= site.broker.photo %>" alt="<%= site?.broker?.full_name || 'Broker' %>" />
+          <% if (site && site.broker && site.broker.photo) { %>
+            <img class="classic-navbar__avatar" src="<%= site.broker.photo %>" alt="<%= (site && site.broker && site.broker.full_name) || 'Broker' %>" />
           <% } %>
-          <span><%= site?.broker?.full_name || 'Broker' %></span>
+          <span><%= (site && site.broker && site.broker.full_name) || 'Broker' %></span>
         </div>
         <nav class="classic-navbar__nav">
           <a class="classic-navbar__link" href="<%= nav.home %>">Home</a>
@@ -24,7 +24,7 @@
       </header>
       <main class="classic-container container">
         <section class="hero card">
-          <h2 style="margin:0 0 8px">Welcome to <%= site?.broker?.full_name || 'our real estate' %></h2>
+          <h2 style="margin:0 0 8px">Welcome to <%= (site && site.broker && site.broker.full_name) || 'our real estate' %></h2>
           <p class="muted">Explore latest properties.</p>
         </section>
         <section>
@@ -46,7 +46,7 @@
         <div class="classic-footer__columns container">
           <div class="classic-footer__col">
             <h4 class="classic-footer__title">Contact</h4>
-            <% if (site?.broker?.email) { %>
+            <% if (site && site.broker && site.broker.email) { %>
               <p class="classic-footer__text">Email: <%= site.broker.email %></p>
             <% } %>
           </div>

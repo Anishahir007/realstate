@@ -19,7 +19,7 @@
       </header>
       <main class="classic-container container">
         <h2>About</h2>
-        <p class="muted">About <%= site?.broker?.full_name || 'Broker' %></p>
+        <p class="muted">About <%= (site && site.broker && site.broker.full_name) || 'Broker' %></p>
       </main>
       <footer class="classic-footer"><div class="classic-footer__columns container"><div>©</div></div></footer>
     </div>

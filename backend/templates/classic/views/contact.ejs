@@ -19,7 +19,7 @@
       </header>
       <main class="classic-container container">
         <h2>Contact</h2>
-        <% if (site?.broker?.email) { %>
+        <% if (site && site.broker && site.broker.email) { %>
           <p>Email: <%= site.broker.email %></p>
         <% } %>
       </main>
