@@ -69,6 +69,26 @@ app.use('/profiles', express.static('public/profiles'));
 app.use('/properties', express.static('public/properties'));  
 // Frontend renders templates now; no static template assets from backend
 
+// Resolve custom domain to SPA route: /site/:slug( + simple subpath)
+app.get('/resolve-host', (req, res) => {
+  try {
+    const host = (req.headers['x-forwarded-host'] || req.headers.host || '').toString().split(',')[0].trim();
+    const site = getSiteByDomain(host);
+    if (!site) return res.status(404).send('Site not found');
+    const raw = (req.query.path || '/').toString();
+    const pathname = raw.replace(/\/$/, '') || '/';
+    let sub = '';
+    if (pathname === '/' || pathname === '') sub = '';
+    else if (pathname === '/properties') sub = '/properties';
+    else if (pathname === '/about') sub = '/about';
+    else if (pathname === '/contact') sub = '/contact';
+    const target = `/site/${site.slug}${sub}`;
+    return res.redirect(302, target);
+  } catch {
+    return res.status(500).send('Server error');
+  }
+});
+
 // Custom-domain serving: map Host header to site and render template pages
 app.use(async (req, res, next) => {
   try {
