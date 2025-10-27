@@ -4,7 +4,8 @@ import { fileURLToPath } from 'url';
 import ejs from 'ejs';
 import { getTenantPool } from '../utils/tenant.js';
 import pool from '../config/database.js';
-import { generateSiteSlug, generateStableBrokerSlug, publishSite, listPublishedSitesForBroker, getSiteBySlug } from '../utils/sites.js';
+import { generateSiteSlug, generateStableBrokerSlug, publishSite, listPublishedSitesForBroker, getSiteBySlug, setCustomDomainForSite, getSiteByDomain, markDomainVerified } from '../utils/sites.js';
+import dns from 'dns/promises';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -222,6 +223,59 @@ export async function getSiteContext(req, res) {
       }
     } catch {}
     return res.json({ site: { broker, title: broker?.full_name ? `${broker.full_name} Real Estate` : 'Real Estate' }, properties });
+  } catch (err) {
+    const isProd = process.env.NODE_ENV === 'production';
+    return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
+  }
+}
+
+// ---- Custom domain management ----
+
+const TARGET_A = process.env.DOMAIN_TARGET_A || '72.61.136.84';
+
+function hostFromRequest(req) {
+  return (req.headers['x-forwarded-host'] || req.headers.host || '').toString().split(',')[0].trim();
+}
+
+async function isDomainPointingToTarget(domain) {
+  const candidates = [domain, domain.startsWith('www.') ? domain.slice(4) : `www.${domain}`];
+  for (const d of candidates) {
+    try {
+      const ips = await dns.resolve4(d);
+      if (ips && ips.includes(TARGET_A)) return true;
+    } catch {}
+  }
+  return false;
+}
+
+export async function connectCustomDomain(req, res) {
+  try {
+    if (!req.user || req.user.role !== 'broker') return res.status(403).json({ message: 'Forbidden' });
+    const slug = (req.body?.slug || '').toString();
+    const domain = (req.body?.domain || '').toString();
+    if (!slug) return res.status(400).json({ message: 'slug is required' });
+    if (!domain) return res.status(400).json({ message: 'domain is required' });
+    const site = getSiteBySlug(slug);
+    if (!site || String(site.brokerId) !== String(req.user.id)) return res.status(404).json({ message: 'Site not found' });
+    const updated = setCustomDomainForSite(slug, domain);
+    const instructions = `Set an A record for ${updated.customDomain} to ${TARGET_A}`;
+    return res.json({ data: { ...updated, instructions } });
+  } catch (err) {
+    const isProd = process.env.NODE_ENV === 'production';
+    return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
+  }
+}
+
+export async function checkCustomDomain(req, res) {
+  try {
+    const slug = (req.query?.slug || '').toString();
+    const site = getSiteBySlug(slug);
+    if (!site) return res.status(404).json({ message: 'Site not found' });
+    const domain = site.customDomain;
+    if (!domain) return res.json({ data: { connected: false, reason: 'No custom domain set' } });
+    const ok = await isDomainPointingToTarget(domain);
+    if (ok) markDomainVerified(slug);
+    return res.json({ data: { connected: ok, targetA: TARGET_A, domain } });
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';
     return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });

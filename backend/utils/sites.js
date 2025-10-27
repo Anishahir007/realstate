@@ -70,10 +70,25 @@ export function publishSite({ slug, brokerId, template, siteTitle }) {
   // Ensure only one active site per broker: remove any previous entries for this broker
   for (const key of Object.keys(map)) {
     if (String(map[key]?.brokerId) === String(brokerId)) {
+      // If we are replacing an existing site for the same broker, try to preserve custom domain
+      if (key !== slug && map[key]?.customDomain) {
+        map[slug] = map[slug] || {};
+        map[slug].customDomain = map[key].customDomain;
+        map[slug].domainVerifiedAt = map[key].domainVerifiedAt || null;
+      }
       delete map[key];
     }
   }
-  map[slug] = { slug, brokerId, template, siteTitle: siteTitle || null, createdAt: now, updatedAt: now };
+  map[slug] = {
+    slug,
+    brokerId,
+    template,
+    siteTitle: siteTitle || null,
+    createdAt: now,
+    updatedAt: now,
+    customDomain: map[slug]?.customDomain || null,
+    domainVerifiedAt: map[slug]?.domainVerifiedAt || null,
+  };
   saveSitesMap(map);
   return map[slug];
 }
@@ -81,6 +96,59 @@ export function publishSite({ slug, brokerId, template, siteTitle }) {
 export function listPublishedSitesForBroker(brokerId) {
   const map = loadSitesMap();
   return Object.values(map).filter((s) => String(s.brokerId) === String(brokerId));
+}
+
+
+// ---- Domain helpers ----
+
+function normalizeDomain(input) {
+  return String(input || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, '')
+    .replace(/\/$/, '');
+}
+
+export function setCustomDomainForSite(slug, domain) {
+  const map = loadSitesMap();
+  const normalized = normalizeDomain(domain);
+  if (!map[slug]) return null;
+  // Ensure the domain is unique by clearing it from any other site
+  for (const key of Object.keys(map)) {
+    if (key !== slug && map[key]?.customDomain === normalized) {
+      map[key].customDomain = null;
+      map[key].domainVerifiedAt = null;
+    }
+  }
+  map[slug].customDomain = normalized;
+  map[slug].updatedAt = new Date().toISOString();
+  saveSitesMap(map);
+  return map[slug];
+}
+
+export function getSiteByDomain(domain) {
+  const map = loadSitesMap();
+  const normalized = normalizeDomain(domain);
+  const withoutWww = normalized.replace(/^www\./, '');
+  const withWww = normalized.startsWith('www.') ? normalized : `www.${normalized}`;
+  for (const key of Object.keys(map)) {
+    const cd = normalizeDomain(map[key]?.customDomain || '');
+    if (!cd) continue;
+    const cdWithoutWww = cd.replace(/^www\./, '');
+    if (cd === normalized || cd === withoutWww || cd === withWww || cdWithoutWww === withoutWww) {
+      return map[key];
+    }
+  }
+  return null;
+}
+
+export function markDomainVerified(slug) {
+  const map = loadSitesMap();
+  if (!map[slug]) return null;
+  map[slug].domainVerifiedAt = new Date().toISOString();
+  map[slug].updatedAt = map[slug].domainVerifiedAt;
+  saveSitesMap(map);
+  return map[slug];
 }
 
 

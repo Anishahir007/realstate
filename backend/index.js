@@ -13,6 +13,8 @@ import notificationRoutes from './routes/notificationRoutes.js';
 import leadsRoutes from './routes/leadsRoutes.js';
 import systemRoutes from './routes/systemRoutes.js';
 import templatesRoutes from './routes/templatesRoutes.js';
+import { getSiteByDomain } from './utils/sites.js';
+import { serveSiteBySlug } from './controllers/templatesController.js';
 import { recordResponseMs } from './utils/metrics.js';
 
 dotenv.config();
@@ -66,6 +68,29 @@ app.use('/api/templates', templatesRoutes);
 app.use('/profiles', express.static('public/profiles'));
 app.use('/properties', express.static('public/properties'));  
 // Frontend renders templates now; no static template assets from backend
+
+// Custom-domain serving: map Host header to site and render template pages
+app.use(async (req, res, next) => {
+  try {
+    // Skip API and static asset routes
+    if (req.path.startsWith('/api') || req.path.startsWith('/profiles') || req.path.startsWith('/properties')) return next();
+    const host = (req.headers['x-forwarded-host'] || req.headers.host || '').toString().split(',')[0].trim();
+    if (!host) return next();
+    const site = getSiteByDomain(host);
+    if (!site) return next();
+    const pathname = (req.path || '/').replace(/\/$/, '') || '/';
+    let page = 'home';
+    if (pathname === '/' || pathname === '') page = 'home';
+    else if (pathname === '/properties') page = 'properties';
+    else if (pathname === '/about') page = 'about';
+    else if (pathname === '/contact') page = 'contact';
+    // Delegate rendering to existing site renderer
+    req.params = { slug: site.slug, page };
+    return serveSiteBySlug(req, res);
+  } catch {
+    return next();
+  }
+});
 
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => {
