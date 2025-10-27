@@ -10,6 +10,7 @@ export default function ClassicLayout({ children }) {
   let brokerPhoto = '';
   let brokerEmail = '';
   let brokerPhone = '';
+  
   try {
     const ctx = useOutletContext?.() || {};
     brokerName = ctx?.site?.broker?.full_name || '';
