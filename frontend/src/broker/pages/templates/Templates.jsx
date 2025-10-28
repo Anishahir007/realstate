@@ -19,7 +19,11 @@ export default function Templates() {
         const { data } = await axios.get(`${apiBase}/api/templates/list`, { headers: { Authorization: `Bearer ${token}` } });
         if (mounted) setItems(data?.data || []);
         const { data: my } = await axios.get(`${apiBase}/api/templates/my-sites`, { headers: { Authorization: `Bearer ${token}` } });
-        if (mounted) setSites(my?.data || []);
+        if (mounted) {
+          const list = my?.data || [];
+          setSites(list);
+          if (list[0]?.customDomain) setDomainInput(list[0].customDomain);
+        }
       } finally {
         if (mounted) setLoading(false);
       }
@@ -41,6 +45,7 @@ export default function Templates() {
       if (created) {
         // Replace any previous site entries for this broker (single active site)
         setSites([created]);
+        if (created.customDomain) setDomainInput(created.customDomain);
         setDomainStatus(null);
       }
     } finally {
@@ -55,7 +60,9 @@ export default function Templates() {
       const { data } = await axios.post(`${apiBase}/api/templates/connect-domain`, { slug: sites[0].slug, domain: domainInput }, { headers: { Authorization: `Bearer ${token}` } });
       // refresh my sites to include domain
       const { data: my } = await axios.get(`${apiBase}/api/templates/my-sites`, { headers: { Authorization: `Bearer ${token}` } });
-      setSites(my?.data || []);
+      const list = my?.data || [];
+      setSites(list);
+      if (list[0]?.customDomain) setDomainInput(list[0].customDomain);
       setDomainStatus({ message: 'Saved. Now set DNS A record and then Check Status.', ok: true });
     } catch (e) {
       setDomainStatus({ message: e?.response?.data?.message || 'Failed to save domain', ok: false });
@@ -73,7 +80,9 @@ export default function Templates() {
       setDomainStatus({ message: ok ? 'Connected' : 'Not connected yet', ok });
       // refresh list to update verification timestamp if any
       const { data: my } = await axios.get(`${apiBase}/api/templates/my-sites`, { headers: { Authorization: `Bearer ${token}` } });
-      setSites(my?.data || []);
+      const list = my?.data || [];
+      setSites(list);
+      if (list[0]?.customDomain) setDomainInput(list[0].customDomain);
     } finally {
       setDomainBusy(false);
     }
@@ -114,11 +123,12 @@ export default function Templates() {
           <div style={{ marginBottom: 8 }}>
             <input
               placeholder="yourdomain.com"
-              value={domainInput}
+              value={sites[0]?.customDomain || domainInput}
               onChange={(e) => setDomainInput(e.target.value)}
+              disabled={Boolean(sites[0]?.customDomain)}
               style={{ padding: 8, width: 320, marginRight: 8 }}
             />
-            <button disabled={domainBusy || !domainInput} onClick={connectDomain}>Connect Domain</button>
+            <button disabled={domainBusy || !domainInput || Boolean(sites[0]?.customDomain)} onClick={connectDomain}>Connect Domain</button>
             <button disabled={domainBusy || !sites[0]?.slug} onClick={checkDomain} style={{ marginLeft: 8 }}>Check Status</button>
           </div>
           <div style={{ background: '#fff7e6', padding: 8, borderRadius: 6, border: '1px solid #ffe58f', color: '#ad6800' }}>
