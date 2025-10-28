@@ -1,5 +1,6 @@
 import React from 'react';
 import { useOutletContext } from 'react-router-dom';
+import Hero from '../components/hero/Hero.jsx';
 
 export default function ProClassicHome({ site: siteProp, properties: propsProps }) {
   const ctx = useOutletContext?.() || {};
@@ -7,6 +8,7 @@ export default function ProClassicHome({ site: siteProp, properties: propsProps 
   const properties = propsProps || ctx.properties || [];
   return (
     <div>
+      <Hero />
       <h2 style={{ marginTop: 0 }}>Latest Properties</h2>
       {properties.length === 0 ? (<div>No properties yet.</div>) : (
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))', gap:16 }}>
