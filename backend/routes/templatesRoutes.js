@@ -17,6 +17,8 @@ router.post('/connect-domain', requireAuth, requireRole('broker'), connectCustom
 router.get('/check-domain', requireAuth, requireRole('broker'), checkCustomDomain);
 
 // Public EJS pages are handled at the app level (e.g., app.get('/site/:slug/:page?'))
+// This deprecated path exists only to avoid accidental handlerless routes in older deployments
+router.get('/site/:slug', (req, res) => res.status(410).send('Deprecated: use /site/:slug at app level'));
 
 export default router;
 
