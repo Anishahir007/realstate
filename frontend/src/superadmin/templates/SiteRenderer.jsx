@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Outlet, useParams } from 'react-router-dom';
+import { Outlet, Route, Routes, useParams } from 'react-router-dom';
 import axios from 'axios';
 import ClassicLayout from './classic/layout/ClassicLayout.jsx';
 import ProClassicLayout from './proclassic/layout/ProClassicLayout.jsx';
+import ViewProperty from './proclassic/pages/ViewProperty.jsx';
 
 // For now, always use classic. You can switch based on stored template.
 export default function SiteRenderer() {
@@ -35,7 +36,10 @@ export default function SiteRenderer() {
   // Render children via Outlet defined in App routes
   return (
     <Layout site={site} properties={properties}>
-      <Outlet context={{ site, properties, template: tpl }} />
+      <Routes>
+        <Route path="property/:id" element={<ViewProperty site={site} properties={properties} />} />
+        <Route path="*" element={<Outlet context={{ site, properties, template: tpl }} />} />
+      </Routes>
     </Layout>
   );
 }
