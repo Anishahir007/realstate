@@ -1,18 +1,21 @@
 import React from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation, useOutletContext } from 'react-router-dom';
 import './viewproperty.css';
 
-export default function ViewProperty({ site, properties }) {
+export default function ViewProperty(props) {
   const { id } = useParams();
   const nav = useNavigate();
-  let current = null;
-  if (Array.isArray(properties)) {
-    for (let i = 0; i < properties.length; i += 1) {
-      const p = properties[i];
-      if (String(p.id) === String(id)) {
-        current = p;
-        break;
-      }
+  const { state } = useLocation();
+  const ctx = useOutletContext?.() || {};
+  const list = Array.isArray(props?.properties)
+    ? props.properties
+    : (Array.isArray(ctx?.properties) ? ctx.properties : []);
+
+  let current = state?.property || null;
+  if (!current && list && list.length) {
+    for (let i = 0; i < list.length; i += 1) {
+      const p = list[i];
+      if (String(p?.id) === String(id)) { current = p; break; }
     }
   }
   if (!current) {
