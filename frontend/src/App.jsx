@@ -8,6 +8,10 @@ import SiteRenderer from './superadmin/templates/SiteRenderer.jsx';
 import DomainSiteRenderer from './superadmin/templates/DomainSiteRenderer.jsx';
 import ProClassicLayout from './superadmin/templates/proclassic/layout/ProClassicLayout.jsx';
 import ProClassicHome from './superadmin/templates/proclassic/pages/Home.jsx';
+import ProClassicProperties from './superadmin/templates/proclassic/pages/Properties.jsx';
+import ProClassicAbout from './superadmin/templates/proclassic/pages/About.jsx';
+import ProClassicContact from './superadmin/templates/proclassic/pages/Contact.jsx';
+import ProClassicPrivacy from './superadmin/templates/proclassic/pages/Privacy.jsx';
 import PreviewRenderer from './superadmin/templates/preview/PreviewRenderer.jsx';
 import ClassicHome from './superadmin/templates/classic/pages/home/Home.jsx';
 import ClassicProperties from './superadmin/templates/classic/pages/Properties.jsx';
@@ -23,9 +27,10 @@ export default function App() {
         {/* Clean custom-domain routes */}
         <Route path="/" element={<DomainSiteRenderer />}>
           <Route index element={<ProClassicHome />} />
-          <Route path="properties" element={<ClassicProperties />} />
-          <Route path="about" element={<ClassicAbout />} />
-          <Route path="contact" element={<ClassicContact />} />
+          <Route path="properties" element={<ProClassicProperties />} />
+          <Route path="about" element={<ProClassicAbout />} />
+          <Route path="contact" element={<ProClassicContact />} />
+          <Route path="privacy" element={<ProClassicPrivacy />} />
         </Route>
         {/* Published sites */}
         <Route path="/site/:slug" element={<SiteRenderer />}>
