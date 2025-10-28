@@ -185,10 +185,10 @@ export async function serveSiteBySlug(req, res) {
     let broker = { id: site.brokerId, full_name: site.siteTitle || 'Broker Site' };
     let properties = [];
     try {
-      const [rows] = await pool.query('SELECT id, full_name, email, tenant_db FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
+      const [rows] = await pool.query('SELECT id, full_name, email, phone, photo, tenant_db FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
       const row = rows?.[0];
       if (row) {
-        broker = { id: row.id, full_name: row.full_name || broker.full_name, email: row.email, tenant_db: row.tenant_db };
+        broker = { id: row.id, full_name: row.full_name || broker.full_name, email: row.email, phone: row.phone, photo: row.photo, tenant_db: row.tenant_db };
         if (row.tenant_db) {
           properties = await fetchBrokerAndProperties(row.tenant_db);
         }
@@ -213,10 +213,10 @@ export async function getSiteContext(req, res) {
     let broker = { id: site.brokerId, full_name: site.siteTitle || 'Broker Site' };
     let properties = [];
     try {
-      const [rows] = await pool.query('SELECT id, full_name, email, tenant_db FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
+      const [rows] = await pool.query('SELECT id, full_name, email, phone, photo, tenant_db FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
       const row = rows?.[0];
       if (row) {
-        broker = { id: row.id, full_name: row.full_name || broker.full_name, email: row.email, tenant_db: row.tenant_db };
+        broker = { id: row.id, full_name: row.full_name || broker.full_name, email: row.email, phone: row.phone, photo: row.photo, tenant_db: row.tenant_db };
         if (row.tenant_db) {
           properties = await fetchBrokerAndProperties(row.tenant_db);
         }
@@ -239,10 +239,10 @@ export async function getDomainSiteContext(req, res) {
     let broker = { id: site.brokerId, full_name: site.siteTitle || 'Broker Site' };
     let properties = [];
     try {
-      const [rows] = await pool.query('SELECT id, full_name, email, tenant_db FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
+      const [rows] = await pool.query('SELECT id, full_name, email, phone, photo, tenant_db FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
       const row = rows?.[0];
       if (row) {
-        broker = { id: row.id, full_name: row.full_name || broker.full_name, email: row.email, tenant_db: row.tenant_db };
+        broker = { id: row.id, full_name: row.full_name || broker.full_name, email: row.email, phone: row.phone, photo: row.photo, tenant_db: row.tenant_db };
         if (row.tenant_db) {
           properties = await fetchBrokerAndProperties(row.tenant_db);
         }
