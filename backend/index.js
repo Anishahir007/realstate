@@ -99,7 +99,7 @@ app.get('/site/:slug/:page', serveSiteBySlug);
 app.use(async (req, res, next) => {
   try {
     // Skip API and static asset routes
-    if (req.path.startsWith('/api') || req.path.startsWith('/profiles') || req.path.startsWith('/properties')) return next();
+    if (req.path.startsWith('/api') || req.path.startsWith('/profiles') || req.path.startsWith('/properties') || req.path.startsWith('/templates')) return next();
     const host = (req.headers['x-forwarded-host'] || req.headers.host || '').toString().split(',')[0].trim();
     if (!host) return next();
     const site = getSiteByDomain(host);
