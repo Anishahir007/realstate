@@ -46,6 +46,7 @@ function sanitizeSlugPart(value) {
     .replace(/-+/g, '-');
 }
 
+// Removed random slug generator usage for FE; keep util in case needed elsewhere.
 export function generateSiteSlug({ brokerName, brokerId }) {
   const namePart = sanitizeSlugPart(brokerName) || 'broker-site';
   const idPart = String(brokerId || '').replace(/[^0-9]/g, '').slice(-4) || Math.floor(Math.random() * 9000 + 1000);

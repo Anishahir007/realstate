@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import ejs from 'ejs';
 import { getTenantPool } from '../utils/tenant.js';
 import pool from '../config/database.js';
-import { generateSiteSlug, generateStableBrokerSlug, publishSite, listPublishedSitesForBroker, getSiteBySlug, setCustomDomainForSite, getSiteByDomain, markDomainVerified } from '../utils/sites.js';
+import { generateStableBrokerSlug, publishSite, listPublishedSitesForBroker, getSiteBySlug, setCustomDomainForSite, getSiteByDomain, markDomainVerified } from '../utils/sites.js';
 import dns from 'dns/promises';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -12,30 +12,6 @@ const __dirname = path.dirname(__filename);
 
 function getTemplatesRoot() {
   return path.resolve(__dirname, '..', 'templates');
-}
-
-function getFrontendTemplatesRoot() {
-  // Monorepo path: backend/controllers/ -> ../../frontend/src/superadmin/templates
-  return path.resolve(__dirname, '..', '..', 'frontend', 'src', 'superadmin', 'templates');
-}
-
-function listTemplatesFromFrontend() {
-  const root = getFrontendTemplatesRoot();
-  try {
-    if (!fs.existsSync(root)) return [];
-    const entries = fs.readdirSync(root, { withFileTypes: true });
-    return entries
-      .filter((d) => d.isDirectory())
-      .filter((d) => {
-        const name = d.name.toLowerCase();
-        if (name === 'preview') return false;
-        const layoutDir = path.join(root, d.name, 'layout');
-        try { return fs.existsSync(layoutDir) && fs.statSync(layoutDir).isDirectory(); } catch { return false; }
-      })
-      .map((d) => ({ name: d.name, label: d.name.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()), previewImage: '' }));
-  } catch {
-    return [];
-  }
 }
 
 function listTemplatesFromFs() {
@@ -49,12 +25,8 @@ function listTemplatesFromFs() {
 
 export async function listTemplates(req, res) {
   try {
-    // Prefer reading from frontend templates directory
-    let items = listTemplatesFromFrontend();
-    if (!items || items.length === 0) {
-      // Fallback to legacy backend templates folder (if any exists)
-      items = listTemplatesFromFs();
-    }
+    // Only read from backend templates folder (EJS)
+    const items = listTemplatesFromFs();
     return res.json({ data: items });
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';
@@ -125,22 +97,6 @@ export async function previewTemplate(req, res) {
   }
 }
 
-// JSON context for preview (frontend-rendered)
-export async function getPreviewContext(req, res) {
-  try {
-    const template = (req.params.template || '').toString();
-    const user = req.user || null;
-    const tenantDb = user?.tenant_db || '';
-    // basic broker object
-    const broker = user ? { id: user.id, full_name: user.name || user.full_name || 'Broker', email: user.email, tenant_db: user.tenant_db } : null;
-    const properties = tenantDb ? await fetchBrokerAndProperties(tenantDb) : [];
-    return res.json({ site: { title: broker?.full_name ? `${broker.full_name} Real Estate` : 'Real Estate', broker, template }, properties });
-  } catch (err) {
-    const isProd = process.env.NODE_ENV === 'production';
-    return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
-  }
-}
-
 export async function publishTemplateAsSite(req, res) {
   try {
     const template = (req.body?.template || '').toString();
@@ -201,57 +157,6 @@ export async function serveSiteBySlug(req, res) {
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';
     return res.status(500).send(isProd ? 'Server error' : String(err?.message || err));
-  }
-}
-
-// JSON context for frontend templates (broker + properties)
-export async function getSiteContext(req, res) {
-  try {
-    const slug = (req.params.slug || '').toString();
-    const site = getSiteBySlug(slug);
-    if (!site) return res.status(404).json({ message: 'Site not found' });
-    let broker = { id: site.brokerId, full_name: site.siteTitle || 'Broker Site' };
-    let properties = [];
-    try {
-      const [rows] = await pool.query('SELECT id, full_name, email, phone, photo, tenant_db FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
-      const row = rows?.[0];
-      if (row) {
-        broker = { id: row.id, full_name: row.full_name || broker.full_name, email: row.email, phone: row.phone, photo: row.photo, tenant_db: row.tenant_db };
-        if (row.tenant_db) {
-          properties = await fetchBrokerAndProperties(row.tenant_db);
-        }
-      }
-    } catch {}
-    return res.json({ site: { broker, title: broker?.full_name ? `${broker.full_name} Real Estate` : 'Real Estate' }, properties, template: site.template });
-  } catch (err) {
-    const isProd = process.env.NODE_ENV === 'production';
-    return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
-  }
-}
-
-// Site context by custom domain (Host header) for SPA clean URLs
-export async function getDomainSiteContext(req, res) {
-  try {
-    const override = (req.query.host || req.query.domain || req.headers['x-site-host'] || '').toString().split(',')[0].trim();
-    const host = (override || req.headers['x-forwarded-host'] || req.headers.host || '').toString().split(',')[0].trim();
-    const site = getSiteByDomain(host);
-    if (!site) return res.status(404).json({ message: 'Site not found' });
-    let broker = { id: site.brokerId, full_name: site.siteTitle || 'Broker Site' };
-    let properties = [];
-    try {
-      const [rows] = await pool.query('SELECT id, full_name, email, phone, photo, tenant_db FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
-      const row = rows?.[0];
-      if (row) {
-        broker = { id: row.id, full_name: row.full_name || broker.full_name, email: row.email, phone: row.phone, photo: row.photo, tenant_db: row.tenant_db };
-        if (row.tenant_db) {
-          properties = await fetchBrokerAndProperties(row.tenant_db);
-        }
-      }
-    } catch {}
-    return res.json({ site: { broker, title: broker?.full_name ? `${broker.full_name} Real Estate` : 'Real Estate' }, properties, slug: site.slug, template: site.template });
-  } catch (err) {
-    const isProd = process.env.NODE_ENV === 'production';
-    return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
   }
 }
 
