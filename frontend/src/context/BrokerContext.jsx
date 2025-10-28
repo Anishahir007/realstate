@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
+import { getApiBase } from '../utils/apiBase.js';
 
 const BrokerContext = createContext(null);
 const STORAGE_KEY = 'realestate_broker_auth';
@@ -25,7 +26,7 @@ function persistAuth(state) {
 
 export function BrokerProvider({ children }) {
   const [state, setState] = useState(() => readPersistedAuth());
-  const apiBase = DEFAULT_API_BASE;
+  const apiBase = useMemo(() => getApiBase(), []);
 
   useEffect(() => {
     persistAuth(state);

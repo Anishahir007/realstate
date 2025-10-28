@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { getApiBase } from '../../utils/apiBase.js';
 import { Outlet } from 'react-router-dom';
 import ClassicLayout from './classic/layout/ClassicLayout.jsx';
 
 export default function DomainSiteRenderer() {
   const [ctx, setCtx] = useState(null);
   const [loading, setLoading] = useState(true);
-  const apiBase = import.meta.env.VITE_API_BASE || '';
+  const apiBase = getApiBase();
 
   useEffect(() => {
     let mounted = true;
