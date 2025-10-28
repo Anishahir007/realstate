@@ -13,7 +13,11 @@ export default function DomainSiteRenderer() {
     let mounted = true;
     async function load() {
       try {
-        const { data } = await axios.get(`${apiBase}/api/templates/domain/context`);
+        const host = window.location.host;
+        const { data } = await axios.get(`${apiBase}/api/templates/domain/context`, {
+          headers: { 'x-site-host': host },
+          withCredentials: false,
+        });
         if (mounted) setCtx(data);
       } finally {
         if (mounted) setLoading(false);
