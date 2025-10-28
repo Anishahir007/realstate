@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet, Link, useParams, useOutletContext } from 'react-router-dom';
 import './proclassic.css';
-import { getApiBase } from '../../../utils/apiBase.js';
+import { getApiBase } from '../../../../utils/apiBase.js';
 
 export default function ProClassicLayout({ children, site: siteProp, properties: propertiesProp }) {
   const { slug = '' } = useParams();
