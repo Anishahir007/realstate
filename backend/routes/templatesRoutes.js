@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { listTemplates, previewTemplate, publishTemplateAsSite, listMySites, serveSiteBySlug, getSiteContext, getPreviewContext, connectCustomDomain, checkCustomDomain } from '../controllers/templatesController.js';
+import { listTemplates, previewTemplate, publishTemplateAsSite, listMySites, serveSiteBySlug, getSiteContext, getPreviewContext, connectCustomDomain, checkCustomDomain, getDomainSiteContext } from '../controllers/templatesController.js';
 
 const router = Router();
 
@@ -20,6 +20,7 @@ router.get('/check-domain', requireAuth, requireRole('broker'), checkCustomDomai
 
 // JSON for frontend
 router.get('/site/:slug/context', getSiteContext);
+router.get('/domain/context', getDomainSiteContext);
 
 export default router;
 

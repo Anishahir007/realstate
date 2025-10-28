@@ -5,6 +5,7 @@ import { BrokerRoutes } from './routes/brokerRoutes.jsx';
 import { UserRoutes } from './routes/userRoutes.jsx';
 import UnifiedAuth from './components/auth/UnifiedAuth.jsx';
 import SiteRenderer from './superadmin/templates/SiteRenderer.jsx';
+import DomainSiteRenderer from './superadmin/templates/DomainSiteRenderer.jsx';
 import PreviewRenderer from './superadmin/templates/preview/PreviewRenderer.jsx';
 import ClassicHome from './superadmin/templates/classic/pages/home/Home.jsx';
 import ClassicProperties from './superadmin/templates/classic/pages/Properties.jsx';
@@ -17,6 +18,13 @@ export default function App() {
       <Routes>
         
         {SuperAdminRoutes()}
+        {/* Clean custom-domain routes */}
+        <Route path="/" element={<DomainSiteRenderer />}>
+          <Route index element={<ClassicHome />} />
+          <Route path="properties" element={<ClassicProperties />} />
+          <Route path="about" element={<ClassicAbout />} />
+          <Route path="contact" element={<ClassicContact />} />
+        </Route>
         {/* Published sites */}
         <Route path="/site/:slug" element={<SiteRenderer />}>
           <Route index element={<ClassicHome />} />

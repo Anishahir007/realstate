@@ -229,6 +229,31 @@ export async function getSiteContext(req, res) {
   }
 }
 
+// Site context by custom domain (Host header) for SPA clean URLs
+export async function getDomainSiteContext(req, res) {
+  try {
+    const host = (req.headers['x-forwarded-host'] || req.headers.host || '').toString().split(',')[0].trim();
+    const site = getSiteByDomain(host);
+    if (!site) return res.status(404).json({ message: 'Site not found' });
+    let broker = { id: site.brokerId, full_name: site.siteTitle || 'Broker Site' };
+    let properties = [];
+    try {
+      const [rows] = await pool.query('SELECT id, full_name, email, tenant_db FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
+      const row = rows?.[0];
+      if (row) {
+        broker = { id: row.id, full_name: row.full_name || broker.full_name, email: row.email, tenant_db: row.tenant_db };
+        if (row.tenant_db) {
+          properties = await fetchBrokerAndProperties(row.tenant_db);
+        }
+      }
+    } catch {}
+    return res.json({ site: { broker, title: broker?.full_name ? `${broker.full_name} Real Estate` : 'Real Estate' }, properties, slug: site.slug, template: site.template });
+  } catch (err) {
+    const isProd = process.env.NODE_ENV === 'production';
+    return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
+  }
+}
+
 // ---- Custom domain management ----
 
 const TARGET_A = process.env.DOMAIN_TARGET_A || '72.61.136.84';
