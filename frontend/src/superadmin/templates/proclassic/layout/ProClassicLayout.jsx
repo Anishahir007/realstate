@@ -1,6 +1,7 @@
 import React from 'react';
 import { Outlet, Link, useParams, useOutletContext } from 'react-router-dom';
 import './proclassic.css';
+import Navbar from '../components/navbar/Navbar.jsx';
 import { getApiBase } from '../../../../utils/apiBase.js';
 
 export default function ProClassicLayout({ children, site: siteProp, properties: propertiesProp }) {
@@ -27,21 +28,7 @@ export default function ProClassicLayout({ children, site: siteProp, properties:
 
   return (
     <div className="proclassic-layout">
-      <header className="proclassic-navbar">
-        <div className="proclassic-brand">
-          {brokerPhoto ? (<img className="proclassic-avatar" src={brokerPhoto} alt={brokerName || 'Broker'} />) : null}
-          <div className="proclassic-brand-text">
-            <div className="proclassic-name">{brokerName}</div>
-            {brokerEmail ? <div className="proclassic-sub">{brokerEmail}</div> : null}
-          </div>
-        </div>
-        <nav className="proclassic-nav">
-          <Link to={`${base}`}>Home</Link>
-          <Link to={`${base}/properties`}>Properties</Link>
-          <Link to={`${base}/about`}>About</Link>
-          <Link to={`${base}/contact`}>Contact</Link>
-        </nav>
-      </header>
+      <Navbar site={siteProp} />
       <main className="proclassic-container">
         {children ? children : <Outlet />}
       </main>
