@@ -33,7 +33,7 @@ export default function DomainSiteRenderer() {
   const site = ctx.site;
   const properties = ctx.properties || [];
   return (
-    <ClassicLayout>
+    <ClassicLayout site={site} properties={properties}>
       <Outlet context={{ site, properties }} />
     </ClassicLayout>
   );

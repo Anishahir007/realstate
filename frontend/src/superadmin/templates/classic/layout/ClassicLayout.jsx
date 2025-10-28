@@ -3,7 +3,7 @@ import { Outlet, Link, useParams, useOutletContext } from 'react-router-dom';
 import './classic.css';
 import { getApiBase } from '../../../../utils/apiBase.js';
 
-export default function ClassicLayout({ children }) {
+export default function ClassicLayout({ children, site: siteProp, properties: propertiesProp }) {
   const { slug = '' } = useParams();
   const base = slug ? `/site/${slug}` : '';
   // Try to read site context from Outlet (SiteRenderer provides it)
@@ -14,10 +14,11 @@ export default function ClassicLayout({ children }) {
   
   try {
     const ctx = useOutletContext?.() || {};
-    brokerName = ctx?.site?.broker?.full_name || '';
-    brokerEmail = ctx?.site?.broker?.email || '';
-    brokerPhone = ctx?.site?.broker?.phone || '';
-    let photo = ctx?.site?.broker?.photo || '';
+    const site = siteProp || ctx?.site || {};
+    brokerName = site?.broker?.full_name || '';
+    brokerEmail = site?.broker?.email || '';
+    brokerPhone = site?.broker?.phone || '';
+    let photo = site?.broker?.photo || '';
     if (photo) {
       const isHttp = photo.startsWith('http://') || photo.startsWith('https://');
       const base = getApiBase();

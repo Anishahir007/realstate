@@ -35,7 +35,7 @@ export default function SiteRenderer() {
   const properties = ctx.properties || [];
   // Render children via Outlet defined in App routes
   return (
-    <ClassicLayout>
+    <ClassicLayout site={site} properties={properties}>
       <Outlet context={{ site, properties }} />
     </ClassicLayout>
   );
