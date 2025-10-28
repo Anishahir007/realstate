@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet, Link, useParams, useOutletContext } from 'react-router-dom';
 import './classic.css';
-import { getApiBase } from '../../../utils/apiBase.js';
+import { getApiBase } from '../../../../utils/apiBase.js';
 
 export default function ClassicLayout({ children }) {
   const { slug = '' } = useParams();
