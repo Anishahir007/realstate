@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: true,
-        allowedHosts: ['www.proker.xyz', 'proker.xyz', 'localhost', '127.0.0.1', '[::1]'],
+        allowedHosts: ['www.proker.xyz', 'proker.xyz'],
     port: 5173,
   },
   build: {
