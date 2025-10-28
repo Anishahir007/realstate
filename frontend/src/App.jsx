@@ -29,12 +29,12 @@ export default function App() {
           <Route path="contact" element={<ContactSwitch />} />
           <Route path="privacy" element={<ProClassicPrivacy />} />
         </Route>
-        {/* Published sites */}
+        {/* Published sites (slug) - dynamic pages by template */}
         <Route path="/site/:slug" element={<SiteRenderer />}>
-          <Route index element={<ClassicHome />} />
-          <Route path="properties" element={<ClassicProperties />} />
-          <Route path="about" element={<ClassicAbout />} />
-          <Route path="contact" element={<ClassicContact />} />
+          <Route index element={<HomeSwitch />} />
+          <Route path="properties" element={<PropertiesSwitch />} />
+          <Route path="about" element={<AboutSwitch />} />
+          <Route path="contact" element={<ContactSwitch />} />
         </Route>
         {/* Template preview (uses broker context JSON) */}
         <Route path="/site/preview/:template" element={<PreviewRenderer />} />
