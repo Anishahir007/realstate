@@ -67,14 +67,14 @@ export function getSiteBySlug(slug) {
 export function publishSite({ slug, brokerId, template, siteTitle }) {
   const map = loadSitesMap();
   const now = new Date().toISOString();
-  // Ensure only one active site per broker: remove any previous entries for this broker
+  // Ensure only one active site per broker: capture any previous domain then remove previous entries
+  let preservedDomain = null;
+  let preservedVerifiedAt = null;
   for (const key of Object.keys(map)) {
     if (String(map[key]?.brokerId) === String(brokerId)) {
-      // If we are replacing an existing site for the same broker, try to preserve custom domain
-      if (key !== slug && map[key]?.customDomain) {
-        map[slug] = map[slug] || {};
-        map[slug].customDomain = map[key].customDomain;
-        map[slug].domainVerifiedAt = map[key].domainVerifiedAt || null;
+      if (map[key]?.customDomain) {
+        preservedDomain = map[key].customDomain;
+        preservedVerifiedAt = map[key].domainVerifiedAt || null;
       }
       delete map[key];
     }
@@ -86,8 +86,8 @@ export function publishSite({ slug, brokerId, template, siteTitle }) {
     siteTitle: siteTitle || null,
     createdAt: now,
     updatedAt: now,
-    customDomain: map[slug]?.customDomain || null,
-    domainVerifiedAt: map[slug]?.domainVerifiedAt || null,
+    customDomain: preservedDomain,
+    domainVerifiedAt: preservedVerifiedAt,
   };
   saveSitesMap(map);
   return map[slug];
