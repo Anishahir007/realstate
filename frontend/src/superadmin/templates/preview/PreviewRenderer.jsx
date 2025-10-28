@@ -3,12 +3,15 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import ClassicLayout from '../classic/layout/ClassicLayout.jsx';
 import ClassicHome from '../classic/pages/Home.jsx';
+import ProClassicLayout from '../proclassic/layout/ProClassicLayout.jsx';
+import ProClassicHome from '../proclassic/pages/Home.jsx';
+import { getApiBase } from '../../../utils/apiBase.js';
 
 export default function PreviewRenderer() {
   const { template } = useParams();
   const [ctx, setCtx] = useState(null);
   const [loading, setLoading] = useState(true);
-  const apiBase = import.meta.env.VITE_API_BASE;
+  const apiBase = getApiBase();
 
   useEffect(() => {
     let mounted = true;
@@ -35,11 +38,13 @@ export default function PreviewRenderer() {
 
   const site = ctx.site || {};
   const properties = ctx.properties || [];
-  // For now, render classic preview; switch on `template` if multiple UIs are added
+  const tpl = (site?.template || template || 'proclassic').toLowerCase();
+  const Layout = tpl === 'classic' ? ClassicLayout : ProClassicLayout;
+  const Home = tpl === 'classic' ? ClassicHome : ProClassicHome;
   return (
-    <ClassicLayout>
-      <ClassicHome site={site} properties={properties} />
-    </ClassicLayout>
+    <Layout site={site} properties={properties}>
+      <Home site={site} properties={properties} />
+    </Layout>
   );
 }
 
