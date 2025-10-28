@@ -6,6 +6,8 @@ import { UserRoutes } from './routes/userRoutes.jsx';
 import UnifiedAuth from './components/auth/UnifiedAuth.jsx';
 import SiteRenderer from './superadmin/templates/SiteRenderer.jsx';
 import DomainSiteRenderer from './superadmin/templates/DomainSiteRenderer.jsx';
+import ProClassicLayout from './superadmin/templates/proclassic/layout/ProClassicLayout.jsx';
+import ProClassicHome from './superadmin/templates/proclassic/pages/Home.jsx';
 import PreviewRenderer from './superadmin/templates/preview/PreviewRenderer.jsx';
 import ClassicHome from './superadmin/templates/classic/pages/home/Home.jsx';
 import ClassicProperties from './superadmin/templates/classic/pages/Properties.jsx';
@@ -20,7 +22,7 @@ export default function App() {
         {SuperAdminRoutes()}
         {/* Clean custom-domain routes */}
         <Route path="/" element={<DomainSiteRenderer />}>
-          <Route index element={<ClassicHome />} />
+          <Route index element={<ProClassicHome />} />
           <Route path="properties" element={<ClassicProperties />} />
           <Route path="about" element={<ClassicAbout />} />
           <Route path="contact" element={<ClassicContact />} />

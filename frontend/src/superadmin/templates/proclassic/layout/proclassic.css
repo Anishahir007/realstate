@@ -1,0 +1,14 @@
+.proclassic-layout{min-height:100vh;display:flex;flex-direction:column;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#fafafa}
+.proclassic-container{max-width:1100px;margin:0 auto;padding:24px;flex:1}
+.proclassic-navbar{position:sticky;top:0;background:#fff;border-bottom:1px solid #eee;display:flex;align-items:center;justify-content:space-between;padding:12px 20px;z-index:10}
+.proclassic-brand{display:flex;align-items:center;gap:10px}
+.proclassic-avatar{width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid #ddd}
+.proclassic-brand-text{display:flex;flex-direction:column}
+.proclassic-name{font-weight:700}
+.proclassic-sub{font-size:12px;color:#666}
+.proclassic-nav{display:flex;gap:14px}
+.proclassic-nav a{text-decoration:none;color:#333}
+.proclassic-footer{background:#111;color:#eee;padding:24px}
+.proclassic-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;max-width:1100px;margin:0 auto}
+.proclassic-links{display:flex;flex-direction:column;gap:6px}
+

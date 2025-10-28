@@ -222,7 +222,7 @@ export async function getSiteContext(req, res) {
         }
       }
     } catch {}
-    return res.json({ site: { broker, title: broker?.full_name ? `${broker.full_name} Real Estate` : 'Real Estate' }, properties });
+    return res.json({ site: { broker, title: broker?.full_name ? `${broker.full_name} Real Estate` : 'Real Estate' }, properties, template: site.template });
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';
     return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
