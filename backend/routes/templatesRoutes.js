@@ -16,8 +16,7 @@ router.get('/my-sites', requireAuth, requireRole('broker'), listMySites);
 router.post('/connect-domain', requireAuth, requireRole('broker'), connectCustomDomain);
 router.get('/check-domain', requireAuth, requireRole('broker'), checkCustomDomain);
 
-// Public EJS site pages
-router.get('/site/:slug'); // placeholder, actual GET handled in main server (app.get('/site/:slug...'))
+// Public EJS pages are handled at the app level (e.g., app.get('/site/:slug/:page?'))
 
 export default router;
 
