@@ -1,6 +1,7 @@
 import React from 'react';
 import { Outlet, Link, useParams, useOutletContext } from 'react-router-dom';
 import './classic.css';
+import { getApiBase } from '../../../utils/apiBase.js';
 
 export default function ClassicLayout({ children }) {
   const { slug = '' } = useParams();
@@ -16,23 +17,11 @@ export default function ClassicLayout({ children }) {
     brokerName = ctx?.site?.broker?.full_name || '';
     brokerEmail = ctx?.site?.broker?.email || '';
     brokerPhone = ctx?.site?.broker?.phone || '';
-    let photo = ctx?.site?.broker?.photo;
-    // Fallback: read current broker from localStorage if available (preview case)
-    if (!brokerName || !photo) {
-      try {
-        const raw = localStorage.getItem('realestate_broker_auth');
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          brokerName = brokerName || parsed?.name || parsed?.profile?.full_name || '';
-          brokerEmail = brokerEmail || parsed?.email || parsed?.profile?.email || '';
-          brokerPhone = brokerPhone || parsed?.phone || parsed?.profile?.phone || '';
-          photo = photo || parsed?.photo || parsed?.profile?.photo || '';
-        }
-      } catch {}
-    }
+    let photo = ctx?.site?.broker?.photo || '';
     if (photo) {
       const isHttp = photo.startsWith('http://') || photo.startsWith('https://');
-      brokerPhoto = isHttp ? photo : `${import.meta.env.VITE_API_BASE || ''}${photo.startsWith('/') ? photo : `/${photo}`}`;
+      const base = getApiBase();
+      brokerPhoto = isHttp ? photo : `${base}${photo.startsWith('/') ? photo : `/${photo}`}`;
     }
   } catch {}
   return (
