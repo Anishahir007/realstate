@@ -1,6 +1,9 @@
-.pc-hero{margin-bottom:16px}
-.pc-hero-top{border-radius:14px;overflow:hidden;border:1px solid #e5e7eb}
-.pc-hero-slide img{width:100%;height:360px;object-fit:cover;display:block}
-.pc-hero-thumbs{margin-top:10px}
-.pc-hero-thumb img{width:100%;height:120px;object-fit:cover;border-radius:10px;border:1px solid #e5e7eb}
+.pc-hero{margin-bottom:16px;position:relative}
+.pc-hero-slide img{width:100%;height:420px;object-fit:cover;display:block;border-radius:14px;border:1px solid #e5e7eb}
+.pc-hero-arrow{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.9);border:1px solid #e5e7eb;color:#111;width:36px;height:36px;border-radius:999px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:5}
+.pc-hero-prev{left:10px}
+.pc-hero-next{right:10px}
+.slick-dots{bottom:-26px}
+.slick-dots li button:before{font-size:10px;color:#cbd5e1}
+.slick-dots li.slick-active button:before{color:#b7791f}
 
