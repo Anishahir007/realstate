@@ -14,7 +14,7 @@ import leadsRoutes from './routes/leadsRoutes.js';
 import systemRoutes from './routes/systemRoutes.js';
 import templatesRoutes from './routes/templatesRoutes.js';
 import { getSiteByDomain } from './utils/sites.js';
-import { serveSiteBySlug } from './controllers/templatesController.js';
+import { serveSiteBySlug, previewTemplate } from './controllers/templatesController.js';
 import { recordResponseMs } from './utils/metrics.js';
 
 dotenv.config();
@@ -69,7 +69,10 @@ app.use('/profiles', express.static('public/profiles'));
 app.use('/properties', express.static('public/properties'));  
 // Frontend renders templates now; no static template assets from backend
 
-// Resolve custom-domain root to SPA route /site/:slug (and simple pages)
+// Public preview of a backend EJS template (no auth)
+app.get('/site/preview/:template', previewTemplate);
+
+// Resolve custom-domain root to site pages
 app.get('/resolve-host', (req, res) => {
   try {
     const host = (req.headers['x-forwarded-host'] || req.headers.host || '').toString().split(',')[0].trim();
@@ -87,6 +90,9 @@ app.get('/resolve-host', (req, res) => {
     return res.status(500).send('Server error');
   }
 });
+
+// Site by slug pages
+app.get('/site/:slug/:page?', serveSiteBySlug);
 
 // Custom-domain serving: map Host header to site and render template pages
 app.use(async (req, res, next) => {
