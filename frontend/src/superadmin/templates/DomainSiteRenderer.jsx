@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { getApiBase } from '../../utils/apiBase.js';
 import { Outlet } from 'react-router-dom';
-import ClassicLayout from './classic/layout/ClassicLayout.jsx';
+import ProClassicLayout from './proclassic/layout/ProClassicLayout.jsx';
 
 export default function DomainSiteRenderer() {
   const [ctx, setCtx] = useState(null);
@@ -33,9 +33,9 @@ export default function DomainSiteRenderer() {
   const site = ctx.site;
   const properties = ctx.properties || [];
   return (
-    <ClassicLayout site={site} properties={properties}>
+    <ProClassicLayout site={site} properties={properties}>
       <Outlet context={{ site, properties }} />
-    </ClassicLayout>
+    </ProClassicLayout>
   );
 }
 
