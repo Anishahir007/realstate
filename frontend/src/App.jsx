@@ -26,7 +26,7 @@ export default function App() {
         {SuperAdminRoutes()}
         {/* Clean custom-domain routes (only on non-main hosts) */}
         {!isMainHost && (
-          <Route path="/" element={<DomainSiteRenderer />}>
+          <Route path="*" element={<DomainSiteRenderer />}>
             <Route index element={<HomeSwitch />} />
             <Route path="properties" element={<PropertiesSwitch />} />
             <Route path="about" element={<AboutSwitch />} />
@@ -36,7 +36,7 @@ export default function App() {
           </Route>
         )}
         {/* Published sites (slug) - dynamic pages by template */}
-        <Route path="/site/:slug" element={<SiteRenderer />}>
+        <Route path="/site/:slug/*" element={<SiteRenderer />}>
           <Route index element={<HomeSwitch />} />
           <Route path="properties" element={<PropertiesSwitch />} />
           <Route path="about" element={<AboutSwitch />} />

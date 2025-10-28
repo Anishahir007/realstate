@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Outlet, Route, Routes, useParams } from 'react-router-dom';
+import { Outlet, useParams } from 'react-router-dom';
 import axios from 'axios';
 import ClassicLayout from './classic/layout/ClassicLayout.jsx';
 import ProClassicLayout from './proclassic/layout/ProClassicLayout.jsx';
@@ -36,10 +36,7 @@ export default function SiteRenderer() {
   // Render children via Outlet defined in App routes
   return (
     <Layout site={site} properties={properties}>
-      <Routes>
-        <Route path="property/:id" element={<ViewProperty site={site} properties={properties} />} />
-        <Route path="*" element={<Outlet context={{ site, properties, template: tpl }} />} />
-      </Routes>
+      <Outlet context={{ site, properties, template: tpl }} />
     </Layout>
   );
 }

@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { getApiBase } from '../../utils/apiBase.js';
-import { Outlet, Route, Routes } from 'react-router-dom';
-import ViewProperty from './proclassic/pages/ViewProperty.jsx';
+import { Outlet } from 'react-router-dom';
 import ProClassicLayout from './proclassic/layout/ProClassicLayout.jsx';
 import ClassicLayout from './classic/layout/ClassicLayout.jsx';
 
@@ -38,10 +37,7 @@ export default function DomainSiteRenderer() {
   const Layout = tpl === 'classic' ? ClassicLayout : ProClassicLayout;
   return (
     <Layout site={site} properties={properties}>
-      <Routes>
-        <Route path="property/:id" element={<ViewProperty site={site} properties={properties} />} />
-        <Route path="*" element={<Outlet context={{ site, properties, template: tpl }} />} />
-      </Routes>
+      <Outlet context={{ site, properties, template: tpl }} />
     </Layout>
   );
 }
