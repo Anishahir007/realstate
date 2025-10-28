@@ -2,10 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Outlet, useParams } from 'react-router-dom';
 import axios from 'axios';
 import ClassicLayout from './classic/layout/ClassicLayout.jsx';
-import ClassicHome from './classic/pages/Home.jsx';
-import ClassicProperties from './classic/pages/Properties.jsx';
-import ClassicAbout from './classic/pages/About.jsx';
-import ClassicContact from './classic/pages/Contact.jsx';
+import ProClassicLayout from './proclassic/layout/ProClassicLayout.jsx';
 
 // For now, always use classic. You can switch based on stored template.
 export default function SiteRenderer() {
@@ -33,11 +30,13 @@ export default function SiteRenderer() {
 
   const site = ctx.site;
   const properties = ctx.properties || [];
+  const tpl = (ctx.template || site?.template || 'proclassic').toLowerCase();
+  const Layout = tpl === 'classic' ? ClassicLayout : ProClassicLayout;
   // Render children via Outlet defined in App routes
   return (
-    <ClassicLayout site={site} properties={properties}>
-      <Outlet context={{ site, properties }} />
-    </ClassicLayout>
+    <Layout site={site} properties={properties}>
+      <Outlet context={{ site, properties, template: tpl }} />
+    </Layout>
   );
 }
 
