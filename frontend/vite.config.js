@@ -9,4 +9,7 @@ export default defineConfig({
         allowedHosts: ['www.proker.xyz', 'proker.xyz', 'localhost', '127.0.0.1', '[::1]'],
     port: 5173,
   },
+  build: {
+    chunkSizeWarningLimit: 1200,
+  },
 })
