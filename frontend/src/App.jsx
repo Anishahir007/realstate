@@ -16,19 +16,23 @@ import ClassicAbout from './superadmin/templates/classic/pages/About.jsx';
 import ClassicContact from './superadmin/templates/classic/pages/Contact.jsx';
 
 export default function App() {
+  const host = typeof window !== 'undefined' ? window.location.host : '';
+  const isMainHost = /(^|\.)proker\.xyz$/i.test(host);
   return (
     <BrowserRouter>
       <Routes>
         
         {SuperAdminRoutes()}
-        {/* Clean custom-domain routes */}
-        <Route path="/" element={<DomainSiteRenderer />}>
-          <Route index element={<HomeSwitch />} />
-          <Route path="properties" element={<PropertiesSwitch />} />
-          <Route path="about" element={<AboutSwitch />} />
-          <Route path="contact" element={<ContactSwitch />} />
-          <Route path="privacy" element={<ProClassicPrivacy />} />
-        </Route>
+        {/* Clean custom-domain routes (only on non-main hosts) */}
+        {!isMainHost && (
+          <Route path="/" element={<DomainSiteRenderer />}>
+            <Route index element={<HomeSwitch />} />
+            <Route path="properties" element={<PropertiesSwitch />} />
+            <Route path="about" element={<AboutSwitch />} />
+            <Route path="contact" element={<ContactSwitch />} />
+            <Route path="privacy" element={<ProClassicPrivacy />} />
+          </Route>
+        )}
         {/* Published sites (slug) - dynamic pages by template */}
         <Route path="/site/:slug" element={<SiteRenderer />}>
           <Route index element={<HomeSwitch />} />
