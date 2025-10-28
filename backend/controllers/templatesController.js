@@ -232,7 +232,8 @@ export async function getSiteContext(req, res) {
 // Site context by custom domain (Host header) for SPA clean URLs
 export async function getDomainSiteContext(req, res) {
   try {
-    const host = (req.headers['x-forwarded-host'] || req.headers.host || '').toString().split(',')[0].trim();
+    const override = (req.query.host || req.query.domain || req.headers['x-site-host'] || '').toString().split(',')[0].trim();
+    const host = (override || req.headers['x-forwarded-host'] || req.headers.host || '').toString().split(',')[0].trim();
     const site = getSiteByDomain(host);
     if (!site) return res.status(404).json({ message: 'Site not found' });
     let broker = { id: site.brokerId, full_name: site.siteTitle || 'Broker Site' };
