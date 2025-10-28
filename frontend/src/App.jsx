@@ -8,6 +8,7 @@ import SiteRenderer from './superadmin/templates/SiteRenderer.jsx';
 import DomainSiteRenderer from './superadmin/templates/DomainSiteRenderer.jsx';
 import ProClassicLayout from './superadmin/templates/proclassic/layout/ProClassicLayout.jsx';
 import ProClassicPrivacy from './superadmin/templates/proclassic/pages/Privacy.jsx';
+import ViewProperty from './superadmin/templates/proclassic/pages/ViewProperty.jsx';
 import { HomeSwitch, PropertiesSwitch, AboutSwitch, ContactSwitch } from './superadmin/templates/SitePageSwitch.jsx';
 import PreviewRenderer from './superadmin/templates/preview/PreviewRenderer.jsx';
 import ClassicHome from './superadmin/templates/classic/pages/home/Home.jsx';
@@ -31,6 +32,7 @@ export default function App() {
             <Route path="about" element={<AboutSwitch />} />
             <Route path="contact" element={<ContactSwitch />} />
             <Route path="privacy" element={<ProClassicPrivacy />} />
+            <Route path="property/:id" element={<ViewProperty />} />
           </Route>
         )}
         {/* Published sites (slug) - dynamic pages by template */}
@@ -39,6 +41,7 @@ export default function App() {
           <Route path="properties" element={<PropertiesSwitch />} />
           <Route path="about" element={<AboutSwitch />} />
           <Route path="contact" element={<ContactSwitch />} />
+          <Route path="property/:id" element={<ViewProperty />} />
         </Route>
         {/* Template preview (uses broker context JSON) */}
         <Route path="/site/preview/:template" element={<PreviewRenderer />} />
