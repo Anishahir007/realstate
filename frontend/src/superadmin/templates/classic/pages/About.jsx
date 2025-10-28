@@ -7,7 +7,7 @@ export default function About({ site: siteProp }) {
   return (
     <div>
       <h1>About {site?.broker?.full_name || 'Us'}</h1>
-      <p>We help you buy properties, sell, and rent properties with ease.</p>
+      <p>We fkehf mbfjks dcnsdfj,m sdvmnddbfjd ceebfhe vhjebf vchewwf evbefe ewubfe vebv efubewf few help you buy properties, sell, and rent properties with ease.</p>
     </div>
   );
 }
