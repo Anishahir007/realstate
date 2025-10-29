@@ -91,9 +91,15 @@ app.get('/resolve-host', (req, res) => {
   }
 });
 
-// Site by slug pages (page can include multiple segments)
-app.get('/site/:slug', serveSiteBySlug);
-app.get('/site/:slug/:page*', serveSiteBySlug);
+// Site by slug pages (generic handler to support deep paths without path-to-regexp wildcards)
+app.use('/site/:slug', (req, res) => {
+  // When mounted via app.use, req.baseUrl is '/site/:slug', req.path is the remainder (e.g., '/', '/properties', '/x/y')
+  const remainder = (req.path || '/');
+  const cleaned = remainder.replace(/^\/+|\/+$/g, '');
+  const last = cleaned.split('/').filter(Boolean).pop() || '';
+  req.params.page = /^[a-z0-9-_]+$/i.test(last) ? last : 'home';
+  return serveSiteBySlug(req, res);
+});
 
 // Custom-domain serving: map Host header to site and render template pages
 app.use(async (req, res, next) => {
