@@ -52,7 +52,9 @@ function buildSiteContext({ broker, properties, page, nav }) {
     },
     page,
     properties: properties || [],
-    nav: nav || { home: '#', properties: '#', about: '#', contact: '#'}
+    nav: nav || { home: '#', properties: '#', about: '#', contact: '#'},
+    // urlFor is a dynamic link builder injected per request mode
+    urlFor: (p) => nav && nav[p] ? nav[p] : '#',
   };
 }
 
@@ -87,7 +89,7 @@ export async function previewTemplate(req, res) {
       broker = { id: req.user.id, full_name: req.user.name || req.user.full_name || 'Broker', email: req.user.email, tenant_db: req.user.tenant_db };
     }
     const properties = tenantDb ? await fetchBrokerAndProperties(tenantDb) : [];
-    const nav = { home: '?page=home', properties: '?page=properties', about: '?page=about', contact: '?page=contact' };
+    const nav = { home: '?page=home', properties: '?page=properties', about: '?page=about', contact: '?page=contact', privacy: '?page=privacy', terms: '?page=terms' };
     const context = buildSiteContext({ broker, properties, page: view, nav });
     const html = await ejs.renderFile(viewPath, context, { async: true, root: getTemplatesRoot() });
     return res.set('Content-Type', 'text/html').send(html);
@@ -156,7 +158,7 @@ export async function serveSiteBySlug(req, res) {
         }
       }
     } catch {}
-    const nav = { home: `/site/${slug}`, properties: `/site/${slug}/properties`, about: `/site/${slug}/about`, contact: `/site/${slug}/contact` };
+    const nav = { home: `/site/${slug}`, properties: `/site/${slug}/properties`, about: `/site/${slug}/about`, contact: `/site/${slug}/contact`, privacy: `/site/${slug}/privacy`, terms: `/site/${slug}/terms` };
     const context = buildSiteContext({ broker, properties, page: view, nav });
     const html = await ejs.renderFile(viewPath, context, { async: true, root: getTemplatesRoot() });
     return res.set('Content-Type', 'text/html').send(html);
