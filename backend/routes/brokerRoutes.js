@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { listBrokers, getMyBrokerProfile, getBrokerById, createBroker, updateBroker } from '../controllers/brokerController.js';
+import { listBrokers, getMyBrokerProfile, getBrokerById, createBroker, updateBroker, getBrokerMonthlyTrends, listBrokersWithStats } from '../controllers/brokerController.js';
 import { upload } from '../middleware/multer.js';
 
 const router = Router();
@@ -8,6 +8,8 @@ const router = Router();
 // Super Admin: list and create brokers (descriptive paths)
 router.get('/listbroker', requireAuth, requireRole('super_admin'), listBrokers);
 router.post('/createbroker', requireAuth, requireRole('super_admin'), upload.single('photo', 'profiles'), createBroker);
+router.get('/monthly-trends', requireAuth, requireRole('super_admin'), getBrokerMonthlyTrends);
+router.get('/listbroker-with-stats', requireAuth, requireRole('super_admin'), listBrokersWithStats);
 
 // Broker: my profile
 router.get('/mybroker', requireAuth, requireRole('broker'), getMyBrokerProfile);

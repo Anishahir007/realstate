@@ -1,7 +1,7 @@
 import pool from '../config/database.js';
 import { isNonEmptyString, sanitizeName, validateEmail, validatePassword } from '../utils/validation.js';
 import { hashPassword } from '../utils/hash.js';
-import { createBrokerDatabaseIfNotExists } from '../utils/tenant.js';
+import { createBrokerDatabaseIfNotExists, getTenantPool, ensureTenantLeadsTableExists } from '../utils/tenant.js';
 
 function mapBrokerRow(row) {
   const status = row.status || (row.last_login_at ? 'active' : 'pending');
@@ -12,9 +12,12 @@ function mapBrokerRow(row) {
     phone: row.phone,
     photo: row.photo,
     licenseNo: row.license_no,
+    location: row.location,
+    companyName: row.company_name,
     tenantDb: row.tenant_db,
     createdByAdminId: row.created_by_admin_id,
     lastLoginAt: row.last_login_at,
+    createdAt: row.created_at,
     status,
   };
 }
@@ -45,7 +48,7 @@ export async function listBrokers(req, res) {
     const where = whereClauses.length ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
     const [rows] = await pool.query(
-      `SELECT id, full_name, email, phone, photo, license_no, tenant_db, status, created_by_admin_id, last_login_at
+      `SELECT id, full_name, email, phone, photo, license_no, location, company_name, tenant_db, status, created_by_admin_id, last_login_at, created_at
        FROM brokers ${where} ORDER BY id DESC LIMIT ? OFFSET ?`,
       [...params, limit, offset]
     );
@@ -72,7 +75,7 @@ export async function getMyBrokerProfile(req, res) {
     if (!brokerId) return res.status(401).json({ message: 'Unauthorized' });
 
     const [rows] = await pool.query(
-      'SELECT id, full_name, email, phone, photo, license_no, tenant_db, status, created_by_admin_id, last_login_at FROM brokers WHERE id = ? LIMIT 1',
+      'SELECT id, full_name, email, phone, photo, license_no, location, company_name, tenant_db, status, created_by_admin_id, last_login_at, created_at FROM brokers WHERE id = ? LIMIT 1',
       [brokerId]
     );
     const row = rows[0];
@@ -90,7 +93,7 @@ export async function getBrokerById(req, res) {
     if (!id) return res.status(400).json({ message: 'Invalid id' });
 
     const [rows] = await pool.query(
-      'SELECT id, full_name, email, phone, photo, license_no, tenant_db, status, created_by_admin_id, last_login_at FROM brokers WHERE id = ? LIMIT 1',
+      'SELECT id, full_name, email, phone, photo, license_no, location, company_name, tenant_db, status, created_by_admin_id, last_login_at, created_at FROM brokers WHERE id = ? LIMIT 1',
       [id]
     );
     const row = rows[0];
@@ -104,7 +107,7 @@ export async function getBrokerById(req, res) {
 
 export async function createBroker(req, res) {
   try {
-    const { full_name, email, phone, password, license_no, status } = req.body || {};
+    const { full_name, email, phone, password, license_no, status, location, company_name } = req.body || {};
     if (!isNonEmptyString(full_name) || !validateEmail(email) || !validatePassword(password)) {
       return res.status(400).json({ message: 'Invalid input' });
     }
@@ -119,12 +122,12 @@ export async function createBroker(req, res) {
     const photoPath = req.file ? `/profiles/${req.file.originalname}` : null;
     const normalizedStatus = (status && ['active', 'suspended'].includes(String(status).toLowerCase())) ? String(status).toLowerCase() : undefined;
     const [result] = await pool.query(
-      `INSERT INTO brokers (full_name, email, phone, photo, password_hash, license_no, tenant_db, created_by_admin_id${normalizedStatus ? ', status' : ''}) VALUES (?, ?, ?, ?, ?, ?, ?, ?${normalizedStatus ? ', ?' : ''})`,
-      [safeName, email, phone || null, photoPath, password_hash, license_no || null, tenant_db, req.user?.id || null, ...(normalizedStatus ? [normalizedStatus] : [])]
+      `INSERT INTO brokers (full_name, email, phone, photo, password_hash, license_no, location, company_name, tenant_db, created_by_admin_id${normalizedStatus ? ', status' : ''}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?${normalizedStatus ? ', ?' : ''})`,
+      [safeName, email, phone || null, photoPath, password_hash, license_no || null, location || null, company_name || null, tenant_db, req.user?.id || null, ...(normalizedStatus ? [normalizedStatus] : [])]
     );
     const id = result.insertId;
     const [rows] = await pool.query(
-      'SELECT id, full_name, email, phone, photo, license_no, tenant_db, status, created_by_admin_id, last_login_at FROM brokers WHERE id = ? LIMIT 1',
+      'SELECT id, full_name, email, phone, photo, license_no, location, company_name, tenant_db, status, created_by_admin_id, last_login_at FROM brokers WHERE id = ? LIMIT 1',
       [id]
     );
     return res.status(201).json({ data: mapBrokerRow(rows[0]) });
@@ -139,7 +142,7 @@ export async function updateBroker(req, res) {
     const id = parseInt(req.params.id, 10);
     if (!id) return res.status(400).json({ message: 'Invalid id' });
 
-    const { full_name, email, phone, license_no, status } = req.body || {};
+    const { full_name, email, phone, license_no, status, location, company_name } = req.body || {};
     const updates = [];
     const params = [];
 
@@ -168,6 +171,14 @@ export async function updateBroker(req, res) {
       updates.push('license_no = ?');
       params.push(isNonEmptyString(license_no) ? license_no : null);
     }
+    if (location !== undefined) {
+      updates.push('location = ?');
+      params.push(isNonEmptyString(location) ? location : null);
+    }
+    if (company_name !== undefined) {
+      updates.push('company_name = ?');
+      params.push(isNonEmptyString(company_name) ? company_name : null);
+    }
     if (status !== undefined) {
       const normalized = String(status).toLowerCase();
       if (!['active', 'suspended'].includes(normalized)) {
@@ -185,7 +196,7 @@ export async function updateBroker(req, res) {
     await pool.query(`UPDATE brokers SET ${updates.join(', ')} WHERE id = ?`, params);
 
     const [rows] = await pool.query(
-      'SELECT id, full_name, email, phone, photo, license_no, tenant_db, created_by_admin_id, last_login_at FROM brokers WHERE id = ? LIMIT 1',
+      'SELECT id, full_name, email, phone, photo, license_no, location, company_name, tenant_db, created_by_admin_id, last_login_at FROM brokers WHERE id = ? LIMIT 1',
       [id]
     );
     if (!rows[0]) return res.status(404).json({ message: 'Not found' });
@@ -196,4 +207,110 @@ export async function updateBroker(req, res) {
   }
 }
 
+
+// Monthly broker trends: counts of active (by created_at) vs suspended (by updated_at) per month
+export async function getBrokerMonthlyTrends(req, res) {
+  try {
+    const year = parseInt(req.query.year, 10) || new Date().getFullYear();
+
+    // Active (onboarded) brokers per month based on created_at
+    const [activeRows] = await pool.query(
+      `SELECT MONTH(created_at) AS m, COUNT(*) AS c
+       FROM brokers
+       WHERE YEAR(created_at) = ? AND status = 'active'
+       GROUP BY MONTH(created_at)`,
+      [year]
+    );
+
+    // Suspended brokers per month based on updated_at (assumes status set that month)
+    const [suspendedRows] = await pool.query(
+      `SELECT MONTH(updated_at) AS m, COUNT(*) AS c
+       FROM brokers
+       WHERE YEAR(updated_at) = ? AND status = 'suspended'
+       GROUP BY MONTH(updated_at)`,
+      [year]
+    );
+
+    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sept','Oct','Nov','Dec'];
+    const activeMap = Object.fromEntries(activeRows.map(r => [r.m, r.c]));
+    const suspendedMap = Object.fromEntries(suspendedRows.map(r => [r.m, r.c]));
+    const data = monthNames.map((label, idx) => {
+      const monthIndex = idx + 1; // 1-12
+      return {
+        month: label,
+        active: Number(activeMap[monthIndex] || 0),
+        suspended: Number(suspendedMap[monthIndex] || 0),
+      };
+    });
+
+    return res.json({ data, meta: { year } });
+  } catch (err) {
+    const isProd = process.env.NODE_ENV === 'production';
+    return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
+  }
+}
+
+
+// Super Admin: List brokers with per-tenant metrics (propertiesCount, leadsCount)
+export async function listBrokersWithStats(req, res) {
+  try {
+    const q = (req.query.q || '').toString().trim();
+    const status = (req.query.status || '').toString().trim().toLowerCase();
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+    const offset = (page - 1) * limit;
+
+    const whereClauses = [];
+    const params = [];
+    if (q) {
+      whereClauses.push('(full_name LIKE ? OR email LIKE ? OR phone LIKE ?)');
+      params.push(`%${q}%`, `%${q}%`, `%${q}%`);
+    }
+    if (status) {
+      if (status === 'active' || status === 'suspended') {
+        whereClauses.push('status = ?');
+        params.push(status);
+      } else if (status === 'pending') {
+        whereClauses.push('last_login_at IS NULL');
+      }
+    }
+    const where = whereClauses.length ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+    const [rows] = await pool.query(
+      `SELECT id, full_name, email, phone, photo, license_no, location, company_name, tenant_db, status, created_by_admin_id, last_login_at
+       FROM brokers ${where} ORDER BY id DESC LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
+    const [countRows] = await pool.query(
+      `SELECT COUNT(*) as total FROM brokers ${where}`,
+      params
+    );
+
+    // For each broker, fetch counts from their tenant DB (if available)
+    const data = [];
+    for (const r of rows) {
+      let propertiesCount = 0;
+      let leadsCount = 0;
+      if (r.tenant_db) {
+        try {
+          const tenantPool = await getTenantPool(r.tenant_db);
+          const [[p]] = await tenantPool.query('SELECT COUNT(*) AS c FROM properties');
+          propertiesCount = Number(p?.c || 0);
+          await ensureTenantLeadsTableExists(tenantPool);
+          const [[l]] = await tenantPool.query('SELECT COUNT(*) AS c FROM leads');
+          leadsCount = Number(l?.c || 0);
+        } catch (e) {
+          // ignore isolated tenant errors; keep counts as 0
+        }
+      }
+      const mapped = mapBrokerRow(r);
+      data.push({ ...mapped, propertiesCount, leadsCount });
+    }
+
+    return res.json({ data, meta: { page, limit, total: countRows[0]?.total || 0 } });
+  } catch (err) {
+    const isProd = process.env.NODE_ENV === 'production';
+    return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
+  }
+}
 

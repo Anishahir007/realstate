@@ -1,3 +1,4 @@
+import pool from '../config/database.js';
 import { getTenantPool } from '../utils/tenant.js';
 
 function getTenantDb(req) {
@@ -402,5 +403,98 @@ export async function deleteProperty(req, res) {
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';
     return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
+  }
+}
+
+// ========== Super Admin: cross-tenant property listing ==========
+export async function listAllBrokerPropertiesAdmin(req, res) {
+  try {
+    const [brokers] = await pool.query('SELECT id, full_name, tenant_db FROM brokers WHERE tenant_db IS NOT NULL');
+    const out = [];
+    for (const br of brokers) {
+      try {
+        const tenantPool = await getTenantPool(br.tenant_db);
+        const [rows] = await tenantPool.query(
+          `SELECT p.id, p.title, p.city, p.state, p.locality, p.sub_locality, p.address, p.property_type, p.building_type, p.status, p.created_at,
+                  pf.expected_price, pf.built_up_area, pf.area_unit, pf.num_bedrooms, pf.num_bathrooms
+           FROM properties p
+           LEFT JOIN property_features pf ON pf.property_id = p.id
+           ORDER BY p.id DESC`
+        );
+        for (const r of rows) {
+          // fetch first/primary image
+          let image = null;
+          try {
+            const [m] = await tenantPool.query('SELECT file_url FROM property_media WHERE property_id = ? ORDER BY is_primary DESC, id ASC LIMIT 1', [r.id]);
+            image = m?.[0]?.file_url || null;
+          } catch {}
+          out.push({
+            id: r.id,
+            tenantDb: br.tenant_db,
+            brokerId: br.id,
+            brokerName: br.full_name,
+            title: r.title,
+            type: r.property_type,
+            buildingType: r.building_type,
+            price: r.expected_price,
+            area: r.built_up_area,
+            areaUnit: r.area_unit,
+            bedrooms: r.num_bedrooms,
+            bathrooms: r.num_bathrooms,
+            city: r.city,
+            state: r.state,
+            locality: r.locality,
+            subLocality: r.sub_locality,
+            address: r.address,
+            image,
+            status: 'published',
+            createdAt: r.created_at,
+          });
+        }
+      } catch (e) {
+        // ignore tenant failures
+      }
+    }
+    return res.json({ data: out });
+  } catch (err) {
+    return res.status(500).json({ message: 'Server error' });
+  }
+}
+
+export async function getBrokerPropertyAdmin(req, res) {
+  try {
+    const brokerId = parseInt(req.params.brokerId, 10);
+    const id = parseInt(req.params.id, 10);
+    if (!brokerId || !id) return res.status(400).json({ message: 'Invalid id' });
+    const [rows] = await pool.query('SELECT tenant_db, full_name FROM brokers WHERE id = ? LIMIT 1', [brokerId]);
+    const br = rows?.[0];
+    if (!br?.tenant_db) return res.status(404).json({ message: 'Broker or tenant not found' });
+    const tenantPool = await getTenantPool(br.tenant_db);
+    const [propRows] = await tenantPool.query('SELECT * FROM properties WHERE id = ? LIMIT 1', [id]);
+    const p = propRows?.[0];
+    if (!p) return res.status(404).json({ message: 'Not found' });
+    let features = [];
+    let media = [];
+    let highlights = [];
+    let amenities = [];
+    let landmarks = [];
+    try { const [r] = await tenantPool.query('SELECT * FROM property_features WHERE property_id = ? LIMIT 1', [id]); features = r; } catch {}
+    try { const [r] = await tenantPool.query('SELECT * FROM property_media WHERE property_id = ? ORDER BY is_primary DESC, id', [id]); media = r; } catch {}
+    try { const [r] = await tenantPool.query('SELECT * FROM property_highlights WHERE property_id = ? LIMIT 1', [id]); highlights = r; } catch {}
+    try { const [r] = await tenantPool.query('SELECT * FROM property_amenities WHERE property_id = ? LIMIT 1', [id]); amenities = r; } catch {}
+    try { const [r] = await tenantPool.query('SELECT * FROM property_landmarks WHERE property_id = ? LIMIT 1', [id]); landmarks = r; } catch {}
+    return res.json({
+      data: {
+        ...p,
+        features: features?.[0] || null,
+        media,
+        highlights: highlights?.[0]?.highlights || [],
+        amenities: amenities?.[0]?.amenities || [],
+        nearby_landmarks: landmarks?.[0]?.nearby_landmarks || [],
+        brokerName: br.full_name,
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ message: 'Server error' });
   }
 }

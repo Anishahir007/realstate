@@ -116,6 +116,34 @@
   border-radius: 14px;
   padding: 14px;
 }
+
+/* Trend card header */
+.trend-card { padding: 16px; }
+.trend-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.trend-title { margin: 0; font-size: 28px; }
+.trend-sub { color: #6b7280; font-size: 16px; }
+.trend-legend { display: flex; gap: 18px; color: #475569; font-size: 14px; }
+.trend-legend-item { display: inline-flex; align-items: center; gap: 8px; }
+.trend-swatch { width: 22px; height: 3px; border-radius: 9999px; display: inline-block; }
+.trend-swatch-blue { background: #2563eb; }
+.trend-swatch-red { background: #ef4444; }
+
+/* Trend chart layout */
+.trend-chart { display: grid; grid-template-columns: 1fr; gap: 10px; }
+.trend-ylabels { display: none; }
+.trend-plot { position: relative; }
+.trend-svg { width: 100%; height: 260px; display: block; background: #fff; border-radius: 10px; }
+.trend-grid line { shape-rendering: crispEdges; }
+.trend-line { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.trend-blue { stroke: #2563eb; }
+.trend-red { stroke: #ef4444; }
+.trend-xlabels { display: none; }
 .superadmindashboard-panel-head {
   display: flex;
   flex-direction: column;
@@ -197,6 +225,55 @@
   font-size: 12px;
   color: #64748b;
 }
+
+/* Line chart */
+.superadmindashboard-line-svg {
+  width: 100%;
+  height: 240px;
+  display: block;
+}
+.superadmindashboard-line-a {
+  stroke: #2563eb;
+  fill: none;
+  stroke-width: 2.5;
+}
+.superadmindashboard-line-b {
+  stroke: #ef4444;
+  fill: none;
+  stroke-width: 2.5;
+}
+.superadmindashboard-legend-inline {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  color: #475569;
+  font-size: 14px;
+  margin-top: 8px;
+}
+.superadmindashboard-legend-inline .legend-a::before,
+.superadmindashboard-legend-inline .legend-b::before {
+  content: "";
+  display: inline-block;
+  width: 20px;
+  height: 3px;
+  border-radius: 9999px;
+  margin-right: 8px;
+}
+.superadmindashboard-legend-inline .legend-a::before {
+  background: #2563eb;
+}
+.superadmindashboard-legend-inline .legend-b::before {
+  background: #ef4444;
+}
+.superadmindashboard-xlabels {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  margin-top: 8px;
+  color: #64748b;
+  font-size: 12px;
+  padding: 0 6px;
+}
+.superadmindashboard-xlabels span { text-align: center; }
 
 /* Pie */
 .superadmindashboard-piewrap {

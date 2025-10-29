@@ -67,7 +67,7 @@ export async function loginSuperAdmin(req, res) {
 
 export async function signupBroker(req, res) {
   try {
-    const { full_name, email, phone, photo, password, license_no, created_by_admin_id, otpId, otpCode } = req.body || {};
+    const { full_name, email, phone, photo, password, license_no, location, company_name, created_by_admin_id, otpId, otpCode } = req.body || {};
     if (!isNonEmptyString(full_name) || !validateEmail(email) || !validatePassword(password) || !isNonEmptyString(phone)) {
       const pwdErr = getPasswordValidationError(password);
       return res.status(400).json({ message: 'Invalid input', errors: { password: pwdErr || 'Invalid password', email: validateEmail(email) ? undefined : 'Invalid email', full_name: isNonEmptyString(full_name) ? undefined : 'Name is required', phone: isNonEmptyString(phone) ? undefined : 'Phone is required' } });
@@ -81,7 +81,7 @@ export async function signupBroker(req, res) {
       const { otpId: createdOtpId } = await sendSignupOtp({
         phone,
         purpose: 'broker_signup',
-        meta: { full_name, email, phone, photo: photo || null, password, license_no, created_by_admin_id: created_by_admin_id ?? null },
+        meta: { full_name, email, phone, photo: photo || null, password, license_no, location: location || null, company_name: company_name || null, created_by_admin_id: created_by_admin_id ?? null },
       });
       return res.status(202).json({ otpId: createdOtpId, message: 'OTP sent to phone' });
     }
@@ -99,6 +99,8 @@ export async function signupBroker(req, res) {
       photo: req.body?.photo ?? meta.photo,
       password: req.body?.password ?? meta.password,
       license_no: req.body?.license_no ?? meta.license_no,
+      location: req.body?.location ?? meta.location,
+      company_name: req.body?.company_name ?? meta.company_name,
       created_by_admin_id: req.body?.created_by_admin_id ?? meta.created_by_admin_id,
     };
     if (!isNonEmptyString(merged.full_name) || !validateEmail(merged.email) || !validatePassword(merged.password) || !isNonEmptyString(merged.phone)) {
@@ -123,8 +125,8 @@ export async function signupBroker(req, res) {
     await createBrokerDatabaseIfNotExists(tenant_db);
 
     const [result] = await pool.query(
-      `INSERT INTO brokers (full_name, email, phone, photo, password_hash, license_no, tenant_db, created_by_admin_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [safeName, merged.email, merged.phone || null, merged.photo || null, password_hash, merged.license_no || null, tenant_db, adminIdToUse]
+      `INSERT INTO brokers (full_name, email, phone, photo, password_hash, license_no, location, company_name, tenant_db, created_by_admin_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [safeName, merged.email, merged.phone || null, merged.photo || null, password_hash, merged.license_no || null, merged.location || null, merged.company_name || null, tenant_db, adminIdToUse]
     );
     const id = result.insertId;
     try {
@@ -155,7 +157,7 @@ export async function signupBroker(req, res) {
 export async function createBrokerByAdmin(req, res) {
   try {
     // Only for super admin via auth middleware
-    const { full_name, email, phone, photo, password, license_no } = req.body || {};
+    const { full_name, email, phone, photo, password, license_no, location, company_name } = req.body || {};
     if (!isNonEmptyString(full_name) || !validateEmail(email) || !validatePassword(password)) {
       const pwdErr = getPasswordValidationError(password);
       return res.status(400).json({ message: 'Invalid input', errors: { password: pwdErr || 'Invalid password', email: validateEmail(email) ? undefined : 'Invalid email', full_name: isNonEmptyString(full_name) ? undefined : 'Name is required' } });
@@ -170,8 +172,8 @@ export async function createBrokerByAdmin(req, res) {
     await createBrokerDatabaseIfNotExists(tenant_db);
 
     const [result] = await pool.query(
-      `INSERT INTO brokers (full_name, email, phone, photo, password_hash, license_no, tenant_db, created_by_admin_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [safeName, email, phone || null, photo || null, password_hash, license_no || null, tenant_db, req.user?.id || null]
+      `INSERT INTO brokers (full_name, email, phone, photo, password_hash, license_no, location, company_name, tenant_db, created_by_admin_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [safeName, email, phone || null, photo || null, password_hash, license_no || null, location || null, company_name || null, tenant_db, req.user?.id || null]
     );
     const id = result.insertId;
     return res.status(201).json({ id, tenant_db });
@@ -292,7 +294,7 @@ export async function whoami(req, res) {
 
     if (role === 'broker') {
       const [rows] = await pool.query(
-        'SELECT id, full_name, email, phone, photo, license_no, tenant_db, created_by_admin_id, last_login_at FROM brokers WHERE id = ? LIMIT 1',
+        'SELECT id, full_name, email, phone, photo, license_no, location, company_name, tenant_db, created_by_admin_id, last_login_at FROM brokers WHERE id = ? LIMIT 1',
         [id]
       );
       const row = rows[0];
@@ -473,8 +475,8 @@ export async function updateBrokerProfile(req, res) {
     params.push(id);
     await pool.query(`UPDATE brokers SET ${updates.join(', ')} WHERE id = ?`, params);
 
-    const [rows] = await pool.query(
-      'SELECT id, full_name, email, phone, photo, license_no, tenant_db, created_by_admin_id, last_login_at FROM brokers WHERE id = ? LIMIT 1',
+      const [rows] = await pool.query(
+        'SELECT id, full_name, email, phone, photo, license_no, location, company_name, tenant_db, created_by_admin_id, last_login_at FROM brokers WHERE id = ? LIMIT 1',
       [id]
     );
     const row = rows[0];
@@ -486,7 +488,9 @@ export async function updateBrokerProfile(req, res) {
         email: row.email,
         phone: row.phone,
         photo: row.photo,
-        licenseNo: row.license_no,
+          licenseNo: row.license_no,
+          location: row.location,
+          companyName: row.company_name,
         tenantDb: row.tenant_db,
         createdByAdminId: row.created_by_admin_id,
         lastLoginAt: row.last_login_at,

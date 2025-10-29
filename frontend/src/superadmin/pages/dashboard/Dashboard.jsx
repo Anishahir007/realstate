@@ -2,11 +2,28 @@ import React, { useEffect, useState } from 'react';
 import './dashboard.css';
 import { useSuperAdmin } from '../../../context/SuperAdminContext.jsx';
 import axios from 'axios';
+import { Line } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title as ChartTitle,
+  Tooltip,
+  Legend as ChartLegend,
+  Filler,
+} from 'chart.js';
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ChartTitle, Tooltip, ChartLegend, Filler);
 
 export default function Dashboard() { 
   const superAdmin = useSuperAdmin();
   const [sys, setSys] = useState({ serverUptimePct: 99.9, dbPerformancePct: 95.5, apiResponseMs: 150, storageUsagePct: 60 });
   const [counts, setCounts] = useState({ totalBrokers: 0, totalLeads: 0 });
+  const [brokerTrend, setBrokerTrend] = useState(() => (
+    ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sept','Oct','Nov','Dec'].map(m => ({ m, a: 0, b: 0 }))
+  ));
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -59,14 +76,84 @@ export default function Dashboard() {
     if (superAdmin?.token) loadLeads();
     return () => { cancelled = true; };
   }, [superAdmin?.token, superAdmin?.apiBase]);
-  const data = [
-    { m: 'Jan', a: 12000, b: 8000 },
-    { m: 'Feb', a: 22000, b: 16000 },
-    { m: 'Mar', a: 30000, b: 33000 },
-    { m: 'Apr', a: 25000, b: 26000 },
-    { m: 'May', a: 40000, b: 50000 }
-  ];
-  const MAX = 50000;
+  // Load broker monthly trends (active vs suspended)
+  useEffect(() => {
+    let cancelled = false;
+    async function loadTrends() {
+      try {
+        const year = new Date().getFullYear();
+        const { data: json } = await axios.get(`${superAdmin.apiBase}/api/broker/monthly-trends?year=${year}` ,{
+          headers: { Authorization: `Bearer ${superAdmin.token}` },
+        });
+        const rows = Array.isArray(json?.data) ? json.data : [];
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sept','Oct','Nov','Dec'];
+        const normalized = months.map((label) => {
+          const r = rows.find(x => x.month === label) || { active: 0, suspended: 0 };
+          return { m: label, a: Number(r.active || 0), b: Number(r.suspended || 0) };
+        });
+        if (!cancelled) setBrokerTrend(normalized);
+      } catch {
+        if (!cancelled) setBrokerTrend((prev) => prev.map(x => ({ ...x, a: 0, b: 0 })));
+      }
+    }
+    if (superAdmin?.token) loadTrends();
+    return () => { cancelled = true; };
+  }, [superAdmin?.token, superAdmin?.apiBase]);
+
+  const data = brokerTrend;
+  const labels = data.map(d => d.m);
+  const chartData = {
+    labels,
+    datasets: [
+      {
+        label: 'Onboarded',
+        data: data.map(d => d.a),
+        borderColor: '#2563eb',
+        backgroundColor: 'rgba(37, 99, 235, 0.08)',
+        pointRadius: 0,
+        tension: 0.35,
+        fill: false,
+      },
+      {
+        label: 'Deactivated',
+        data: data.map(d => d.b),
+        borderColor: '#ef4444',
+        backgroundColor: 'rgba(239, 68, 68, 0.08)',
+        pointRadius: 0,
+        tension: 0.35,
+        fill: false,
+      },
+    ],
+  };
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: true,
+        position: 'top',
+        align: 'end',
+        labels: { color: '#334155', usePointStyle: true, boxWidth: 28, boxHeight: 6, pointStyle: 'line' },
+      },
+      title: { display: false },
+      tooltip: { intersect: false, mode: 'index' },
+    },
+    elements: { line: { borderWidth: 2.5 }, point: { radius: 0, hoverRadius: 4, hitRadius: 10 } },
+    scales: {
+      x: {
+        grid: { display: false },
+        ticks: { color: '#64748b' },
+        border: { display: false },
+      },
+      y: {
+        min: -20,
+        max: 100,
+        ticks: { stepSize: 20, color: '#64748b' },
+        grid: { color: '#e5e7eb' },
+        border: { display: false },
+      },
+    },
+  };
   const BAR_MAX = 200;
 
   return (
@@ -152,37 +239,17 @@ export default function Dashboard() {
         </section>
 
         <section className="superadmindashboard-grid">
-          <div className="superadmindashboard-panel">
-            <div className="superadmindashboard-panel-head">
-              <h2>Sales Trends</h2>
-              <span className="superadmindashboard-sub">Monthly sales and broker acquisition</span>
+          <div className="superadmindashboard-panel trend-card">
+            <div className="trend-head">
+              <div className="trend-head-left">
+                <h2 className="trend-title">Broker Trends</h2>
+                <div className="trend-sub">Monthly broker onboarding vs deactivated metrics.</div>
+              </div>
             </div>
 
-            <div className="superadmindashboard-chart" role="img" aria-label="Bar chart of monthly sales">
-              <div className="superadmindashboard-ylabels" aria-hidden>
-                {[50000, 40000, 30000, 20000, 10000, 0].map((v) => (
-                  <span key={v}>{v.toLocaleString()}</span>
-                ))}
-              </div>
-
-              <div className="superadmindashboard-plot">
-                {data.map((d) => (
-                  <div key={d.m} className="superadmindashboard-barcol">
-                    <div className="superadmindashboard-bars">
-                      <div
-                        className="superadmindashboard-bar superadmindashboard-bar-a"
-                        style={{ height: `${Math.round((d.a / MAX) * BAR_MAX)}px` }}
-                        aria-label={`${d.m} series A ${d.a.toLocaleString()}`}
-                      />
-                      <div
-                        className="superadmindashboard-bar superadmindashboard-bar-b"
-                        style={{ height: `${Math.round((d.b / MAX) * BAR_MAX)}px` }}
-                        aria-label={`${d.m} series B ${d.b.toLocaleString()}`}
-                      />
-                    </div>
-                    <div className="superadmindashboard-barlabel">{d.m}</div>
-                  </div>
-                ))}
+            <div className="trend-chart" role="img" aria-label="Broker trends line chart">
+              <div className="trend-plot" style={{ height: 260 }}>
+                <Line data={chartData} options={chartOptions} />
               </div>
             </div>
           </div>

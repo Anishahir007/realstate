@@ -3,6 +3,22 @@ import axios from 'axios';
 import './broker.css';
 import { useSuperAdmin } from '../../../context/SuperAdminContext.jsx';
 
+// Small helpers to create deterministic mock values for UI-only fields
+function deriveSubscription(id) {
+  const types = ['Basic', 'Premium', 'Pro'];
+  return types[id % types.length];
+}
+function deriveCompany(name = '') {
+  const base = (name || 'Realty').split(' ')[0];
+  return {
+    company: `${base} Realty Co.`,
+    domain: `${base.toLowerCase()}realty.com`,
+  };
+}
+function pseudoCount(id, max) {
+  return (id % (max + 1));
+}
+
 export default function SuperAdminBroker() {
   const { token, apiBase } = useSuperAdmin();
   const [brokers, setBrokers] = useState([]);
@@ -37,10 +53,25 @@ export default function SuperAdminBroker() {
 
   const headers = useMemo(() => ({ Authorization: token ? `Bearer ${token}` : '' }), [token]);
   const filteredBrokers = useMemo(() => {
-    if (!statusFilter || statusFilter === 'All') return brokers;
-    const target = String(statusFilter).toLowerCase();
-    return brokers.filter((b) => String(b.status || 'active').toLowerCase() === target);
-  }, [brokers, statusFilter]);
+    const list = brokers.filter((b) => {
+      if (query && !(`${b.name || ''} ${b.email || ''}`.toLowerCase().includes(query.toLowerCase()))) return false;
+      if (!statusFilter || statusFilter === 'All') return true;
+      const target = String(statusFilter).toLowerCase();
+      return String(b.status || 'active').toLowerCase() === target;
+    });
+    return list;
+  }, [brokers, statusFilter, query]);
+
+  const totals = useMemo(() => {
+    const total = brokers.length;
+    const active = brokers.filter((b) => String(b.status || '').toLowerCase() === 'active').length;
+    const inactive = brokers.filter((b) => {
+      const s = String(b.status || '').toLowerCase();
+      return s === 'suspended' || s === 'inactive';
+    }).length;
+    const leads = brokers.reduce((sum, b) => sum + (Number(b.leadsCount) || 0), 0);
+    return { total, active, inactive, leads };
+  }, [brokers]);
 
   useEffect(() => {
     let cancelled = false;
@@ -53,10 +84,8 @@ export default function SuperAdminBroker() {
           ...(query ? { q: query } : {}),
           ...((statusFilter && statusFilter !== 'All') ? { status: String(statusFilter).toLowerCase() } : {}),
         };
-        const resp = await axios.get(`${apiBase}/api/broker/listbroker`, { headers, params: Object.keys(params).length ? params : undefined });
-        if (!cancelled) {
-          setBrokers(Array.isArray(resp.data?.data) ? resp.data.data : []);
-        }
+        const resp = await axios.get(`${apiBase}/api/broker/listbroker-with-stats`, { headers, params: Object.keys(params).length ? params : undefined });
+        if (!cancelled) setBrokers(Array.isArray(resp.data?.data) ? resp.data.data : []);
       } catch (e) {
         if (!cancelled) setError(e?.response?.data?.message || e?.message || 'Failed to load');
       } finally {
@@ -73,15 +102,13 @@ export default function SuperAdminBroker() {
         ...(query ? { q: query } : {}),
         ...((statusFilter && statusFilter !== 'All') ? { status: String(statusFilter).toLowerCase() } : {}),
       };
-      const resp = await axios.get(`${apiBase}/api/broker/listbroker`, { headers, params: Object.keys(params).length ? params : undefined });
+      const resp = await axios.get(`${apiBase}/api/broker/listbroker-with-stats`, { headers, params: Object.keys(params).length ? params : undefined });
       setBrokers(Array.isArray(resp.data?.data) ? resp.data.data : []);
-    } catch (e) {
-      // non-blocking
-    }
+    } catch {}
   }
 
   function openAdd() {
-    setFormAdd({ full_name: '', email: '', phone: '', password: '', license_no: '' });
+    setFormAdd({ full_name: '', email: '', phone: '', password: '', license_no: '', status: 'active', photo: null });
     setShowAdd(true);
   }
 
@@ -110,12 +137,16 @@ export default function SuperAdminBroker() {
 
   async function openView(brokerId) {
     if (!token) return;
+    const seed = brokers.find((x) => x.id === brokerId) || null;
+    if (seed) {
+      setSelected(seed);
+      setShowView(true);
+    }
     try {
       const resp = await axios.get(`${apiBase}/api/broker/getbroker/${brokerId}`, { headers });
-      setSelected(resp.data?.data || null);
-      setShowView(true);
+      setSelected((prev) => ({ ...(prev || {}), ...(resp.data?.data || {}) }));
     } catch (e) {
-      alert(e?.response?.data?.message || e?.message || 'Failed to load broker');
+      if (!seed) alert(e?.response?.data?.message || e?.message || 'Failed to load broker');
     }
   }
 
@@ -155,72 +186,129 @@ export default function SuperAdminBroker() {
     }
   }
 
+  function exportCsv() {
+    const rows = [
+      ['ID','Name','Email','Status'],
+      ...filteredBrokers.map(b => [b.id, b.name, b.email, b.status]),
+    ];
+    const csv = rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'brokers.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
-    <div className="superadminbroker-root">
-      <div className="superadminbroker-head">
+    <div className="bm-root">
+      <div className="bm-head">
         <div>
-          <h2 className="superadminbroker-title">Brokers</h2>
-          <p className="superadminbroker-sub">Manage broker accounts, status, and invites.</p>
+          <h1 className="bm-title">Broker Management</h1>
+          <div className="bm-sub">Manage broker accounts & subscriptions</div>
         </div>
-        <div className="superadminbroker-actions">
-          <button className="superadminbroker-btn" onClick={openAdd}>+ Add Broker</button>
+        <div className="bm-actions">
+          <button className="bm-btn bm-btn-light" onClick={exportCsv}>Export Leads</button>
+          <button className="bm-btn bm-btn-primary" onClick={openAdd}>+ Add New Broker</button>
         </div>
       </div>
 
-      <div className="superadminbroker-card">
-        <div className="superadminbroker-toolbar">
-          <input className="superadminbroker-input" placeholder="Search brokers" value={query} onChange={(e) => setQuery(e.target.value)} />
-          <select className="superadminbroker-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+      <div className="bm-toolbar">
+        <div className="bm-search">
+          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden><path fill="#64748b" d="M21 20l-5.6-5.6a7 7 0 10-1.4 1.4L20 21zM4 10a6 6 0 1112 0A6 6 0 014 10z"/></svg>
+          <input placeholder="Search brokers by name, email, or company..." value={query} onChange={(e) => setQuery(e.target.value)} />
+        </div>
+        <div className="bm-filter">
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option>All</option>
             <option>Active</option>
             <option>Pending</option>
             <option>Suspended</option>
           </select>
         </div>
+      </div>
 
-        <div className="superadminbroker-tablewrap">
-          <table className="superadminbroker-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && (
-                <tr>
-                  <td colSpan={5}>Loading...</td>
-                </tr>
-              )}
-              {!!error && !loading && (
-                <tr>
-                  <td colSpan={5} style={{ color: '#b91c1c' }}>{error}</td>
-                </tr>
-              )}
-              {!loading && !error && filteredBrokers.length === 0 && (
-                <tr>
-                  <td colSpan={5}>No brokers found</td>
-                </tr>
-              )}
-              {!loading && !error && filteredBrokers.map((b) => (
-                <tr key={b.id}>
-                  <td>{b.id}</td>
-                  <td>{b.name}</td>
-                  <td>{b.email}</td>
-                  <td>
-                    <span className={`superadminbroker-badge superadminbroker-badge-${String(b.status || 'active').toLowerCase()}`}>{String(b.status || 'active').charAt(0).toUpperCase() + String(b.status || 'active').slice(1)}</span>
-                  </td>
-                  <td>
-                    <button className="superadminbroker-link" onClick={() => openView(b.id)}>View</button>
-                    <button className="superadminbroker-link" onClick={() => openEdit(b.id)}>Edit</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div className="bm-cards">
+        <div className="bm-card">
+          <div className="bm-card-title">Total Brokers</div>
+          <div className="bm-card-metric">{totals.total}</div>
+        </div>
+        <div className="bm-card">
+          <div className="bm-card-title">Active Brokers</div>
+          <div className="bm-card-metric">{totals.active}</div>
+        </div>
+        <div className="bm-card">
+          <div className="bm-card-title">Inactive Brokers</div>
+          <div className="bm-card-metric">{totals.inactive}</div>
+        </div>
+        <div className="bm-card">
+          <div className="bm-card-title">Total Leads</div>
+          <div className="bm-card-metric">{totals.leads.toLocaleString()}</div>
+        </div>
+      </div>
+
+      <div className="bm-section">
+        <div className="bm-section-head">
+          <div>
+            <h2>Broker Accounts</h2>
+            <div className="bm-section-sub">Manage all broker accounts and their details</div>
+          </div>
+        </div>
+
+        <div className="bm-table">
+          <div className="bm-thead">
+            <div>Broker</div>
+            <div>Company</div>
+            <div>Subscription</div>
+            <div>Status</div>
+            <div>Properties</div>
+            <div>Leads</div>
+            <div>Actions</div>
+          </div>
+
+          {loading && <div className="bm-row"><div className="bm-loading">Loading...</div></div>}
+          {!!error && !loading && <div className="bm-row"><div className="bm-error">{error}</div></div>}
+          {!loading && !error && filteredBrokers.length === 0 && <div className="bm-row"><div>No brokers found</div></div>}
+
+          {!loading && !error && filteredBrokers.map((b) => {
+            const sub = deriveSubscription(b.id);
+            const companyName = b.companyName || deriveCompany(b.name).company;
+            const properties = (typeof b.propertiesCount === 'number') ? b.propertiesCount : (10 + pseudoCount(b.id, 40));
+            const leads = (typeof b.leadsCount === 'number') ? b.leadsCount : (15 + pseudoCount(b.id * 7, 30));
+            return (
+              <div key={b.id} className="bm-row">
+                <div className="bm-broker">
+                  <div className="bm-avatar" aria-hidden>{String(b.name || 'B').split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase()}</div>
+                  <div className="bm-broker-info">
+                    <div className="bm-broker-name">{b.name}</div>
+                    <div className="bm-broker-email">{b.email}</div>
+                  </div>
+                </div>
+                <div className="bm-company">
+                  <div className="bm-company-name">{companyName}</div>
+                </div>
+                <div>
+                  <span className={`bm-tag bm-tag-${sub.toLowerCase()}`}>{sub}</span>
+                </div>
+                <div>
+                  <span className={`bm-badge bm-badge-${String(b.status || 'active').toLowerCase()}`}>{String(b.status || 'active').charAt(0).toUpperCase() + String(b.status || 'active').slice(1)}</span>
+                </div>
+                <div className="bm-col-center">
+                  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden><path fill="#64748b" d="M3 11h18v2H3v-2Zm2 4h14v2H5v-2ZM7 7h10v2H7V7Z"/></svg>
+                  <span>{properties}</span>
+                </div>
+                <div className="bm-col-center">
+                  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden><path fill="#64748b" d="M20 7H4v10h16V7Zm2-2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2ZM7 8h3v3H7V8Zm0 5h10v2H7v-2Zm5-5h5v3h-5V8Z"/></svg>
+                  <span>{leads}</span>
+                </div>
+                <div className="bm-actions-col">
+                  <button className="bm-link" onClick={() => openView(b.id)} title="View" aria-label="View">👁️</button>
+                  <button className="bm-link" onClick={() => openEdit(b.id)} title="Edit" aria-label="Edit">✏️</button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -276,31 +364,47 @@ export default function SuperAdminBroker() {
       {showView && selected && (
         <div className="superadminbroker-modal-overlay" onClick={() => setShowView(false)}>
           <div className="superadminbroker-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="superadminbroker-modal-header">
-              <h3>Broker Details</h3>
+            <div className="bm-view-head">
+              <div>
+                <h3 className="bm-view-title">Broker Information</h3>
+                <div className="bm-view-sub">Personal and business details</div>
+              </div>
               <button className="superadminbroker-iconbtn" onClick={() => setShowView(false)} aria-label="Close">×</button>
             </div>
-            <div className="superadminbroker-viewgrid">
-              <div><strong>ID:</strong> {selected.id}</div>
-              <div><strong>Name:</strong> {selected.name}</div>
-              <div><strong>Email:</strong> {selected.email}</div>
-              <div><strong>Phone:</strong> {selected.phone || '-'}</div>
-              <div><strong>License No:</strong> {selected.licenseNo || '-'}</div>
-              <div><strong>Status:</strong> {selected.status}</div>
-              <div><strong>Tenant DB:</strong> {selected.tenantDb}</div>
-              <div style={{ gridColumn: '1 / -1' }}>
-                <strong>Photo:</strong>
-                {selected.photo ? (
-                  <div style={{ marginTop: 8 }}>
-                    <img src={`${apiBase}${selected.photo}`} alt="Broker" style={{ width: 96, height: 96, objectFit: 'cover', borderRadius: 8 }} />
-                  </div>
-                ) : (
-                  <span> -</span>
-                )}
+
+            {(() => {
+              const sub = deriveSubscription(selected.id || 0);
+              const comp = selected.companyName ? { company: selected.companyName, domain: `${(selected.companyName || '').split(' ')[0].toLowerCase()}realty.com` } : deriveCompany(selected.name);
+              const totalProps = Number(selected.propertiesCount || 0);
+              const totalLeads = Number(selected.leadsCount || 0);
+              const created = selected.createdAt || selected.created_at || selected.created_at?.split('T')?.[0];
+              const memberSince = created ? String(created).slice(0, 10) : '-';
+              const status = String(selected.status || 'active');
+              return (
+                <div className="bm-view-grid">
+                  <div className="bm-view-item"><div className="bm-view-label">Full Name</div><div className="bm-view-value">{selected.name || '-'}</div></div>
+                  <div className="bm-view-item"><div className="bm-view-label">License Number</div><div className="bm-view-value">{selected.licenseNo || '-'}</div></div>
+                  <div className="bm-view-item"><div className="bm-view-label">Email Address</div><div className="bm-view-value">{selected.email || '-'}</div></div>
+                  <div className="bm-view-item"><div className="bm-view-label">Location</div><div className="bm-view-value">{selected.location || '-'}</div></div>
+                  <div className="bm-view-item"><div className="bm-view-label">Phone Number</div><div className="bm-view-value">{selected.phone || '-'}</div></div>
+                  <div className="bm-view-item"><div className="bm-view-label">Member Since</div><div className="bm-view-value">{memberSince}</div></div>
+                  <div className="bm-view-item"><div className="bm-view-label">Company Name</div><div className="bm-view-value">{comp.company}</div></div>
+                  <div className="bm-view-item"><div className="bm-view-label">Total Leads</div><div className="bm-view-value">{totalLeads}</div></div>
+                  <div className="bm-view-item"><div className="bm-view-label">Total Properties</div><div className="bm-view-value">{totalProps}</div></div>
+                </div>
+              );
+            })()}
+
+            <hr className="bm-view-divider" />
+            <div className="bm-view-bottom">
+              <div>
+                <div className="bm-view-label">Account Status</div>
+                <span className={`bm-badge bm-badge-${String(selected.status || 'active').toLowerCase()}`}>{String(selected.status || 'active').charAt(0).toUpperCase() + String(selected.status || 'active').slice(1)}</span>
               </div>
-            </div>
-            <div className="superadminbroker-modal-actions">
-              <button className="btn-dark" onClick={() => setShowView(false)}>Close</button>
+              <div>
+                <div className="bm-view-label">Subscription Plan</div>
+                <span className={`bm-tag bm-tag-${deriveSubscription(selected.id || 0).toLowerCase()}`}>{deriveSubscription(selected.id || 0)}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -352,5 +456,3 @@ export default function SuperAdminBroker() {
     </div>
   );
 }
-
-

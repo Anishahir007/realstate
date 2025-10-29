@@ -16,6 +16,8 @@ import {
   addPropertyVideo,
   deletePropertyMedia,
   setPrimaryPropertyMedia,
+  listAllBrokerPropertiesAdmin,
+  getBrokerPropertyAdmin,
 } from '../controllers/propertyController.js';
 
 const router = Router();
@@ -41,6 +43,10 @@ router.post('/:id/media', requireAuth, requireRole('broker'), upload.single('fil
 router.post('/:id/video', requireAuth, requireRole('broker'), addPropertyVideo);
 router.delete('/media/:mediaId', requireAuth, requireRole('broker'), deletePropertyMedia);
 router.post('/:id/media/:mediaId/primary', requireAuth, requireRole('broker'), setPrimaryPropertyMedia);
+
+// Super admin cross-tenant
+router.get('/admin/all', requireAuth, requireRole('super_admin'), listAllBrokerPropertiesAdmin);
+router.get('/admin/:brokerId/:id', requireAuth, requireRole('super_admin'), getBrokerPropertyAdmin);
 
 export default router;
 

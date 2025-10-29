@@ -32,6 +32,8 @@ CREATE TABLE IF NOT EXISTS brokers (
   photo VARCHAR(512) NULL,
   password_hash VARCHAR(255) NOT NULL,
   license_no VARCHAR(100) NULL,
+  location VARCHAR(100) NULL,
+  company_name VARCHAR(255) NULL,
   tenant_db VARCHAR(128) NULL,
   status ENUM('active', 'suspended') NOT NULL DEFAULT 'active',
   created_by_admin_id BIGINT UNSIGNED NULL,
