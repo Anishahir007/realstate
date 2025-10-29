@@ -39,7 +39,7 @@ export default function Navbar() {
           <span>CRM</span>
         </NavLink>
 
-        <NavLink to="/superadmin/manage-property" className={({ isActive }) => `superadminnavbar-link${isActive ? ' superadminnavbar-link-active' : ''}`}>
+        <NavLink to="/superadmin/properties" className={({ isActive }) => `superadminnavbar-link${isActive ? ' superadminnavbar-link-active' : ''}`}>
           <span className="superadminnavbar-icon"><FiHome /></span>
           <span>Manage Property</span>
         </NavLink>
