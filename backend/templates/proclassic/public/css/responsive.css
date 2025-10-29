@@ -1,0 +1,6 @@
+@media (max-width: 640px) {
+  .pc-container { padding: 16px; }
+  .pc-navbar__row { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .pc-nav { flex-wrap: wrap; gap: 10px; }
+}
+

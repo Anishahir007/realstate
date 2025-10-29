@@ -35,7 +35,10 @@ export async function listTemplates(req, res) {
 }
 
 function getTemplateViewPath(templateName, view) {
-  return path.join(getTemplatesRoot(), templateName, 'views', `${view}.ejs`);
+  const root = getTemplatesRoot();
+  const pagesFirst = path.join(root, templateName, 'views', 'pages', `${view}.ejs`);
+  if (fs.existsSync(pagesFirst)) return pagesFirst;
+  return path.join(root, templateName, 'views', `${view}.ejs`);
 }
 
 function readTemplateAsset(templateName, assetPath) {

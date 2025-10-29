@@ -1,0 +1,24 @@
+<nav class="pc-navbar">
+  <div class="pc-container pc-navbar__row">
+    <div class="pc-brand">
+      <% if (site && site.broker && site.broker.photo) { %>
+        <img class="pc-avatar" src="<%= site.broker.photo %>" alt="<%= (site && site.broker && site.broker.full_name) || 'Broker' %>" />
+      <% } %>
+      <span><%= (site && site.broker && site.broker.full_name) || 'Broker' %></span>
+      <span class="pc-badge">ProClassic</span>
+    </div>
+    <div class="pc-nav">
+      <a class="pc-link<%= page==='home' ? ' pc-link--active' : '' %>" href="<%= nav.home %>">Home</a>
+      <a class="pc-link<%= page==='about' ? ' pc-link--active' : '' %>" href="<%= nav.about %>">About Us</a>
+      <a class="pc-link<%= page==='properties' ? ' pc-link--active' : '' %>" href="<%= nav.properties %>">Find Properties</a>
+      <% if (nav.services) { %>
+        <a class="pc-link pc-link--has-caret<%= page==='services' ? ' pc-link--active' : '' %>" href="<%= nav.services %>">Services We Offer</a>
+      <% } %>
+      <% if (nav.postProperty) { %>
+        <a class="pc-link<%= page==='post-property' ? ' pc-link--active' : '' %>" href="<%= nav.postProperty %>">Post Property</a>
+      <% } %>
+      <a class="pc-link pc-link--emphasis<%= page==='contact' ? ' pc-link--active' : '' %>" href="<%= nav.contact %>">Contact Us</a>
+    </div>
+  </div>
+</nav>
+

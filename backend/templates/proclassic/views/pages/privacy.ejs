@@ -4,21 +4,13 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Privacy Policy • <%= site.title %></title>
-    <%- include('../partials/style.ejs') %>
+    <link rel="stylesheet" href="/templates/proclassic/public/css/style.css" />
+    <link rel="stylesheet" href="/templates/proclassic/public/css/navbar.css" />
+    <link rel="stylesheet" href="/templates/proclassic/public/css/responsive.css" />
   </head>
   <body>
     <div class="pc-shell">
-      <nav class="pc-navbar">
-        <div class="pc-container pc-navbar__row">
-          <div class="pc-brand"><span><%= site && site.broker && site.broker.full_name || 'Broker' %></span><span class="pc-badge">ProClassic</span></div>
-          <div class="pc-nav">
-            <a class="pc-link" href="<%= nav.home %>">Home</a>
-            <a class="pc-link" href="<%= nav.properties %>">Properties</a>
-            <a class="pc-link" href="<%= nav.about %>">About</a>
-            <a class="pc-link" href="<%= nav.contact %>">Contact</a>
-          </div>
-        </div>
-      </nav>
+      <%- include('../partials/navbar/navbar.ejs') %>
 
       <main class="pc-container">
         <h1 class="pc-section__title">Privacy Policy</h1>
@@ -28,7 +20,7 @@
         </div>
       </main>
 
-      <footer class="pc-footer"><div class="pc-container pc-footer__grid"><div class="pc-footer__muted">©</div></div></footer>
+      <%- include('../partials/footer/footer.ejs') %>
     </div>
   </body>
   </html>

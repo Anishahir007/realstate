@@ -1,0 +1,81 @@
+/* Navbar overrides to match requested light style with gold accents */
+:root {
+  --pc-gold: #d4a033;
+  --pc-text-dark: #1f2937;
+}
+
+.pc-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: #ffffff;
+  border-bottom: 1px solid #eaeaea;
+}
+.pc-navbar::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 14px;
+  background: var(--pc-gold);
+}
+.pc-navbar__row {
+  padding-top: 18px;
+  padding-bottom: 10px;
+}
+.pc-brand {
+  color: var(--pc-text-dark);
+  font-weight: 800;
+}
+.pc-avatar {
+  background: #fff;
+  border-color: #e5e7eb;
+}
+.pc-link {
+  color: var(--pc-text-dark);
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+.pc-link:hover {
+  color: #111827;
+  background: transparent;
+}
+.pc-link--active {
+  position: relative;
+  color: #111827;
+}
+.pc-link--active::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: -12px;
+  height: 3px;
+  background: var(--pc-gold);
+  border-radius: 2px;
+}
+
+/* Caret indicator on services */
+.pc-link--has-caret {
+  padding-right: 18px;
+}
+.pc-link--has-caret::after {
+  content: "";
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 6px;
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid #9ca3af;
+  border-bottom: 2px solid #9ca3af;
+  transform: rotate(-45deg) translateY(-2px);
+}
+
+/* Emphasized link (Contact Us) */
+.pc-link--emphasis {
+  color: var(--pc-gold);
+}
+.pc-link--emphasis:hover {
+  color: #b8860b;
+}

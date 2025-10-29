@@ -1,0 +1,15 @@
+<footer class="pc-footer">
+  <div class="pc-container pc-footer__grid">
+    <div>
+      <div class="pc-footer__muted">© <%= new Date().getFullYear() %> <%= (site && site.broker && site.broker.full_name) || 'Broker' %></div>
+    </div>
+    <div>
+      <div class="pc-footer__muted">Email: <%= site && site.broker && site.broker.email || '-' %></div>
+      <div class="pc-footer__muted">Phone: <%= site && site.broker && site.broker.phone || '-' %></div>
+    </div>
+    <div>
+      <div class="pc-footer__muted"><a class="pc-link" href="<%= nav.privacy %>">Privacy</a> · <a class="pc-link" href="<%= nav.terms %>">Terms</a></div>
+    </div>
+  </div>
+</footer>
+

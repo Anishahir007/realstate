@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title><%= site.title %> • ProClassic</title>
+    <link rel="stylesheet" href="/templates/proclassic/public/css/style.css" />
+    <link rel="stylesheet" href="/templates/proclassic/public/css/navbar.css" />
+    <link rel="stylesheet" href="/templates/proclassic/public/css/responsive.css" />
+  </head>
+  <body>
+    <div class="pc-shell">
+      <%- include('../partials/navbar/navbar.ejs') %>
+
+      <header class="pc-hero">
+        <div class="pc-container">
+          <div class="pc-hero__card">
+            <h1 class="pc-hero__title">Find your next home with <%= (site && site.broker && site.broker.full_name) || 'our team' %></h1>
+            <p class="pc-hero__subtitle">Curated listings, trusted advice, and seamless closings.</p>
+            <a class="pc-cta" href="<%= nav.properties %>">Browse Properties</a>
+          </div>
+        </div>
+      </header>
+
+      <main class="pc-container">
+        <section>
+          <h3 class="pc-section__title">Featured Properties</h3>
+          <div class="pc-grid">
+            <% (properties || []).forEach(function(p){ %>
+              <div class="pc-card">
+                <div class="pc-card__title"><%= p.title %></div>
+                <div class="pc-card__meta"><%= p.city %>, <%= p.state %></div>
+              </div>
+            <% }); %>
+            <% if (!(properties || []).length) { %>
+              <div class="pc-card"><div class="pc-card__title">No properties yet</div><div class="pc-card__meta">Check back soon.</div></div>
+            <% } %>
+          </div>
+        </section>
+      </main>
+
+      <%- include('../partials/footer/footer.ejs') %>
+    </div>
+  </body>
+  </html>
+
+
