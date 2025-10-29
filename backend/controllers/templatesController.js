@@ -132,7 +132,12 @@ export async function listMySites(req, res) {
 export async function serveSiteBySlug(req, res) {
   try {
     const slug = (req.params.slug || '').toString();
-    const view = (req.params.page || 'home').toString();
+    // Support both named ':page' and wildcard '/*' captures
+    const rawPage = (req.params.page || req.params[0] || '').toString();
+    let view = rawPage.replace(/^\/+|\/+$/g, '');
+    if (!view) view = 'home';
+    // only allow simple names like 'home', 'properties', 'post-property'
+    if (!/^[a-z0-9-_]+$/i.test(view)) view = 'home';
     const site = getSiteBySlug(slug);
     if (!site) return res.status(404).send('Site not found');
     const viewPath = getTemplateViewPath(site.template, view);

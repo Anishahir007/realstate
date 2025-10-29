@@ -91,9 +91,9 @@ app.get('/resolve-host', (req, res) => {
   }
 });
 
-// Site by slug pages (register explicit variants; some router versions dislike `?`)
+// Site by slug pages (explicit variants + wildcard for deep paths)
 app.get('/site/:slug', serveSiteBySlug);
-app.get('/site/:slug/:page', serveSiteBySlug);
+app.get('/site/:slug/*', serveSiteBySlug);
 
 // Custom-domain serving: map Host header to site and render template pages
 app.use(async (req, res, next) => {
@@ -104,12 +104,9 @@ app.use(async (req, res, next) => {
     if (!host) return next();
     const site = getSiteByDomain(host);
     if (!site) return next();
-    const pathname = (req.path || '/').replace(/\/$/, '') || '/';
-    let page = 'home';
-    if (pathname === '/' || pathname === '') page = 'home';
-    else if (pathname === '/properties') page = 'properties';
-    else if (pathname === '/about') page = 'about';
-    else if (pathname === '/contact') page = 'contact';
+    const raw = (req.path || '/');
+    const last = raw.replace(/^\/+|\/+$/g, '').split('/').filter(Boolean).pop() || 'home';
+    const page = /^[a-z0-9-_]+$/i.test(last) ? last : 'home';
     // Delegate rendering to existing site renderer
     req.params = { slug: site.slug, page };
     return serveSiteBySlug(req, res);
