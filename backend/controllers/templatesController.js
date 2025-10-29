@@ -134,8 +134,9 @@ export async function serveSiteBySlug(req, res) {
     const slug = (req.params.slug || '').toString();
     // Support both named ':page' and wildcard '/*' captures
     const rawPage = (req.params.page || req.params[0] || '').toString();
-    let view = rawPage.replace(/^\/+|\/+$/g, '');
-    if (!view) view = 'home';
+    const cleaned = rawPage.replace(/^\/+|\/+$/g, '');
+    const last = cleaned.split('/').filter(Boolean).pop() || '';
+    let view = last || 'home';
     // only allow simple names like 'home', 'properties', 'post-property'
     if (!/^[a-z0-9-_]+$/i.test(view)) view = 'home';
     const site = getSiteBySlug(slug);

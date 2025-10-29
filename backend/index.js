@@ -91,9 +91,9 @@ app.get('/resolve-host', (req, res) => {
   }
 });
 
-// Site by slug pages (explicit variants + wildcard for deep paths)
+// Site by slug pages (page can include multiple segments)
 app.get('/site/:slug', serveSiteBySlug);
-app.get('/site/:slug/*', serveSiteBySlug);
+app.get('/site/:slug/:page*', serveSiteBySlug);
 
 // Custom-domain serving: map Host header to site and render template pages
 app.use(async (req, res, next) => {
