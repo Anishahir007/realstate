@@ -25,9 +25,60 @@ function listTemplatesFromFs() {
 
 export async function listTemplates(req, res) {
   try {
-    // Only read from backend templates folder (EJS)
+    // Read from backend templates folder (EJS)
     const items = listTemplatesFromFs();
-    return res.json({ data: items });
+    // Merge status map; non-super_admins only see active
+    const statusMap = readTemplateStatusMap();
+    const withStatus = items.map(t => ({ ...t, status: statusMap[t.name] || 'active' }));
+    const isSuper = req.user && req.user.role === 'super_admin';
+    const filtered = isSuper ? withStatus : withStatus.filter(t => t.status !== 'inactive');
+    return res.json({ data: filtered });
+  } catch (err) {
+    const isProd = process.env.NODE_ENV === 'production';
+    return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
+  }
+}
+
+// ---- Template status (active/inactive) stored in a small JSON file ----
+function getTemplateStatusPath() {
+  return path.resolve(__dirname, '..', 'public', 'templates', 'templates-status.json');
+}
+function ensureDirExists(p) {
+  const dir = path.dirname(p);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+}
+function readTemplateStatusMap() {
+  try {
+    const p = getTemplateStatusPath();
+    if (!fs.existsSync(p)) return {};
+    const raw = fs.readFileSync(p, 'utf-8');
+    return JSON.parse(raw || '{}') || {};
+  } catch {
+    return {};
+  }
+}
+function writeTemplateStatusMap(map) {
+  try {
+    const p = getTemplateStatusPath();
+    ensureDirExists(p);
+    fs.writeFileSync(p, JSON.stringify(map, null, 2));
+  } catch {}
+}
+
+export async function setTemplateStatus(req, res) {
+  try {
+    if (!req.user || req.user.role !== 'super_admin') {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+    const name = (req.body?.name || '').toString();
+    const status = (req.body?.status || 'active').toString();
+    if (!name || !['active','inactive'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid name/status' });
+    }
+    const map = readTemplateStatusMap();
+    map[name] = status;
+    writeTemplateStatusMap(map);
+    return res.json({ ok: true });
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';
     return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });

@@ -7,6 +7,7 @@ import SuperAdminLayout from '../superadmin/components/Layout.jsx';
 import SuperAdminBroker from '../superadmin/pages/broker/Broker.jsx';
 import SuperAdminProperties from '../superadmin/pages/properties/Properties.jsx';
 import SuperAdminViewProfile from '../superadmin/pages/settings/view-profile/ViewProfile.jsx';
+import ManageTemplates from '../superadmin/pages/templates/ManageTemplates.jsx';
 import SuperAdminAdmincrm from '../superadmin/pages/crm/Admincrm.jsx';
 import { SuperAdminProvider } from '../context/SuperAdminContext.jsx';
 
@@ -27,6 +28,7 @@ export function SuperAdminRoutes() {
       >
         <Route path="dashboard" element={<SuperAdminDashboard />} />
         <Route path="brokers" element={<SuperAdminBroker />} />
+        <Route path="manage-templates" element={<ManageTemplates />} />
         <Route path="properties" element={<SuperAdminProperties />} />
         <Route path="crm" element={<SuperAdminAdmincrm />} />
         <Route path="settings/view-profile" element={<SuperAdminViewProfile />} />

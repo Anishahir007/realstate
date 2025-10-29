@@ -44,7 +44,7 @@ export default function Navbar() {
           <span>Manage Property</span>
         </NavLink>
 
-        <NavLink to="/superadmin/manage-website" className={({ isActive }) => `superadminnavbar-link${isActive ? ' superadminnavbar-link-active' : ''}`}>
+        <NavLink to="/superadmin/manage-templates" className={({ isActive }) => `superadminnavbar-link${isActive ? ' superadminnavbar-link-active' : ''}`}>
           <span className="superadminnavbar-icon"><FiGlobe /></span>
           <span>Manage Website</span>
         </NavLink>

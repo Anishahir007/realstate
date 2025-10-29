@@ -1,11 +1,13 @@
 import { Router } from 'express';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { listTemplates, previewTemplate, publishTemplateAsSite, listMySites, serveSiteBySlug, connectCustomDomain, checkCustomDomain } from '../controllers/templatesController.js';
+import { listTemplates, previewTemplate, publishTemplateAsSite, listMySites, serveSiteBySlug, connectCustomDomain, checkCustomDomain, setTemplateStatus } from '../controllers/templatesController.js';
 
 const router = Router();
 
 // Broker can list templates and preview (EJS-only)
-router.get('/list', requireAuth, requireRole('broker'), listTemplates);
+router.get('/list', requireAuth, listTemplates); // brokers and super admins can list; filtering handled in controller
+// Super admin: set template status
+router.post('/admin/set-status', requireAuth, requireRole('super_admin'), setTemplateStatus);
 router.get('/preview/:template', requireAuth, requireRole('broker'), previewTemplate);
 
 // Broker can publish
