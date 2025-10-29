@@ -4,6 +4,9 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import expressLayouts from 'express-ejs-layouts';
 import pool from './config/database.js';
 import authRoutes from './routes/authRoutes.js';
 import brokerRoutes from './routes/brokerRoutes.js';
@@ -20,6 +23,15 @@ import { recordResponseMs } from './utils/metrics.js';
 dotenv.config();
 
 const app = express();
+
+// View engine for server-rendered templates (EJS with layouts)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'templates'));
+app.use(expressLayouts);
+// We'll pass layout per-render; keep default off
+app.set('layout', false);
 
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
@@ -67,7 +79,8 @@ app.use('/api/templates', templatesRoutes);
 // Serve uploaded images
 app.use('/profiles', express.static('public/profiles'));
 app.use('/properties', express.static('public/properties'));  
-// Frontend renders templates now; no static template assets from backend
+// Serve template public assets (CSS/JS/images)
+app.use('/templates', express.static(path.join(__dirname, 'templates')));
 
 // Public preview of a backend EJS template (no auth)
 app.get('/site/preview/:template', previewTemplate);

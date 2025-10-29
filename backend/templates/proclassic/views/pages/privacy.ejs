@@ -1,28 +1,9 @@
-<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Privacy Policy • <%= site.title %></title>
-    <link rel="stylesheet" href="/templates/proclassic/public/css/style.css" />
-    <link rel="stylesheet" href="/templates/proclassic/public/css/navbar.css" />
-    <link rel="stylesheet" href="/templates/proclassic/public/css/responsive.css" />
-  </head>
-  <body>
-    <div class="pc-shell">
-      <%- include('../partials/navbar/navbar.ejs') %>
-
-      <main class="pc-container">
-        <h1 class="pc-section__title">Privacy Policy</h1>
-        <div class="pc-card">
-          <p class="pc-footer__muted">We respect your privacy. This site collects only the information required to respond to enquiries and provide real estate services. We do not sell your data. Contact details submitted via forms may be used to follow up about listings and services.</p>
-          <p class="pc-footer__muted">You can request correction or deletion of your personal data by contacting <%= site && site.broker && site.broker.email || 'our team' %>.</p>
-        </div>
-      </main>
-
-      <%- include('../partials/footer/footer.ejs') %>
-    </div>
-  </body>
-  </html>
+<div class="pc-container">
+  <h1 class="pc-section__title">Privacy Policy</h1>
+  <div class="pc-card">
+    <p class="pc-footer__muted">We respect your privacy. This site collects only the information required to respond to enquiries and provide real estate services. We do not sell your data. Contact details submitted via forms may be used to follow up about listings and services.</p>
+    <p class="pc-footer__muted">You can request correction or deletion of your personal data by contacting <%= site && site.broker && site.broker.email || 'our team' %>.</p>
+  </div>
+</div>
 
 

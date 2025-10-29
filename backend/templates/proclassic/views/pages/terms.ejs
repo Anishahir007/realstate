@@ -1,28 +1,9 @@
-<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Terms & Conditions • <%= site.title %></title>
-    <link rel="stylesheet" href="/templates/proclassic/public/css/style.css" />
-    <link rel="stylesheet" href="/templates/proclassic/public/css/navbar.css" />
-    <link rel="stylesheet" href="/templates/proclassic/public/css/responsive.css" />
-  </head>
-  <body>
-    <div class="pc-shell">
-      <%- include('../partials/navbar/navbar.ejs') %>
-
-      <main class="pc-container">
-        <h1 class="pc-section__title">Terms & Conditions</h1>
-        <div class="pc-card">
-          <p class="pc-footer__muted">All listing information is provided as-is and subject to change without notice. We do not guarantee accuracy of third-party data. By using this site you agree not to misuse contact details or content and to comply with applicable laws.</p>
-          <p class="pc-footer__muted">Transactions are subject to separate agreements and due diligence. For questions, contact <%= site && site.broker && site.broker.email || 'our team' %>.</p>
-        </div>
-      </main>
-
-      <%- include('../partials/footer/footer.ejs') %>
-    </div>
-  </body>
-  </html>
+<div class="pc-container">
+  <h1 class="pc-section__title">Terms & Conditions</h1>
+  <div class="pc-card">
+    <p class="pc-footer__muted">All listing information is provided as-is and subject to change without notice. We do not guarantee accuracy of third-party data. By using this site you agree not to misuse contact details or content and to comply with applicable laws.</p>
+    <p class="pc-footer__muted">Transactions are subject to separate agreements and due diligence. For questions, contact <%= site && site.broker && site.broker.email || 'our team' %>.</p>
+  </div>
+</div>
 
 

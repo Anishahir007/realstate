@@ -41,6 +41,22 @@ function getTemplateViewPath(templateName, view) {
   return path.join(root, templateName, 'views', `${view}.ejs`);
 }
 
+function getTemplateViewRel(templateName, view) {
+  const abs = getTemplateViewPath(templateName, view);
+  const root = getTemplatesRoot();
+  const relWithExt = path.relative(root, abs).replaceAll('\\', '/');
+  return relWithExt.replace(/\.ejs$/i, '');
+}
+
+function getTemplateLayoutRel(templateName) {
+  const root = getTemplatesRoot();
+  const layoutPath = path.join(root, templateName, 'views', 'layout.ejs');
+  if (fs.existsSync(layoutPath)) {
+    return path.relative(root, layoutPath).replaceAll('\\', '/').replace(/\.ejs$/i, '');
+  }
+  return null;
+}
+
 function readTemplateAsset(templateName, assetPath) {
   const p = path.join(getTemplatesRoot(), templateName, assetPath);
   if (fs.existsSync(p)) return fs.readFileSync(p, 'utf-8');
@@ -94,8 +110,10 @@ export async function previewTemplate(req, res) {
     const properties = tenantDb ? await fetchBrokerAndProperties(tenantDb) : [];
     const nav = { home: '?page=home', properties: '?page=properties', about: '?page=about', contact: '?page=contact', privacy: '?page=privacy', terms: '?page=terms' };
     const context = buildSiteContext({ broker, properties, page: view, nav });
-    const html = await ejs.renderFile(viewPath, context, { async: true, root: getTemplatesRoot() });
-    return res.set('Content-Type', 'text/html').send(html);
+    // Use Express view engine + layouts when available
+    const viewRel = getTemplateViewRel(template, view);
+    const layoutRel = getTemplateLayoutRel(template);
+    return res.render(viewRel, { ...context, layout: layoutRel || false });
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';
     return res.status(500).send(isProd ? 'Server error' : String(err?.message || err));
@@ -163,8 +181,9 @@ export async function serveSiteBySlug(req, res) {
     } catch {}
     const nav = { home: `/site/${slug}`, properties: `/site/${slug}/properties`, about: `/site/${slug}/about`, contact: `/site/${slug}/contact`, privacy: `/site/${slug}/privacy`, terms: `/site/${slug}/terms` };
     const context = buildSiteContext({ broker, properties, page: view, nav });
-    const html = await ejs.renderFile(viewPath, context, { async: true, root: getTemplatesRoot() });
-    return res.set('Content-Type', 'text/html').send(html);
+    const viewRel = getTemplateViewRel(site.template, view);
+    const layoutRel = getTemplateLayoutRel(site.template);
+    return res.render(viewRel, { ...context, layout: layoutRel || false });
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';
     return res.status(500).send(isProd ? 'Server error' : String(err?.message || err));

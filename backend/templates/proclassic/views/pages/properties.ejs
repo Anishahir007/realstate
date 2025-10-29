@@ -1,41 +1,22 @@
-<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Properties • <%= site.title %></title>
-    <link rel="stylesheet" href="/templates/proclassic/public/css/style.css" />
-    <link rel="stylesheet" href="/templates/proclassic/public/css/navbar.css" />
-    <link rel="stylesheet" href="/templates/proclassic/public/css/responsive.css" />
-  </head>
-  <body>
-    <div class="pc-shell">
-      <%- include('../partials/navbar/navbar.ejs') %>
-
-      <main class="pc-container">
-        <h2 class="pc-section__title">Available Properties</h2>
-        <div class="pc-grid">
-          <% (properties || []).forEach(function(p){ %>
-            <div class="pc-card">
-              <div class="pc-card__title"><%= p.title %></div>
-              <div class="pc-card__meta"><%= p.city %>, <%= p.state %></div>
-              <% if (p.expected_price) { %>
-                <div class="pc-card__meta">Price: ₹<%= p.expected_price %></div>
-              <% } %>
-              <% if (p.built_up_area && p.area_unit) { %>
-                <div class="pc-card__meta">Area: <%= p.built_up_area %> <%= p.area_unit %></div>
-              <% } %>
-            </div>
-          <% }); %>
-          <% if (!(properties || []).length) { %>
-            <div class="pc-card"><div class="pc-card__title">No properties yet</div></div>
-          <% } %>
-        </div>
-      </main>
-
-      <%- include('../partials/footer/footer.ejs') %>
-    </div>
-  </body>
-  </html>
+<div class="pc-container">
+  <h2 class="pc-section__title">Available Properties</h2>
+  <div class="pc-grid">
+    <% (properties || []).forEach(function(p){ %>
+      <div class="pc-card">
+        <div class="pc-card__title"><%= p.title %></div>
+        <div class="pc-card__meta"><%= p.city %>, <%= p.state %></div>
+        <% if (p.expected_price) { %>
+          <div class="pc-card__meta">Price: ₹<%= p.expected_price %></div>
+        <% } %>
+        <% if (p.built_up_area && p.area_unit) { %>
+          <div class="pc-card__meta">Area: <%= p.built_up_area %> <%= p.area_unit %></div>
+        <% } %>
+      </div>
+    <% }); %>
+    <% if (!(properties || []).length) { %>
+      <div class="pc-card"><div class="pc-card__title">No properties yet</div></div>
+    <% } %>
+  </div>
+</div>
 
 
