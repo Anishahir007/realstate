@@ -8,7 +8,7 @@ const router = Router();
 router.get('/list', requireAuth, listTemplates); // brokers and super admins can list; filtering handled in controller
 // Super admin: set template status
 router.post('/admin/set-status', requireAuth, requireRole('super_admin'), setTemplateStatus);
-router.get('/preview/:template', requireAuth, requireRole('broker'), previewTemplate);
+router.get('/preview/:template', requireAuth, previewTemplate);
 
 // Broker can publish
 router.post('/publish', requireAuth, requireRole('broker'), publishTemplateAsSite);

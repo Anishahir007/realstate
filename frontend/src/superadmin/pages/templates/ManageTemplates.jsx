@@ -38,6 +38,26 @@ export default function ManageTemplates() {
     }
   }
 
+  async function previewTemplate(name) {
+    const win = window.open('', '_blank', 'noopener');
+    try {
+      const resp = await axios.get(`${apiBase}/api/templates/preview/${name}`, { headers, responseType: 'text' });
+      let html = String(resp.data || '');
+      // Ensure relative assets resolve against backend origin
+      if (html.includes('<head>')) {
+        html = html.replace('<head>', `<head><base href="${apiBase}/">`);
+      } else {
+        html = `<base href="${apiBase}/">` + html;
+      }
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+    } catch (e) {
+      if (win) win.close();
+      alert(e?.response?.data?.message || e?.message || 'Preview failed');
+    }
+  }
+
   const filtered = useMemo(() => {
     const qq = q.trim().toLowerCase();
     return items.filter(x => !qq || x.label.toLowerCase().includes(qq) || x.name.toLowerCase().includes(qq));
@@ -71,6 +91,7 @@ export default function ManageTemplates() {
               <div className="superadminmanagetemplates-row">
                 <span className={`superadminmanagetemplates-badge ${t.status === 'inactive' ? 'inactive' : 'active'}`}>{t.status === 'inactive' ? 'Inactive' : 'Active'}</span>
                 <div className="superadminmanagetemplates-actions-row">
+                  <button className="superadminmanagetemplates-btn superadminmanagetemplates-btn-ghost" onClick={() => previewTemplate(t.name)}>👁️ Preview</button>
                   {t.status === 'inactive' ? (
                     <button className="superadminmanagetemplates-btn" onClick={() => toggleStatus(t.name, 'active')}>Activate</button>
                   ) : (
