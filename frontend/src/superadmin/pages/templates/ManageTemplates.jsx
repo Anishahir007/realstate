@@ -2,9 +2,11 @@ import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useSuperAdmin } from '../../../context/SuperAdminContext.jsx';
 import './managetemplates.css';
+import { useNavigate } from 'react-router-dom';
 
 export default function ManageTemplates() {
   const { token, apiBase } = useSuperAdmin();
+  const navigate = useNavigate();
   const headers = useMemo(() => ({ Authorization: token ? `Bearer ${token}` : '' }), [token]);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -38,24 +40,8 @@ export default function ManageTemplates() {
     }
   }
 
-  async function previewTemplate(name) {
-    const win = window.open('', '_blank', 'noopener');
-    try {
-      const resp = await axios.get(`${apiBase}/api/templates/preview/${name}`, { headers, responseType: 'text' });
-      let html = String(resp.data || '');
-      // Ensure relative assets resolve against backend origin
-      if (html.includes('<head>')) {
-        html = html.replace('<head>', `<head><base href="${apiBase}/">`);
-      } else {
-        html = `<base href="${apiBase}/">` + html;
-      }
-      win.document.open();
-      win.document.write(html);
-      win.document.close();
-    } catch (e) {
-      if (win) win.close();
-      alert(e?.response?.data?.message || e?.message || 'Preview failed');
-    }
+  function previewTemplate(name) {
+    navigate(`/superadmin/manage-templates/preview/${encodeURIComponent(name)}`);
   }
 
   const filtered = useMemo(() => {
@@ -103,6 +89,7 @@ export default function ManageTemplates() {
           </div>
         ))}
       </div>
+
     </div>
   );
 }

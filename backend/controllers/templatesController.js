@@ -85,6 +85,45 @@ export async function setTemplateStatus(req, res) {
   }
 }
 
+export async function previewTemplatePage(req, res) {
+  try {
+    const template = (req.params.template || '').toString();
+    const token = (req.query?.t || '').toString();
+    const origin = req.get('origin') || process.env.PUBLIC_ORIGIN || `${req.protocol}://${req.get('host')}`;
+    const previewUrl = `${origin}/api/templates/preview/${template}`;
+    const safeToken = token.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const html = `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Template Preview - ${template}</title>
+    <base href="${origin}/">
+    <style>body{margin:0;font:14px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial}#loading{padding:16px;color:#374151}</style>
+  </head>
+  <body>
+    <div id="loading">Loading preview...</div>
+    <script>
+      (async function(){
+        try {
+          const resp = await fetch('${previewUrl}', { headers: { 'Authorization': 'Bearer ${safeToken}' } });
+          const txt = await resp.text();
+          document.open();
+          document.write(txt);
+          document.close();
+        } catch (e) {
+          document.getElementById('loading').textContent = 'Preview failed: ' + (e && e.message ? e.message : e);
+        }
+      })();
+    </script>
+  </body>
+</html>`;
+    return res.send(html);
+  } catch (err) {
+    const isProd = process.env.NODE_ENV === 'production';
+    return res.status(500).send(isProd ? 'Server error' : String(err?.message || err));
+  }
+}
+
 function getTemplateViewPath(templateName, view) {
   const root = getTemplatesRoot();
   const pagesFirst = path.join(root, templateName, 'views', 'pages', `${view}.ejs`);

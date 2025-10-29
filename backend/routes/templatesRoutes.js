@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { listTemplates, previewTemplate, publishTemplateAsSite, listMySites, serveSiteBySlug, connectCustomDomain, checkCustomDomain, setTemplateStatus } from '../controllers/templatesController.js';
+import { listTemplates, previewTemplate, publishTemplateAsSite, listMySites, serveSiteBySlug, connectCustomDomain, checkCustomDomain, setTemplateStatus, previewTemplatePage } from '../controllers/templatesController.js';
 
 const router = Router();
 
@@ -8,6 +8,8 @@ const router = Router();
 router.get('/list', requireAuth, listTemplates); // brokers and super admins can list; filtering handled in controller
 // Super admin: set template status
 router.post('/admin/set-status', requireAuth, requireRole('super_admin'), setTemplateStatus);
+// Lightweight preview page that bootstraps with token query
+router.get('/admin/preview-page/:template', previewTemplatePage);
 router.get('/preview/:template', requireAuth, previewTemplate);
 
 // Broker can publish
