@@ -1,0 +1,2 @@
+// Classic template JS placeholder
+

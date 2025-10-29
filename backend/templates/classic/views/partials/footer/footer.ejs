@@ -1,0 +1,20 @@
+<footer class="classic-footer">
+  <div class="classic-footer__columns container">
+    <div class="classic-footer__col">
+      <h4 class="classic-footer__title">Contact</h4>
+      <% if (site && site.broker && site.broker.email) { %>
+        <p class="classic-footer__text">Email: <%= site.broker.email %></p>
+      <% } %>
+    </div>
+    <div class="classic-footer__col">
+      <h4 class="classic-footer__title">Links</h4>
+      <div class="classic-footer__links">
+        <a href="<%= nav.home %>">Home</a>
+        <a href="<%= nav.properties %>">Find Property</a>
+        <a href="<%= nav.about %>">About</a>
+        <a href="<%= nav.contact %>">Contact</a>
+      </div>
+    </div>
+  </div>
+</footer>
+

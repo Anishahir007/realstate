@@ -1,0 +1,13 @@
+<h2>Properties</h2>
+<div class="grid">
+  <% (properties || []).forEach(function(p){ %>
+    <div class="card">
+      <div><strong><%= p.title %></strong></div>
+      <div class="muted"><%= p.city %>, <%= p.state %></div>
+    </div>
+  <% }); %>
+  <% if (!(properties || []).length) { %>
+    <div class="muted">No properties yet.</div>
+  <% } %>
+</div>
+

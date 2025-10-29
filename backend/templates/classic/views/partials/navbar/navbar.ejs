@@ -1,0 +1,15 @@
+<header class="classic-navbar">
+  <div class="classic-navbar__brand">
+    <% if (site && site.broker && site.broker.photo) { %>
+      <img class="classic-navbar__avatar" src="<%= site.broker.photo %>" alt="<%= (site && site.broker && site.broker.full_name) || 'Broker' %>" />
+    <% } %>
+    <span><%= (site && site.broker && site.broker.full_name) || 'Broker' %></span>
+  </div>
+  <nav class="classic-navbar__nav">
+    <a class="classic-navbar__link" href="<%= nav.home %>">Home</a>
+    <a class="classic-navbar__link" href="<%= nav.properties %>">Properties</a>
+    <a class="classic-navbar__link" href="<%= nav.about %>">About</a>
+    <a class="classic-navbar__link" href="<%= nav.contact %>">Contact</a>
+  </nav>
+</header>
+

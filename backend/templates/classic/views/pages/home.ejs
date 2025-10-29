@@ -1,0 +1,19 @@
+<section class="hero card">
+  <h2 style="margin:0 0 8px">Welcome to <%= (site && site.broker && site.broker.full_name) || 'our real estate' %></h2>
+  <p class="muted">Explore latest properties.</p>
+</section>
+<section>
+  <h3 style="margin:0 0 12px">Featured Properties</h3>
+  <div class="grid">
+    <% (properties || []).forEach(function(p){ %>
+      <div class="card">
+        <div><strong><%= p.title %></strong></div>
+        <div class="muted"><%= p.city %>, <%= p.state %></div>
+      </div>
+    <% }); %>
+    <% if (!(properties || []).length) { %>
+      <div class="muted">No properties yet.</div>
+    <% } %>
+  </div>
+</section>
+

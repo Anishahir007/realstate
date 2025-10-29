@@ -1,0 +1,21 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title><%= (site && site.broker && site.broker.full_name ? site.broker.full_name + ' Real Estate' : 'Real Estate') %> • <%= (page || '').charAt(0).toUpperCase() + (page || '').slice(1) %></title>
+    <link rel="stylesheet" href="/templates/classic/public/css/style.css" />
+    <link rel="stylesheet" href="/templates/classic/public/css/responsive.css" />
+  </head>
+  <body>
+    <div class="classic-layout">
+      <%- include('./partials/navbar/navbar.ejs') %>
+      <main class="classic-container container">
+        <%- body %>
+      </main>
+      <%- include('./partials/footer/footer.ejs') %>
+    </div>
+  </body>
+  </html>
+
+
