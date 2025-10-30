@@ -99,6 +99,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Public preview of a backend EJS template (no auth)
 app.get('/site/preview/:template', previewTemplate);
+app.get('/site/preview/:template/:page', previewTemplate);
 
 // Resolve custom-domain root to site pages
 app.get('/resolve-host', (req, res) => {

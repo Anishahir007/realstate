@@ -243,7 +243,7 @@ function pickFeatured(properties, limit = 6) {
 export async function previewTemplate(req, res) {
   try {
     const template = (req.params.template || '').toString();
-    const view = (req.query.page || 'home').toString();
+    const view = ((req.params.page || req.query.page) || 'home').toString();
     const tenantDb = req.headers['x-tenant-db'] || req.headers['x-tenant'] || req.user?.tenant_db || '';
     const viewPath = getTemplateViewPath(template, view);
     if (!fs.existsSync(viewPath)) return res.status(404).send('Not found');
@@ -254,7 +254,8 @@ export async function previewTemplate(req, res) {
       broker = { id: req.user.id, full_name: req.user.name || req.user.full_name || 'Broker', email: req.user.email, tenant_db: req.user.tenant_db };
     }
     const properties = tenantDb ? await fetchBrokerAndProperties(tenantDb) : [];
-    const nav = { home: '?page=home', properties: '?page=properties', about: '?page=about', contact: '?page=contact', privacy: '?page=privacy', terms: '?page=terms' };
+    const base = `/site/preview/${template}`;
+    const nav = { home: `${base}`, properties: `${base}/properties`, about: `${base}/about`, contact: `${base}/contact`, privacy: `${base}/privacy`, terms: `${base}/terms` };
     const featuredProperties = pickFeatured(properties);
     const context = { ...buildSiteContext({ broker, properties, page: view, nav }), featuredProperties };
     // Use Express view engine + layouts when available
