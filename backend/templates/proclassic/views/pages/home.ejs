@@ -1,20 +1,5 @@
 <%- include('./hero.ejs') %>
 
-<div class="pc-container">
-  <section>
-    <h3 class="pc-section__title">Featured Properties</h3>
-    <div class="pc-grid">
-      <% (properties || []).forEach(function(p){ %>
-        <div class="pc-card">
-          <div class="pc-card__title"><%= p.title %></div>
-          <div class="pc-card__meta"><%= p.city %>, <%= p.state %></div>
-        </div>
-      <% }); %>
-      <% if (!(properties || []).length) { %>
-        <div class="pc-card"><div class="pc-card__title">No properties yet</div><div class="pc-card__meta">Check back soon.</div></div>
-      <% } %>
-    </div>
-  </section>
-</div>
+<%- include('./featured.ejs') %>
 
 
