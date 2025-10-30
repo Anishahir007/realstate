@@ -352,7 +352,6 @@ export async function previewTemplate(req, res) {
       out = rewriteTemplateAssetUrls(out);
       out = stripExternalTemplateAssets(out);
       out = encodeSpacesInPublicUrls(out);
-      out = rewritePublicAssetUrls(out);
       return res.send(out);
     });
   } catch (err) {
@@ -433,7 +432,6 @@ export async function serveSiteBySlug(req, res) {
       out = rewriteTemplateAssetUrls(out);
       out = stripExternalTemplateAssets(out);
       out = encodeSpacesInPublicUrls(out);
-      out = rewritePublicAssetUrls(out);
       return res.send(out);
     });
   } catch (err) {
