@@ -81,6 +81,8 @@ app.use('/profiles', express.static('public/profiles'));
 app.use('/properties', express.static('public/properties'));  
 // Serve template public assets (CSS/JS/images)
 app.use('/templates', express.static(path.join(__dirname, 'templates')));
+// Serve any other files under /public at root (e.g., /public/* and relative links)
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Public preview of a backend EJS template (no auth)
 app.get('/site/preview/:template', previewTemplate);

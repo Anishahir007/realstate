@@ -153,6 +153,20 @@ function readTemplateAsset(templateName, assetPath) {
   return '';
 }
 
+function injectBaseHref(html, baseHref) {
+  try {
+    if (!html) return html;
+    const safe = String(baseHref || '/');
+    if (html.includes('<head')) {
+      return html.replace('<head>', `<head><base href="${safe}">`);
+    }
+    // Fallback prepend
+    return `<base href="${safe}">` + html;
+  } catch {
+    return html;
+  }
+}
+
 function buildSiteContext({ broker, properties, page, nav }) {
   return {
     site: {
@@ -203,7 +217,11 @@ export async function previewTemplate(req, res) {
     // Use Express view engine + layouts when available
     const viewRel = getTemplateViewRel(template, view);
     const layoutRel = getTemplateLayoutRel(template);
-    return res.render(viewRel, { ...context, layout: layoutRel || false });
+    return res.render(viewRel, { ...context, layout: layoutRel || false }, (err, html) => {
+      if (err) return res.status(500).send(process.env.NODE_ENV === 'production' ? 'Server error' : String(err?.message || err));
+      const out = injectBaseHref(html, `/templates/${template}/`);
+      return res.send(out);
+    });
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';
     return res.status(500).send(isProd ? 'Server error' : String(err?.message || err));
@@ -273,7 +291,11 @@ export async function serveSiteBySlug(req, res) {
     const context = buildSiteContext({ broker, properties, page: view, nav });
     const viewRel = getTemplateViewRel(site.template, view);
     const layoutRel = getTemplateLayoutRel(site.template);
-    return res.render(viewRel, { ...context, layout: layoutRel || false });
+    return res.render(viewRel, { ...context, layout: layoutRel || false }, (err, html) => {
+      if (err) return res.status(500).send(process.env.NODE_ENV === 'production' ? 'Server error' : String(err?.message || err));
+      const out = injectBaseHref(html, `/templates/${site.template}/`);
+      return res.send(out);
+    });
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';
     return res.status(500).send(isProd ? 'Server error' : String(err?.message || err));
