@@ -22,7 +22,7 @@
       dots.forEach((d,i)=> d.classList.toggle('active', i===idx));
     }
     function go(n){ idx = (n + slides.length) % slides.length; render(); restart(); }
-    function start(){ timer = setInterval(()=> go(idx+1), interval); }
+    function start(){ stop(); timer = setInterval(()=> go(idx+1), interval); }
     function stop(){ if (timer) { clearInterval(timer); timer = null; } }
     function restart(){ stop(); start(); }
 
