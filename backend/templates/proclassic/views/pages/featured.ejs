@@ -1,0 +1,40 @@
+<div class="pc-featured">
+  <div class="pc-container">
+    <div class="pc-featured__head">
+      <h2 class="pc-featured__title">Featured Properties</h2>
+      <p class="pc-featured__sub">Top picks curated by price and location</p>
+    </div>
+
+    <div class="pc-featured__grid">
+      <% (featuredProperties || []).forEach(function(p){ %>
+        <div class="pc-fcard">
+          <div class="pc-fcard__media">
+            <img alt="property" src="<%= p.image_url ? p.image_url : '/templates/proclassic/public/img/placeholder.jpg' %>" />
+            <div class="pc-fcard__badge"><%= (p.property_type || 'For Sale').toString().replace(/_/g, ' ').toUpperCase() %></div>
+            <div class="pc-fcard__price">₹ <%= Number(p.expected_price||0).toLocaleString('en-IN') %></div>
+          </div>
+          <div class="pc-fcard__body">
+            <div class="pc-fcard__title"><%= p.title || 'Property' %></div>
+            <div class="pc-fcard__meta"><%= [p.locality, p.city, p.state].filter(Boolean).join(', ') %></div>
+            <div class="pc-fcard__specs">
+              <div class="pc-fspec"><span>Area</span><strong><%= p.built_up_area || '-' %> <%= p.area_unit || '' %></strong></div>
+            </div>
+            <div class="pc-fcard__actions">
+              <a class="pc-btn pc-btn-light" href="<%= nav.properties %>">View Details</a>
+              <a class="pc-btn pc-btn-dark" href="<%= nav.contact || '#' %>">Send Enquiry</a>
+            </div>
+          </div>
+        </div>
+      <% }) %>
+      <% if (!(featuredProperties || []).length) { %>
+        <div class="pc-empty">No featured properties yet. Please check back soon.</div>
+      <% } %>
+    </div>
+
+    <div class="pc-featured__footer">
+      <a class="pc-btn pc-btn-primary" href="<%= nav.properties %>">View All Properties</a>
+    </div>
+  </div>
+</div>
+
+

@@ -204,7 +204,13 @@ async function fetchBrokerAndProperties(tenantDb) {
     const tenantPool = await getTenantPool(tenantDb);
     const [rows] = await tenantPool.query(
       `SELECT p.id, p.title, p.city, p.state, p.locality, p.address, p.property_type, p.building_type,
-              pf.expected_price, pf.built_up_area, pf.area_unit, p.created_at
+              pf.expected_price, pf.built_up_area, pf.area_unit, p.created_at,
+              (
+                SELECT file_url FROM property_media m
+                WHERE m.property_id = p.id
+                ORDER BY m.is_primary DESC, m.id ASC
+                LIMIT 1
+              ) AS image_url
        FROM properties p
        LEFT JOIN property_features pf ON pf.property_id = p.id
        ORDER BY p.id DESC
@@ -214,6 +220,14 @@ async function fetchBrokerAndProperties(tenantDb) {
   } catch {
     return [];
   }
+}
+
+function pickFeatured(properties, limit = 6) {
+  try {
+    const arr = Array.isArray(properties) ? properties.slice() : [];
+    arr.sort((a, b) => (Number(b?.expected_price) || 0) - (Number(a?.expected_price) || 0));
+    return arr.slice(0, limit);
+  } catch { return []; }
 }
 
 export async function previewTemplate(req, res) {
@@ -231,7 +245,8 @@ export async function previewTemplate(req, res) {
     }
     const properties = tenantDb ? await fetchBrokerAndProperties(tenantDb) : [];
     const nav = { home: '?page=home', properties: '?page=properties', about: '?page=about', contact: '?page=contact', privacy: '?page=privacy', terms: '?page=terms' };
-    const context = buildSiteContext({ broker, properties, page: view, nav });
+    const featuredProperties = pickFeatured(properties);
+    const context = { ...buildSiteContext({ broker, properties, page: view, nav }), featuredProperties };
     // Use Express view engine + layouts when available
     const viewRel = getTemplateViewRel(template, view);
     const layoutRel = getTemplateLayoutRel(template);
@@ -307,7 +322,8 @@ export async function serveSiteBySlug(req, res) {
       }
     } catch {}
     const nav = { home: `/site/${slug}`, properties: `/site/${slug}/properties`, about: `/site/${slug}/about`, contact: `/site/${slug}/contact`, privacy: `/site/${slug}/privacy`, terms: `/site/${slug}/terms` };
-    const context = buildSiteContext({ broker, properties, page: view, nav });
+    const featuredProperties = pickFeatured(properties);
+    const context = { ...buildSiteContext({ broker, properties, page: view, nav }), featuredProperties };
     const viewRel = getTemplateViewRel(site.template, view);
     const layoutRel = getTemplateLayoutRel(site.template);
     return res.render(viewRel, { ...context, layout: layoutRel || false }, (err, html) => {
