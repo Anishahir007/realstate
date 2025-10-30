@@ -205,6 +205,17 @@ function rewriteTemplateAssetUrls(html) {
   } catch { return html; }
 }
 
+function stripExternalTemplateAssets(html) {
+  try {
+    if (!html) return html;
+    // Remove link tags that point to template css (both /templates and /api/templates/assets)
+    let out = html.replace(/<link[^>]+href=["']\/(api\/templates\/assets|templates)\/[^"']+\.css["'][^>]*>/gi, '');
+    // Remove script tags that point to template js
+    out = out.replace(/<script[^>]+src=["']\/(api\/templates\/assets|templates)\/[^"']+\.js["'][^>]*><\/script>/gi, '');
+    return out;
+  } catch { return html; }
+}
+
 function normalizePublicUrl(u) {
   try {
     if (!u) return '';
@@ -292,6 +303,7 @@ export async function previewTemplate(req, res) {
       let out = injectBaseHref(html, `/templates/${template}/`);
       out = tryInlineTemplateCss(out, template);
       out = rewriteTemplateAssetUrls(out);
+      out = stripExternalTemplateAssets(out);
       return res.send(out);
     });
   } catch (err) {
@@ -369,6 +381,7 @@ export async function serveSiteBySlug(req, res) {
       let out = injectBaseHref(html, `/templates/${site.template}/`);
       out = tryInlineTemplateCss(out, site.template);
       out = rewriteTemplateAssetUrls(out);
+      out = stripExternalTemplateAssets(out);
       return res.send(out);
     });
   } catch (err) {
