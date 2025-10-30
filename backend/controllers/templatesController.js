@@ -276,10 +276,10 @@ function normalizeAssetPath(u, defaultBucket) {
 
 function makeAbsoluteIfNeeded(p, assetOrigin) {
   try {
+    if (!p) return p;
+    if (/^https?:\/\//i.test(p)) return p;
     if (!assetOrigin) return p;
-    if (!p || /^https?:\/\//i.test(p)) return p;
-    if (p.startsWith('/profiles/') || p.startsWith('/properties/')) return assetOrigin.replace(/\/$/, '') + p;
-    return p;
+    return assetOrigin.replace(/\/$/, '') + p;
   } catch { return p; }
 }
 

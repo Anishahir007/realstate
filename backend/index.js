@@ -41,8 +41,8 @@ app.use(helmet({
     directives: {
       // Allow template inline <style> fallback and external CSS under same origin
       "style-src": ["'self'", "'unsafe-inline'"],
-      // Allow Unsplash and data URLs for hero/background images
-      "img-src": ["'self'", "data:", "https://images.unsplash.com", "https://plus.unsplash.com", "https://images.pexels.com"],
+      // Allow Unsplash, Pexels and our own asset hosts
+      "img-src": ["'self'", "data:", "https://images.unsplash.com", "https://plus.unsplash.com", "https://images.pexels.com", process.env.PUBLIC_ORIGIN || 'https://www.proker.xyz', 'https://www.proker.xyz', 'https://proker.xyz', 'https://prokers.cloud'],
       // Allow scripts from same origin and inline (template JS)
       "script-src": ["'self'", "'unsafe-inline'"],
       // Fonts/images via data: are fine
