@@ -241,7 +241,7 @@ function encodeSpacesInPublicUrls(html) {
   } catch { return html; }
 }
 
-function normalizePublicUrl(u) {
+function normalizeAssetPath(u, defaultBucket) {
   try {
     if (!u) return '';
     let s = String(u).trim().replace(/\\/g, '/');
@@ -249,6 +249,10 @@ function normalizePublicUrl(u) {
     s = s.replace(/^\.\//, '').replace(/^public\//i, '');
     // Already absolute http(s)
     if (/^https?:\/\//i.test(s)) return s;
+    // Ensure bucket prefix
+    if (!/^\//.test(s) && !/^profiles\//i.test(s) && !/^properties\//i.test(s)) {
+      if (defaultBucket) s = `${defaultBucket.replace(/\/$/, '')}/` + s;
+    }
     // Force absolute path so <base href> won't break it
     s = '/' + s.replace(/^\//, '');
     // URL-encode spaces and special chars but keep slashes
@@ -259,9 +263,9 @@ function normalizePublicUrl(u) {
 }
 
 function buildSiteContext({ broker, properties, page, nav }) {
-  const normalizedBroker = broker ? { ...broker, photo: normalizePublicUrl(broker.photo) } : broker;
+  const normalizedBroker = broker ? { ...broker, photo: normalizeAssetPath(broker.photo, 'profiles') } : broker;
   const normalizedProps = Array.isArray(properties)
-    ? properties.map((p) => ({ ...p, image_url: normalizePublicUrl(p?.image_url) }))
+    ? properties.map((p) => ({ ...p, image_url: normalizeAssetPath(p?.image_url, 'properties') }))
     : [];
   return {
     site: {
