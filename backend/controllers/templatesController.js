@@ -232,6 +232,15 @@ function tryInlineTemplateJs(html, templateName) {
   } catch { return html; }
 }
 
+function encodeSpacesInPublicUrls(html) {
+  try {
+    if (!html) return html;
+    return html.replace(/(href|src)=("|')((\/)(profiles|properties)\/[^"']+)(\2)/gi, (m, attr, q, url, slash, bucket) => {
+      try { return `${attr}=${q}${encodeURI(url)}${q}`; } catch { return m; }
+    });
+  } catch { return html; }
+}
+
 function normalizePublicUrl(u) {
   try {
     if (!u) return '';
@@ -326,6 +335,7 @@ export async function previewTemplate(req, res) {
       out = tryInlineTemplateJs(out, template);
       out = rewriteTemplateAssetUrls(out);
       out = stripExternalTemplateAssets(out);
+      out = encodeSpacesInPublicUrls(out);
       return res.send(out);
     });
   } catch (err) {
@@ -405,6 +415,7 @@ export async function serveSiteBySlug(req, res) {
       out = tryInlineTemplateJs(out, site.template);
       out = rewriteTemplateAssetUrls(out);
       out = stripExternalTemplateAssets(out);
+      out = encodeSpacesInPublicUrls(out);
       return res.send(out);
     });
   } catch (err) {
