@@ -195,6 +195,16 @@ function tryInlineTemplateCss(html, templateName) {
   }
 }
 
+function rewriteTemplateAssetUrls(html) {
+  try {
+    if (!html) return html;
+    let out = html.replace(/(href|src)=["']\/templates\//g, (m, p1) => `${p1}="/api/templates/assets/`);
+    // Replace CSS url(/templates/..)
+    out = out.replace(/url\((['"]?)\/templates\//g, (m, q) => `url(${q}/api/templates/assets/`);
+    return out;
+  } catch { return html; }
+}
+
 function normalizePublicUrl(u) {
   try {
     if (!u) return '';
@@ -281,6 +291,7 @@ export async function previewTemplate(req, res) {
       if (err) return res.status(500).send(process.env.NODE_ENV === 'production' ? 'Server error' : String(err?.message || err));
       let out = injectBaseHref(html, `/templates/${template}/`);
       out = tryInlineTemplateCss(out, template);
+      out = rewriteTemplateAssetUrls(out);
       return res.send(out);
     });
   } catch (err) {
@@ -357,6 +368,7 @@ export async function serveSiteBySlug(req, res) {
       if (err) return res.status(500).send(process.env.NODE_ENV === 'production' ? 'Server error' : String(err?.message || err));
       let out = injectBaseHref(html, `/templates/${site.template}/`);
       out = tryInlineTemplateCss(out, site.template);
+      out = rewriteTemplateAssetUrls(out);
       return res.send(out);
     });
   } catch (err) {
