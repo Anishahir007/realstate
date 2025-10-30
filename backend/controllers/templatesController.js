@@ -172,7 +172,17 @@ function tryInlineTemplateCss(html, templateName) {
     const root = getTemplatesRoot();
     const cssDir = path.join(root, templateName, 'public', 'css');
     if (!fs.existsSync(cssDir)) return html;
-    const cssFiles = ['style.css', 'navbar.css', 'responsive.css'].filter(f => fs.existsSync(path.join(cssDir, f)));
+    const cssFiles = [
+      'style.css',
+      'navbar.css',
+      'responsive.css',
+      'hero.css',
+      'featured.css',
+      'insights.css',
+      'contacthome.css',
+      'testimonials.css',
+      'about.css',
+    ].filter(f => fs.existsSync(path.join(cssDir, f)));
     if (cssFiles.length === 0) return html;
     const blocks = cssFiles.map(f => {
       try { return `<style>\n${fs.readFileSync(path.join(cssDir, f), 'utf-8')}\n</style>`; } catch { return ''; }
