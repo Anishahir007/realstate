@@ -43,8 +43,8 @@ app.use(helmet({
       "style-src": ["'self'", "'unsafe-inline'"],
       // Allow Unsplash and data URLs for hero/background images
       "img-src": ["'self'", "data:", "https://images.unsplash.com", "https://plus.unsplash.com", "https://images.pexels.com"],
-      // Allow scripts from same origin (template JS)
-      "script-src": ["'self'"],
+      // Allow scripts from same origin and inline (template JS)
+      "script-src": ["'self'", "'unsafe-inline'"],
       // Fonts/images via data: are fine
       "font-src": ["'self'", "data:"],
     }
@@ -88,14 +88,14 @@ app.use('/api/broker-users', brokerUserRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api/leads', leadsRoutes);
+// Serve template assets FIRST so it doesn't get swallowed by /api/templates router
+app.use('/api/templates/assets', express.static(path.join(__dirname, 'templates')));
 app.use('/api/templates', templatesRoutes);
 // Serve uploaded images
 app.use('/profiles', express.static('public/profiles'));
 app.use('/properties', express.static('public/properties'));  
 // Serve template public assets (CSS/JS/images)
 app.use('/templates', express.static(path.join(__dirname, 'templates')));
-// Also expose template assets under /api to work behind frontend proxies
-app.use('/api/templates/assets', express.static(path.join(__dirname, 'templates')));
 // Serve any other files under /public at root (e.g., /public/* and relative links)
 app.use(express.static(path.join(__dirname, 'public')));
 

@@ -216,6 +216,22 @@ function stripExternalTemplateAssets(html) {
   } catch { return html; }
 }
 
+function tryInlineTemplateJs(html, templateName) {
+  try {
+    const root = getTemplatesRoot();
+    const jsDir = path.join(root, templateName, 'public', 'js');
+    if (!fs.existsSync(jsDir)) return html;
+    const jsFiles = ['hero.js', 'testimonials.js'].filter(f => fs.existsSync(path.join(jsDir, f)));
+    if (jsFiles.length === 0) return html;
+    const blocks = jsFiles.map(f => {
+      try { return `<script>\n${fs.readFileSync(path.join(jsDir, f), 'utf-8')}\n</script>`; } catch { return ''; }
+    }).join('\n');
+    if (!blocks.trim()) return html;
+    if (html.includes('</body>')) return html.replace('</body>', `${blocks}\n</body>`);
+    return html + blocks;
+  } catch { return html; }
+}
+
 function normalizePublicUrl(u) {
   try {
     if (!u) return '';
@@ -302,6 +318,7 @@ export async function previewTemplate(req, res) {
       if (err) return res.status(500).send(process.env.NODE_ENV === 'production' ? 'Server error' : String(err?.message || err));
       let out = injectBaseHref(html, `/templates/${template}/`);
       out = tryInlineTemplateCss(out, template);
+      out = tryInlineTemplateJs(out, template);
       out = rewriteTemplateAssetUrls(out);
       out = stripExternalTemplateAssets(out);
       return res.send(out);
@@ -380,6 +397,7 @@ export async function serveSiteBySlug(req, res) {
       if (err) return res.status(500).send(process.env.NODE_ENV === 'production' ? 'Server error' : String(err?.message || err));
       let out = injectBaseHref(html, `/templates/${site.template}/`);
       out = tryInlineTemplateCss(out, site.template);
+      out = tryInlineTemplateJs(out, site.template);
       out = rewriteTemplateAssetUrls(out);
       out = stripExternalTemplateAssets(out);
       return res.send(out);
