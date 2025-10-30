@@ -235,12 +235,17 @@ function tryInlineTemplateJs(html, templateName) {
 function normalizePublicUrl(u) {
   try {
     if (!u) return '';
-    let s = String(u).replace(/\\/g, '/');
-    // Drop accidental leading 'public/' stored in DB
-    s = s.replace(/^public\//i, '');
-    // If already absolute URL or starts with '/', return as-is
-    if (/^https?:\/\//i.test(s) || s.startsWith('/')) return s;
-    return '/' + s.replace(/^\//, '');
+    let s = String(u).trim().replace(/\\/g, '/');
+    // Remove leading './' or 'public/'
+    s = s.replace(/^\.\//, '').replace(/^public\//i, '');
+    // Already absolute http(s)
+    if (/^https?:\/\//i.test(s)) return s;
+    // Force absolute path so <base href> won't break it
+    s = '/' + s.replace(/^\//, '');
+    // URL-encode spaces and special chars but keep slashes
+    const parts = s.split('/');
+    const encoded = parts.map((p, idx) => idx === 0 ? p : encodeURIComponent(p));
+    return encoded.join('/');
   } catch { return u; }
 }
 
