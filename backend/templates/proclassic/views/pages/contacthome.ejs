@@ -1,0 +1,53 @@
+<section class="pc-contacthome">
+  <div class="pc-contacthome__bg" aria-hidden></div>
+  <div class="pc-container pc-contacthome__wrap">
+    <div class="pc-contacthome__left">
+      <h2 class="pc-contacthome__title">How to find us</h2>
+      <ul class="pc-contacthome__list">
+        <li>
+          <span class="pc-contacthome__icon">📍</span>
+          <div>
+            <div class="pc-contacthome__label">Address</div>
+            <div class="pc-contacthome__text"><%= (site && site.broker && site.broker.address) || 'Your office address here' %></div>
+          </div>
+        </li>
+        <li>
+          <span class="pc-contacthome__icon">📞</span>
+          <div>
+            <div class="pc-contacthome__label">Phone</div>
+            <div class="pc-contacthome__text"><%= (site && site.broker && site.broker.phone) || '+91-0000000000' %></div>
+          </div>
+        </li>
+        <li>
+          <span class="pc-contacthome__icon">✉️</span>
+          <div>
+            <div class="pc-contacthome__label">Email</div>
+            <div class="pc-contacthome__text"><%= (site && site.broker && site.broker.email) || 'info@example.com' %></div>
+          </div>
+        </li>
+      </ul>
+    </div>
+    <div class="pc-contacthome__right">
+      <h2 class="pc-contacthome__title">Quick Enquiry</h2>
+      <form class="pc-contacthome__form" action="#" method="post">
+        <div class="pc-row">
+          <input class="pc-input" type="text" name="name" placeholder="Your Name" required />
+          <input class="pc-input" type="email" name="email" placeholder="Email" required />
+        </div>
+        <div class="pc-row">
+          <input class="pc-input pc-input--sm" type="text" name="isd" value="+91" />
+          <input class="pc-input" type="tel" name="phone" placeholder="Phone / Mobile" required />
+          <select class="pc-input" name="topic">
+            <option>Buy a Property</option>
+            <option>Sell a Property</option>
+            <option>Rent a Property</option>
+          </select>
+        </div>
+        <textarea class="pc-textarea" name="message" rows="4" placeholder="Leave a message for us"></textarea>
+        <button class="pc-btn pc-btn-primary" type="submit">Send Message</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+
