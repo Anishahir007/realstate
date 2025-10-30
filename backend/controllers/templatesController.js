@@ -195,14 +195,30 @@ function tryInlineTemplateCss(html, templateName) {
   }
 }
 
+function normalizePublicUrl(u) {
+  try {
+    if (!u) return '';
+    let s = String(u).replace(/\\/g, '/');
+    // Drop accidental leading 'public/' stored in DB
+    s = s.replace(/^public\//i, '');
+    // If already absolute URL or starts with '/', return as-is
+    if (/^https?:\/\//i.test(s) || s.startsWith('/')) return s;
+    return '/' + s.replace(/^\//, '');
+  } catch { return u; }
+}
+
 function buildSiteContext({ broker, properties, page, nav }) {
+  const normalizedBroker = broker ? { ...broker, photo: normalizePublicUrl(broker.photo) } : broker;
+  const normalizedProps = Array.isArray(properties)
+    ? properties.map((p) => ({ ...p, image_url: normalizePublicUrl(p?.image_url) }))
+    : [];
   return {
     site: {
-      title: broker?.full_name ? `${broker.full_name} Real Estate` : 'Real Estate',
-      broker,
+      title: normalizedBroker?.full_name ? `${normalizedBroker.full_name} Real Estate` : 'Real Estate',
+      broker: normalizedBroker,
     },
     page,
-    properties: properties || [],
+    properties: normalizedProps,
     nav: nav || { home: '#', properties: '#', about: '#', contact: '#'},
     // urlFor is a dynamic link builder injected per request mode
     urlFor: (p) => nav && nav[p] ? nav[p] : '#',
