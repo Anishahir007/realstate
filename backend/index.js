@@ -36,6 +36,19 @@ app.set('layout', false);
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
   crossOriginEmbedderPolicy: false,
+  contentSecurityPolicy: {
+    useDefaults: true,
+    directives: {
+      // Allow template inline <style> fallback and external CSS under same origin
+      "style-src": ["'self'", "'unsafe-inline'"],
+      // Allow Unsplash and data URLs for hero/background images
+      "img-src": ["'self'", "data:", "https://images.unsplash.com", "https://plus.unsplash.com", "https://images.pexels.com"],
+      // Allow scripts from same origin (template JS)
+      "script-src": ["'self'"],
+      // Fonts/images via data: are fine
+      "font-src": ["'self'", "data:"],
+    }
+  }
 }));
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
