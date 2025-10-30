@@ -1,12 +1,4 @@
-<header class="pc-hero">
-  <div class="pc-container">
-    <div class="pc-hero__card">
-      <h1 class="pc-hero__title">Find your next home with <%= (site && site.broker && site.broker.full_name) || 'our team' %></h1>
-      <p class="pc-hero__subtitle">Curated listings, trusted advice, and seamless closings.</p>
-      <a class="pc-cta" href="<%= nav.properties %>">Browse Properties</a>
-    </div>
-  </div>
-</header>
+<%- include('./hero.ejs') %>
 
 <div class="pc-container">
   <section>

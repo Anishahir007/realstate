@@ -1,0 +1,54 @@
+<section class="pc-hero-carousel" data-interval="5000">
+  <div class="pc-hero-slides">
+    <div class="pc-hero-slide active" style="background-image:url('https://images.unsplash.com/photo-1501183638710-841dd1904471?q=80&w=1600&auto=format&fit=crop');">
+      <div class="pc-hero-overlay">
+        <div class="pc-hero-content pc-container">
+          <h1>Find your next home with <%= (site && site.broker && site.broker.full_name) || 'our team' %></h1>
+          <p>Curated listings, trusted advice, and seamless closings.</p>
+          <a class="pc-cta" href="<%= nav.properties %>">Browse Properties</a>
+        </div>
+      </div>
+    </div>
+    <div class="pc-hero-slide" style="background-image:url('https://images.unsplash.com/photo-1502005229762-cf1b2da7c08e?q=80&w=1600&auto=format&fit=crop');">
+      <div class="pc-hero-overlay">
+        <div class="pc-hero-content pc-container">
+          <h1>Premium listings in your city</h1>
+          <p>Explore hand-picked properties across prime neighborhoods.</p>
+          <a class="pc-cta" href="<%= nav.properties %>">Explore Listings</a>
+        </div>
+      </div>
+    </div>
+    <div class="pc-hero-slide" style="background-image:url('https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?q=80&w=1600&auto=format&fit=crop');">
+      <div class="pc-hero-overlay">
+        <div class="pc-hero-content pc-container">
+          <h1>From discovery to closing</h1>
+          <p>We guide you at every step with local expertise.</p>
+          <a class="pc-cta" href="<%= nav.contact || '#' %>">Talk to Us</a>
+        </div>
+      </div>
+    </div>
+    <div class="pc-hero-slide" style="background-image:url('https://images.unsplash.com/photo-1523217582562-09d0def993a6?q=80&w=1600&auto=format&fit=crop');">
+      <div class="pc-hero-overlay">
+        <div class="pc-hero-content pc-container">
+          <h1>Smart investments</h1>
+          <p>Find properties that match your budget and goals.</p>
+          <a class="pc-cta" href="<%= nav.properties %>">See Opportunities</a>
+        </div>
+      </div>
+    </div>
+    <div class="pc-hero-slide" style="background-image:url('https://images.unsplash.com/photo-1507089947368-19c1da9775ae?q=80&w=1600&auto=format&fit=crop');">
+      <div class="pc-hero-overlay">
+        <div class="pc-hero-content pc-container">
+          <h1>Move-in ready homes</h1>
+          <p>Beautiful spaces curated for modern living.</p>
+          <a class="pc-cta" href="<%= nav.properties %>">Get Started</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <button class="pc-hero-nav pc-hero-prev" aria-label="Previous">‹</button>
+  <button class="pc-hero-nav pc-hero-next" aria-label="Next">›</button>
+  <div class="pc-hero-dots" aria-hidden="true"></div>
+</section>
+
+
