@@ -167,6 +167,24 @@ function injectBaseHref(html, baseHref) {
   }
 }
 
+function tryInlineTemplateCss(html, templateName) {
+  try {
+    const root = getTemplatesRoot();
+    const cssDir = path.join(root, templateName, 'public', 'css');
+    if (!fs.existsSync(cssDir)) return html;
+    const cssFiles = ['style.css', 'navbar.css', 'responsive.css'].filter(f => fs.existsSync(path.join(cssDir, f)));
+    if (cssFiles.length === 0) return html;
+    const blocks = cssFiles.map(f => {
+      try { return `<style>\n${fs.readFileSync(path.join(cssDir, f), 'utf-8')}\n</style>`; } catch { return ''; }
+    }).join('\n');
+    if (!blocks.trim()) return html;
+    if (html.includes('</head>')) return html.replace('</head>', `${blocks}\n</head>`);
+    return blocks + html;
+  } catch {
+    return html;
+  }
+}
+
 function buildSiteContext({ broker, properties, page, nav }) {
   return {
     site: {
@@ -219,7 +237,8 @@ export async function previewTemplate(req, res) {
     const layoutRel = getTemplateLayoutRel(template);
     return res.render(viewRel, { ...context, layout: layoutRel || false }, (err, html) => {
       if (err) return res.status(500).send(process.env.NODE_ENV === 'production' ? 'Server error' : String(err?.message || err));
-      const out = injectBaseHref(html, `/templates/${template}/`);
+      let out = injectBaseHref(html, `/templates/${template}/`);
+      out = tryInlineTemplateCss(out, template);
       return res.send(out);
     });
   } catch (err) {
@@ -293,7 +312,8 @@ export async function serveSiteBySlug(req, res) {
     const layoutRel = getTemplateLayoutRel(site.template);
     return res.render(viewRel, { ...context, layout: layoutRel || false }, (err, html) => {
       if (err) return res.status(500).send(process.env.NODE_ENV === 'production' ? 'Server error' : String(err?.message || err));
-      const out = injectBaseHref(html, `/templates/${site.template}/`);
+      let out = injectBaseHref(html, `/templates/${site.template}/`);
+      out = tryInlineTemplateCss(out, site.template);
       return res.send(out);
     });
   } catch (err) {
