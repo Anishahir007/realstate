@@ -1,0 +1,34 @@
+.pc-about-hero{position:relative;background:linear-gradient(180deg,rgba(2,6,23,.65),rgba(2,6,23,.55)),url('/templates/proclassic/public/img/city-bg.jpg') center/cover no-repeat;color:#fff;padding:56px 0;margin-bottom:18px}
+.pc-about-title{margin:0;font-size:36px}
+.pc-about-sub{max-width:800px;margin:8px 0 0}
+
+.pc-about-wrap{display:grid;grid-template-columns:1.2fr 1fr;gap:22px}
+.pc-about-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px;color:#0f172a}
+.pc-about-bullets{margin:0;padding-left:18px}
+
+.pc-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px}
+.pc-stat{background:#111827;color:#fff;border-radius:12px;padding:16px;text-align:center}
+.pc-stat-num{font-size:26px;font-weight:800}
+.pc-stat-label{opacity:.95}
+
+.pc-about-cta{display:flex;gap:10px;align-items:center;margin-top:14px}
+.pc-btn{border:1px solid #e5e7eb;border-radius:10px;padding:10px 14px;cursor:pointer;text-decoration:none;display:inline-block}
+.pc-btn-primary{background:#2563eb;color:#fff;border-color:#2563eb}
+.pc-btn-light{background:#fff;color:#111827}
+
+.pc-about-image{width:100%;height:260px;object-fit:cover;border-radius:10px}
+.pc-about-gallery{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.pc-about-thumb{width:100%;height:120px;object-fit:cover;border-radius:10px}
+
+.pc-values-wrap{margin-top:18px}
+.pc-values{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.pc-value{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px}
+.pc-center{text-align:center}
+
+@media (max-width: 1024px){
+  .pc-about-wrap{grid-template-columns:1fr}
+  .pc-stats{grid-template-columns:repeat(2,1fr)}
+  .pc-values{grid-template-columns:1fr}
+}
+
+

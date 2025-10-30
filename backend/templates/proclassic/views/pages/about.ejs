@@ -1,8 +1,58 @@
-<div class="pc-container">
-  <h2 class="pc-section__title">About Us</h2>
-  <div class="pc-card">
-    <p class="pc-footer__muted">We help buyers and sellers close with confidence. Personalized guidance, market insights, and strong negotiations—powered by <%= site && site.broker && site.broker.full_name || 'our broker' %>.</p>
+<section class="pc-about-hero">
+  <div class="pc-container">
+    <h1 class="pc-about-title">About <%= site && site.broker && site.broker.full_name || 'Our Real Estate Team' %></h1>
+    <p class="pc-about-sub">Trusted local partner for buying, selling and renting properties. We combine on‑ground expertise with data‑driven insights to help you make confident decisions.</p>
+  </div>
+</section>
+
+<div class="pc-container pc-about-wrap">
+  <div class="pc-about-card">
+    <h2 style="margin-top:0">Our Story</h2>
+    <p>Since day one, our focus has been simple—deliver honest advice and close smoothly. Over the years we have built a strong network of owners, developers and financial institutions across the city. That network allows us to surface the right options faster, negotiate better and protect you at every step.</p>
+    <ul class="pc-about-bullets">
+      <li>End‑to‑end help for buy, sell, rent and investment</li>
+      <li>On‑ground team for property discovery and due diligence</li>
+      <li>Clear documentation with RERA‑compliant processes</li>
+      <li>Dedicated relationship manager until possession</li>
+    </ul>
+    <div class="pc-stats">
+      <div class="pc-stat"><div class="pc-stat-num">10+ yrs</div><div class="pc-stat-label">Experience</div></div>
+      <div class="pc-stat"><div class="pc-stat-num">1200+</div><div class="pc-stat-label">Homes Closed</div></div>
+      <div class="pc-stat"><div class="pc-stat-num">25+</div><div class="pc-stat-label">Localities Covered</div></div>
+      <div class="pc-stat"><div class="pc-stat-num">4.9/5</div><div class="pc-stat-label">Client Rating</div></div>
+    </div>
+    <div class="pc-about-cta">
+      <a class="pc-btn pc-btn-primary" href="<%= nav && nav.properties || '#' %>">Browse Properties</a>
+      <a class="pc-btn pc-btn-light" href="<%= nav && nav.contact || '#' %>">Talk to an Expert</a>
+    </div>
+  </div>
+
+  <div class="pc-about-card">
+    <img class="pc-about-image" src="/templates/proclassic/public/img/placeholder.jpg" alt="Our office" />
+    <div class="pc-about-gallery">
+      <img class="pc-about-thumb" src="/templates/proclassic/public/img/placeholder.jpg" alt="Team" />
+      <img class="pc-about-thumb" src="/templates/proclassic/public/img/placeholder.jpg" alt="Site visit" />
+    </div>
   </div>
 </div>
+
+<div class="pc-container pc-values-wrap">
+  <h2 class="pc-section__title pc-center">Our Values</h2>
+  <div class="pc-values">
+    <div class="pc-value">
+      <h3 style="margin-top:0">Transparency</h3>
+      <p>No surprises. From property titles to payment schedules, you always know what is happening and why.</p>
+    </div>
+    <div class="pc-value">
+      <h3 style="margin-top:0">Local Expertise</h3>
+      <p>Street‑level knowledge of projects, developers and micro‑markets so you get the complete picture.</p>
+    </div>
+    <div class="pc-value">
+      <h3 style="margin-top:0">Clients First</h3>
+      <p>Your goals drive every decision. We negotiate hard on your behalf and stay with you beyond possession.</p>
+    </div>
+  </div>
+</div>
+
 
 
