@@ -1,9 +1,9 @@
 .pc-testimonials{background:#f8fafc;padding:28px 0}
 .pc-testimonials__head{display:flex;justify-content:center;margin-bottom:14px}
-.pc-testimonials__title{margin:0;font-size:32px}
+.pc-testimonials__title{margin:0;font-size:32px;color:#111827}
 .pc-twrap{position:relative}
 .pc-tslides{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-.pc-tcard{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px;position:relative;opacity:.4;transition:opacity .5s ease}
+.pc-tcard{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px;position:relative;opacity:.4;transition:opacity .5s ease;color:#111827}
 .pc-tcard.active{opacity:1}
 .pc-tquote{position:absolute;left:16px;top:10px;font-size:30px;color:#ef4444}
 .pc-ttext{min-height:72px}
