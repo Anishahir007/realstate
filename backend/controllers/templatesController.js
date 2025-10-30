@@ -274,10 +274,19 @@ function normalizeAssetPath(u, defaultBucket) {
   } catch { return u; }
 }
 
-function buildSiteContext({ broker, properties, page, nav }) {
-  const normalizedBroker = broker ? { ...broker, photo: normalizeAssetPath(broker.photo, 'profiles') } : broker;
+function makeAbsoluteIfNeeded(p, assetOrigin) {
+  try {
+    if (!assetOrigin) return p;
+    if (!p || /^https?:\/\//i.test(p)) return p;
+    if (p.startsWith('/profiles/') || p.startsWith('/properties/')) return assetOrigin.replace(/\/$/, '') + p;
+    return p;
+  } catch { return p; }
+}
+
+function buildSiteContext({ broker, properties, page, nav, assetOrigin }) {
+  const normalizedBroker = broker ? { ...broker, photo: makeAbsoluteIfNeeded(normalizeAssetPath(broker.photo, 'profiles'), assetOrigin) } : broker;
   const normalizedProps = Array.isArray(properties)
-    ? properties.map((p) => ({ ...p, image_url: normalizeAssetPath(p?.image_url, 'properties') }))
+    ? properties.map((p) => ({ ...p, image_url: makeAbsoluteIfNeeded(normalizeAssetPath(p?.image_url, 'properties'), assetOrigin) }))
     : [];
   return {
     site: {
@@ -338,9 +347,10 @@ export async function previewTemplate(req, res) {
     }
     const properties = tenantDb ? await fetchBrokerAndProperties(tenantDb) : [];
     const base = `/site/preview/${template}`;
+    const origin = `${req.protocol}://${req.get('host')}`;
     const nav = { home: `${base}`, properties: `${base}/properties`, about: `${base}/about`, contact: `${base}/contact`, privacy: `${base}/privacy`, terms: `${base}/terms` };
     const featuredProperties = pickFeatured(properties);
-    const context = { ...buildSiteContext({ broker, properties, page: view, nav }), featuredProperties };
+    const context = { ...buildSiteContext({ broker, properties, page: view, nav, assetOrigin: origin }), featuredProperties };
     // Use Express view engine + layouts when available
     const viewRel = getTemplateViewRel(template, view);
     const layoutRel = getTemplateLayoutRel(template);
@@ -419,9 +429,10 @@ export async function serveSiteBySlug(req, res) {
         }
       }
     } catch {}
+    const origin = `${req.protocol}://${req.get('host')}`;
     const nav = { home: `/site/${slug}`, properties: `/site/${slug}/properties`, about: `/site/${slug}/about`, contact: `/site/${slug}/contact`, privacy: `/site/${slug}/privacy`, terms: `/site/${slug}/terms` };
     const featuredProperties = pickFeatured(properties);
-    const context = { ...buildSiteContext({ broker, properties, page: view, nav }), featuredProperties };
+    const context = { ...buildSiteContext({ broker, properties, page: view, nav, assetOrigin: origin }), featuredProperties };
     const viewRel = getTemplateViewRel(site.template, view);
     const layoutRel = getTemplateLayoutRel(site.template);
     return res.render(viewRel, { ...context, layout: layoutRel || false }, (err, html) => {
