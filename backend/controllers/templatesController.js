@@ -241,6 +241,18 @@ function encodeSpacesInPublicUrls(html) {
   } catch { return html; }
 }
 
+function rewritePublicAssetUrls(html) {
+  try {
+    if (!html) return html;
+    let out = html.replace(/(href|src)=("|')\/profiles\//gi, (m, a, q) => `${a}=${q}/api/profiles/`);
+    out = out.replace(/(href|src)=("|')\/properties\//gi, (m, a, q) => `${a}=${q}/api/properties/`);
+    // Also rewrite inside CSS url()
+    out = out.replace(/url\((['"]?)\/profiles\//gi, (m, q) => `url(${q}/api/profiles/`);
+    out = out.replace(/url\((['"]?)\/properties\//gi, (m, q) => `url(${q}/api/properties/`);
+    return out;
+  } catch { return html; }
+}
+
 function normalizeAssetPath(u, defaultBucket) {
   try {
     if (!u) return '';
@@ -340,6 +352,7 @@ export async function previewTemplate(req, res) {
       out = rewriteTemplateAssetUrls(out);
       out = stripExternalTemplateAssets(out);
       out = encodeSpacesInPublicUrls(out);
+      out = rewritePublicAssetUrls(out);
       return res.send(out);
     });
   } catch (err) {
@@ -420,6 +433,7 @@ export async function serveSiteBySlug(req, res) {
       out = rewriteTemplateAssetUrls(out);
       out = stripExternalTemplateAssets(out);
       out = encodeSpacesInPublicUrls(out);
+      out = rewritePublicAssetUrls(out);
       return res.send(out);
     });
   } catch (err) {

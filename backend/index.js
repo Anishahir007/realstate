@@ -94,6 +94,9 @@ app.use('/api/templates', templatesRoutes);
 // Serve uploaded images
 app.use('/profiles', express.static('public/profiles'));
 app.use('/properties', express.static('public/properties'));  
+// API-prefixed mirrors for environments that only proxy /api to backend
+app.use('/api/profiles', express.static('public/profiles'));
+app.use('/api/properties', express.static('public/properties'));
 // Serve template public assets (CSS/JS/images)
 app.use('/templates', express.static(path.join(__dirname, 'templates')));
 // Serve any other files under /public at root (e.g., /public/* and relative links)
