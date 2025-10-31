@@ -1,5 +1,6 @@
 import pool from '../config/database.js';
 import { getTenantPool } from '../utils/tenant.js';
+import { notifySuperAdmin } from '../utils/notifications.js';
 
 function getTenantDb(req) {
   const fromUser = req.user && req.user.tenant_db ? req.user.tenant_db : null;
@@ -118,6 +119,22 @@ export async function createProperty(req, res) {
       // eslint-disable-next-line no-console
       console.warn('createProperty seed warning:', seedErr?.message || seedErr);
     }
+    // Notify super admin
+    try {
+      const brokerName = req.user?.full_name || req.user?.name || 'Unknown Broker';
+      const brokerEmail = req.user?.email || null;
+      const brokerId = req.user?.id || null;
+      await notifySuperAdmin({
+        type: 'property_created',
+        title: 'New property created',
+        message: `${body.title || 'Untitled Property'} - ${body.city || ''}, ${body.state || ''}`,
+        actorBrokerId: brokerId,
+        actorBrokerName: brokerName,
+        actorBrokerEmail: brokerEmail,
+      });
+    } catch (notifyErr) {
+      // Non-blocking
+    }
     return res.status(201).json({ id: newId });
   } catch (err) {   
     const isProd = process.env.NODE_ENV === 'production';
@@ -151,6 +168,24 @@ export async function updateProperty(req, res) {
     const tenantPool = await getTenantPool(tenantDb);
     params.push(id);
     await tenantPool.query(`UPDATE properties SET ${updates.join(', ')} WHERE id = ?`, params);
+    // Notify super admin
+    try {
+      const [propRows] = await tenantPool.query('SELECT title, city, state FROM properties WHERE id = ? LIMIT 1', [id]);
+      const prop = propRows?.[0];
+      const brokerName = req.user?.full_name || req.user?.name || 'Unknown Broker';
+      const brokerEmail = req.user?.email || null;
+      const brokerId = req.user?.id || null;
+      await notifySuperAdmin({
+        type: 'property_updated',
+        title: 'Property updated',
+        message: `${prop?.title || 'Property'} #${id} - ${prop?.city || ''}, ${prop?.state || ''}`,
+        actorBrokerId: brokerId,
+        actorBrokerName: brokerName,
+        actorBrokerEmail: brokerEmail,
+      });
+    } catch (notifyErr) {
+      // Non-blocking
+    }
     return res.json({ message: 'Updated' });
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';
@@ -398,7 +433,29 @@ export async function deleteProperty(req, res) {
     const id = parseInt(req.params.id, 10);
     if (!id) return res.status(400).json({ message: 'Invalid id' });
     const tenantPool = await getTenantPool(tenantDb);
+    // Get property info before deletion for notification
+    let propTitle = `Property #${id}`;
+    try {
+      const [propRows] = await tenantPool.query('SELECT title FROM properties WHERE id = ? LIMIT 1', [id]);
+      if (propRows?.[0]) propTitle = propRows[0].title || propTitle;
+    } catch {}
     await tenantPool.query("UPDATE properties SET status = 'inactive' WHERE id = ?", [id]);
+    // Notify super admin
+    try {
+      const brokerName = req.user?.full_name || req.user?.name || 'Unknown Broker';
+      const brokerEmail = req.user?.email || null;
+      const brokerId = req.user?.id || null;
+      await notifySuperAdmin({
+        type: 'property_deleted',
+        title: 'Property deleted',
+        message: `${propTitle} has been deactivated`,
+        actorBrokerId: brokerId,
+        actorBrokerName: brokerName,
+        actorBrokerEmail: brokerEmail,
+      });
+    } catch (notifyErr) {
+      // Non-blocking
+    }
     return res.json({ message: 'Deleted' });
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';
@@ -409,14 +466,20 @@ export async function deleteProperty(req, res) {
 // ========== Super Admin: cross-tenant property listing ==========
 export async function listAllBrokerPropertiesAdmin(req, res) {
   try {
+    const limit = Math.max(1, Math.min(50, parseInt(req.query.limit, 10) || 10));
     const [brokers] = await pool.query('SELECT id, full_name, tenant_db FROM brokers WHERE tenant_db IS NOT NULL');
     const out = [];
     for (const br of brokers) {
       try {
         const tenantPool = await getTenantPool(br.tenant_db);
         const [rows] = await tenantPool.query(
-          `SELECT p.id, p.title, p.city, p.state, p.locality, p.sub_locality, p.address, p.property_type, p.building_type, p.status, p.created_at,
-                  pf.expected_price, pf.built_up_area, pf.area_unit, pf.num_bedrooms, pf.num_bathrooms
+          `SELECT p.id, p.title, p.city, p.state, p.locality, p.sub_locality, p.address, p.property_type, p.building_type, p.property_for, p.status,
+                  p.description, p.created_at,
+                  pf.expected_price, pf.built_up_area, pf.area_unit, pf.carpet_area, pf.carpet_area_unit,
+                  pf.super_area, pf.super_area_unit, pf.num_bedrooms, pf.num_bathrooms,
+                  pf.sale_type, pf.availability, pf.approving_authority, pf.ownership, pf.rera_status, pf.rera_number,
+                  pf.no_of_floors, pf.property_on_floor, pf.furnishing_status, pf.facing, pf.flooring_type, pf.age_years,
+                  pf.booking_amount, pf.maintenance_charges, pf.possession_by
            FROM properties p
            LEFT JOIN property_features pf ON pf.property_id = p.id
            ORDER BY p.id DESC`
@@ -436,26 +499,53 @@ export async function listAllBrokerPropertiesAdmin(req, res) {
             title: r.title,
             type: r.property_type,
             buildingType: r.building_type,
+            propertyFor: r.property_for,
+            saleType: r.sale_type,
+            availability: r.availability,
+            approvingAuthority: r.approving_authority,
+            ownership: r.ownership,
+            reraStatus: r.rera_status,
+            reraNumber: r.rera_number,
+            floors: r.no_of_floors,
+            propertyOnFloor: r.property_on_floor,
+            furnishingStatus: r.furnishing_status,
+            facing: r.facing,
+            flooringType: r.flooring_type,
+            ageYears: r.age_years,
             price: r.expected_price,
             area: r.built_up_area,
             areaUnit: r.area_unit,
+            carpetArea: r.carpet_area,
+            carpetAreaUnit: r.carpet_area_unit,
+            superArea: r.super_area,
+            superAreaUnit: r.super_area_unit,
             bedrooms: r.num_bedrooms,
             bathrooms: r.num_bathrooms,
+            bookingAmount: r.booking_amount,
+            maintenanceCharges: r.maintenance_charges,
+            possessionBy: r.possession_by,
+            description: r.description,
             city: r.city,
             state: r.state,
             locality: r.locality,
             subLocality: r.sub_locality,
             address: r.address,
             image,
-            status: 'published',
-            createdAt: r.created_at,
+            status: r.status || 'active',
+            createdAt: r.created_at ? new Date(r.created_at).toISOString() : null,
           });
         }
       } catch (e) {
         // ignore tenant failures
       }
     }
-    return res.json({ data: out });
+    out.sort((a, b) => {
+      const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return bTime - aTime;
+    });
+    const sliced = out.slice(0, limit);
+    return res.json({ data: sliced, meta: { total: out.length, returned: sliced.length } });
   } catch (err) {
     return res.status(500).json({ message: 'Server error' });
   }

@@ -2,6 +2,8 @@ import pool from '../config/database.js';
 import { isNonEmptyString, sanitizeName, validateEmail, validatePassword } from '../utils/validation.js';
 import { hashPassword } from '../utils/hash.js';
 import { createBrokerDatabaseIfNotExists, getTenantPool, ensureTenantLeadsTableExists } from '../utils/tenant.js';
+import { resolveDateRange } from '../utils/dateRange.js';
+import { notifySuperAdmin } from '../utils/notifications.js';
 
 function mapBrokerRow(row) {
   const status = row.status || (row.last_login_at ? 'active' : 'pending');
@@ -130,6 +132,20 @@ export async function createBroker(req, res) {
       'SELECT id, full_name, email, phone, photo, license_no, location, company_name, tenant_db, status, created_by_admin_id, last_login_at FROM brokers WHERE id = ? LIMIT 1',
       [id]
     );
+    // Notify super admin - broker created
+    try {
+      const adminName = req.user?.full_name || req.user?.name || 'Super Admin';
+      await notifySuperAdmin({
+        type: 'broker_created',
+        title: 'New broker created',
+        message: `Broker "${safeName}" (${email}) has been created`,
+        actorBrokerId: null,
+        actorBrokerName: adminName,
+        actorBrokerEmail: req.user?.email || null,
+      });
+    } catch (notifyErr) {
+      // Non-blocking
+    }
     return res.status(201).json({ data: mapBrokerRow(rows[0]) });
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';
@@ -192,6 +208,15 @@ export async function updateBroker(req, res) {
       return res.status(400).json({ message: 'No fields to update' });
     }
 
+    // Get broker info before update for status change notification
+    let oldStatus = null;
+    let brokerName = null;
+    if (status !== undefined) {
+      const [oldRows] = await pool.query('SELECT status, full_name FROM brokers WHERE id = ? LIMIT 1', [id]);
+      oldStatus = oldRows?.[0]?.status || null;
+      brokerName = oldRows?.[0]?.full_name || null;
+    }
+
     params.push(id);
     await pool.query(`UPDATE brokers SET ${updates.join(', ')} WHERE id = ?`, params);
 
@@ -200,6 +225,24 @@ export async function updateBroker(req, res) {
       [id]
     );
     if (!rows[0]) return res.status(404).json({ message: 'Not found' });
+    
+    // Notify super admin - broker status changed
+    if (status !== undefined && oldStatus && oldStatus !== status) {
+      try {
+        const adminName = req.user?.full_name || req.user?.name || 'Super Admin';
+        await notifySuperAdmin({
+          type: status === 'suspended' ? 'broker_suspended' : 'broker_activated',
+          title: status === 'suspended' ? 'Broker suspended' : 'Broker activated',
+          message: `Broker "${brokerName || rows[0].full_name}" status changed from ${oldStatus} to ${status}`,
+          actorBrokerId: null,
+          actorBrokerName: adminName,
+          actorBrokerEmail: req.user?.email || null,
+        });
+      } catch (notifyErr) {
+        // Non-blocking
+      }
+    }
+    
     return res.json({ data: mapBrokerRow(rows[0]) });
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';
@@ -211,24 +254,43 @@ export async function updateBroker(req, res) {
 // Monthly broker trends: counts of active (by created_at) vs suspended (by updated_at) per month
 export async function getBrokerMonthlyTrends(req, res) {
   try {
-    const year = parseInt(req.query.year, 10) || new Date().getFullYear();
+    const year = Number.parseInt(req.query.year, 10) || new Date().getFullYear();
+    const { startDate, endDate } = resolveDateRange({
+      range: req.query.range,
+      from: req.query.from,
+      to: req.query.to,
+      month: req.query.month,
+      year: req.query.year,
+    });
 
     // Active (onboarded) brokers per month based on created_at
+    const activeParams = [year];
+    let activeWhere = 'WHERE YEAR(created_at) = ? AND status = \'active\'';
+    if (startDate && endDate) {
+      activeWhere += ' AND created_at BETWEEN ? AND ?';
+      activeParams.push(startDate, endDate);
+    }
     const [activeRows] = await pool.query(
       `SELECT MONTH(created_at) AS m, COUNT(*) AS c
        FROM brokers
-       WHERE YEAR(created_at) = ? AND status = 'active'
+       ${activeWhere}
        GROUP BY MONTH(created_at)`,
-      [year]
+      activeParams
     );
 
     // Suspended brokers per month based on updated_at (assumes status set that month)
+    const suspendedParams = [year];
+    let suspendedWhere = 'WHERE YEAR(updated_at) = ? AND status = \'suspended\'';
+    if (startDate && endDate) {
+      suspendedWhere += ' AND updated_at BETWEEN ? AND ?';
+      suspendedParams.push(startDate, endDate);
+    }
     const [suspendedRows] = await pool.query(
       `SELECT MONTH(updated_at) AS m, COUNT(*) AS c
        FROM brokers
-       WHERE YEAR(updated_at) = ? AND status = 'suspended'
+       ${suspendedWhere}
        GROUP BY MONTH(updated_at)`,
-      [year]
+      suspendedParams
     );
 
     const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sept','Oct','Nov','Dec'];
@@ -243,7 +305,7 @@ export async function getBrokerMonthlyTrends(req, res) {
       };
     });
 
-    return res.json({ data, meta: { year } });
+    return res.json({ data, meta: { year, range: req.query.range || null, from: startDate ? startDate.toISOString() : null, to: endDate ? endDate.toISOString() : null } });
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';
     return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });

@@ -6,6 +6,7 @@ import { getTenantPool } from '../utils/tenant.js';
 import pool from '../config/database.js';
 import { generateStableBrokerSlug, publishSite, listPublishedSitesForBroker, getSiteBySlug, setCustomDomainForSite, getSiteByDomain, markDomainVerified } from '../utils/sites.js';
 import dns from 'dns/promises';
+import { notifySuperAdmin } from '../utils/notifications.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -437,6 +438,21 @@ export async function publishTemplateAsSite(req, res) {
     const origin = req.get('origin') || process.env.PUBLIC_ORIGIN || `${req.protocol}://${req.get('host')}`;
     const urlPath = `/site/${site.slug}`;
     const url = `${origin}${urlPath}`;
+    // Notify super admin - website published on subdomain
+    try {
+      const brokerName = req.user?.full_name || req.user?.name || 'Unknown Broker';
+      const brokerEmail = req.user?.email || null;
+      await notifySuperAdmin({
+        type: 'website_subdomain_published',
+        title: 'Website published on subdomain',
+        message: `${brokerName} published website "${siteTitle || template}" at ${url}`,
+        actorBrokerId: req.user.id,
+        actorBrokerName: brokerName,
+        actorBrokerEmail: brokerEmail,
+      });
+    } catch (notifyErr) {
+      // Non-blocking
+    }
     return res.status(201).json({ data: { ...site, url, urlPath } });
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';
@@ -536,6 +552,21 @@ export async function connectCustomDomain(req, res) {
     if (!site || String(site.brokerId) !== String(req.user.id)) return res.status(404).json({ message: 'Site not found' });
     const updated = setCustomDomainForSite(slug, domain);
     const instructions = `Set an A record for ${updated.customDomain} to ${TARGET_A}`;
+    // Notify super admin - custom domain connected
+    try {
+      const brokerName = req.user?.full_name || req.user?.name || 'Unknown Broker';
+      const brokerEmail = req.user?.email || null;
+      await notifySuperAdmin({
+        type: 'website_custom_domain_connected',
+        title: 'Custom domain connected',
+        message: `${brokerName} connected custom domain ${domain} to website "${site.siteTitle || site.template}"`,
+        actorBrokerId: req.user.id,
+        actorBrokerName: brokerName,
+        actorBrokerEmail: brokerEmail,
+      });
+    } catch (notifyErr) {
+      // Non-blocking
+    }
     return res.json({ data: { ...updated, instructions } });
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';
@@ -551,7 +582,25 @@ export async function checkCustomDomain(req, res) {
     const domain = site.customDomain;
     if (!domain) return res.json({ data: { connected: false, reason: 'No custom domain set' } });
     const ok = await isDomainPointingToTarget(domain);
-    if (ok) markDomainVerified(slug);
+    const wasVerified = site.domainVerified;
+    if (ok && !wasVerified) {
+      markDomainVerified(slug);
+      // Notify super admin - domain verified
+      try {
+        const [brokerRows] = await pool.query('SELECT id, full_name, email FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
+        const broker = brokerRows?.[0];
+        await notifySuperAdmin({
+          type: 'website_custom_domain_verified',
+          title: 'Custom domain verified',
+          message: `Custom domain ${domain} verified for website "${site.siteTitle || site.template}"`,
+          actorBrokerId: broker?.id || null,
+          actorBrokerName: broker?.full_name || null,
+          actorBrokerEmail: broker?.email || null,
+        });
+      } catch (notifyErr) {
+        // Non-blocking
+      }
+    }
     return res.json({ data: { connected: ok, targetA: TARGET_A, domain } });
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';

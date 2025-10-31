@@ -10,6 +10,8 @@ import SuperAdminViewProfile from '../superadmin/pages/settings/view-profile/Vie
 import ManageTemplates from '../superadmin/pages/templates/ManageTemplates.jsx';
 import TemplatePreview from '../superadmin/pages/templates/TemplatePreview.jsx';
 import SuperAdminAdmincrm from '../superadmin/pages/crm/Admincrm.jsx';
+import Reports from '../superadmin/pages/reports/Reports.jsx';
+import Notifications from '../superadmin/pages/notifications/Notifications.jsx';
 import { SuperAdminProvider } from '../context/SuperAdminContext.jsx';
 
 export function SuperAdminRoutes() {
@@ -33,6 +35,8 @@ export function SuperAdminRoutes() {
         <Route path="manage-templates/preview/:name" element={<TemplatePreview />} />
         <Route path="properties" element={<SuperAdminProperties />} />
         <Route path="crm" element={<SuperAdminAdmincrm />} />
+        <Route path="reports" element={<Reports />} />
+        <Route path="notifications" element={<Notifications />} />
         <Route path="settings/view-profile" element={<SuperAdminViewProfile />} />
       </Route>
       <Route

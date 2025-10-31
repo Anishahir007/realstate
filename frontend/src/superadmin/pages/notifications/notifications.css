@@ -1,0 +1,274 @@
+.superadminnotifications-root {
+  padding: 24px;
+  background: #f8fafc;
+  min-height: 100vh;
+}
+
+.superadminnotifications-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  background: #fff;
+  padding: 20px 24px;
+  border-radius: 16px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
+}
+
+.superadminnotifications-title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.superadminnotifications-subtitle {
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.superadminnotifications-markall-btn {
+  padding: 10px 20px;
+  border: 1px solid #2563eb;
+  border-radius: 10px;
+  background: #fff;
+  color: #2563eb;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.superadminnotifications-markall-btn:hover {
+  background: #eff6ff;
+  border-color: #1d4ed8;
+}
+
+.superadminnotifications-filters {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 24px;
+  padding: 20px 24px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
+}
+
+.superadminnotifications-filter-group {
+  flex: 1;
+}
+
+.superadminnotifications-filter-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+}
+
+.superadminnotifications-filter-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.superadminnotifications-filter-btn {
+  padding: 8px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.superadminnotifications-filter-btn:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.superadminnotifications-filter-btn.active {
+  background: linear-gradient(135deg, #2563eb, #4338ca);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.superadminnotifications-content {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
+  overflow: hidden;
+}
+
+.superadminnotifications-loading {
+  padding: 48px;
+  text-align: center;
+  color: #64748b;
+  font-size: 16px;
+}
+
+.superadminnotifications-empty {
+  padding: 64px 24px;
+  text-align: center;
+}
+
+.superadminnotifications-empty-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.superadminnotifications-empty-text {
+  color: #64748b;
+  font-size: 16px;
+}
+
+.superadminnotifications-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.superadminnotifications-item {
+  display: flex;
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  position: relative;
+}
+
+.superadminnotifications-item:last-child {
+  border-bottom: none;
+}
+
+.superadminnotifications-item:hover {
+  background: #f8fafc;
+}
+
+.superadminnotifications-item-unread {
+  background: #f0f9ff;
+  border-left: 4px solid #2563eb;
+}
+
+.superadminnotifications-item-icon {
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+  border-radius: 12px;
+  font-size: 24px;
+}
+
+.superadminnotifications-item-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.superadminnotifications-item-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.superadminnotifications-item-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.superadminnotifications-item-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.superadminnotifications-item-message {
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.superadminnotifications-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.superadminnotifications-item-time {
+  font-weight: 500;
+}
+
+.superadminnotifications-item-actor {
+  padding: 2px 8px;
+  background: #f1f5f9;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.superadminnotifications-item-type {
+  padding: 2px 8px;
+  background: #fef3c7;
+  color: #92400e;
+  border-radius: 6px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.superadminnotifications-item-dot {
+  flex: 0 0 8px;
+  width: 8px;
+  height: 8px;
+  background: #2563eb;
+  border-radius: 50%;
+  align-self: center;
+}
+
+@media (max-width: 768px) {
+  .superadminnotifications-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .superadminnotifications-markall-btn {
+    width: 100%;
+  }
+
+  .superadminnotifications-filters {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .superadminnotifications-filter-buttons {
+    justify-content: flex-start;
+  }
+
+  .superadminnotifications-item {
+    padding: 16px;
+  }
+
+  .superadminnotifications-item-meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+}

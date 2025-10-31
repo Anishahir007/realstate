@@ -16,6 +16,7 @@ import notificationRoutes from './routes/notificationRoutes.js';
 import leadsRoutes from './routes/leadsRoutes.js';
 import systemRoutes from './routes/systemRoutes.js';
 import templatesRoutes from './routes/templatesRoutes.js';
+import reportsRoutes from './routes/reportsRoutes.js';
 import { getSiteByDomain } from './utils/sites.js';
 import { serveSiteBySlug, previewTemplate } from './controllers/templatesController.js';
 import { recordResponseMs } from './utils/metrics.js';
@@ -88,6 +89,7 @@ app.use('/api/broker-users', brokerUserRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api/leads', leadsRoutes);
+app.use('/api/reports', reportsRoutes);
 // Serve template assets FIRST so it doesn't get swallowed by /api/templates router
 app.use('/api/templates/assets', express.static(path.join(__dirname, 'templates')));
 app.use('/api/templates', templatesRoutes);
