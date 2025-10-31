@@ -37,16 +37,4 @@
   </div>
 </div>
 
-<script>
-  (function () {
-    try {
-      const featured = <%- JSON.stringify(featuredProperties || []) %>;
-      window.__featuredProperties = featured;
-      console.log('Featured properties', featured);
-    } catch (err) {
-      console.warn('Failed to log featured properties', err);
-    }
-  })();
-</script>
-
 
