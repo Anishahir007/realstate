@@ -41,6 +41,35 @@ function buildVersionedUrl(base, relativePath, mtimeMs) {
   return `${cleanBase}/${encoded}${versionSuffix}`;
 }
 
+function resolveAssetOrigin(req) {
+  const envOrigin = process.env.TEMPLATE_ASSET_ORIGIN || process.env.ASSET_ORIGIN || process.env.PUBLIC_ASSET_ORIGIN || process.env.PUBLIC_ORIGIN;
+  if (envOrigin) return envOrigin.replace(/\/+$/, '');
+  const forwardedProto = (req.headers['x-forwarded-proto'] || '').toString().split(',')[0].trim();
+  const proto = forwardedProto || req.protocol || 'http';
+  const forwardedHost = (req.headers['x-forwarded-host'] || '').toString().split(',')[0].trim();
+  const host = forwardedHost || req.get('host');
+  if (!host) return '';
+  return `${proto}://${host}`.replace(/\/+$/, '');
+}
+
+function applyAssetOrigin(manifest, origin) {
+  if (!manifest) return manifest;
+  const cleanOrigin = (origin || '').replace(/\/+$/, '');
+  if (!cleanOrigin) return manifest;
+  const withOrigin = (url) => {
+    if (!url) return url;
+    if (/^https?:\/\//i.test(url)) return url;
+    if (url.startsWith('/')) return `${cleanOrigin}${url}`;
+    return `${cleanOrigin}/${url}`;
+  };
+  return {
+    ...manifest,
+    baseHref: withOrigin(manifest.baseHref),
+    css: (manifest.css || []).map(withOrigin),
+    js: (manifest.js || []).map(withOrigin),
+  };
+}
+
 async function listAssetFiles(rootDir, extension) {
   const results = [];
 
@@ -154,11 +183,12 @@ function injectTemplateAssets(html, manifest) {
   return out;
 }
 
-function finalizeTemplateHtml(html, template, manifest) {
-  let out = ensureBaseHref(html, manifest.baseHref);
+function finalizeTemplateHtml(html, template, manifest, assetOrigin) {
+  const decorated = applyAssetOrigin(manifest, assetOrigin);
+  let out = ensureBaseHref(html, decorated.baseHref);
   out = stripLegacyTemplateAssets(out, template);
-  out = injectTemplateAssets(out, manifest);
-  out = rewritePublicAssetUrls(out);
+  out = injectTemplateAssets(out, decorated);
+  out = rewritePublicAssetUrls(out, assetOrigin);
   out = encodeSpacesInPublicUrls(out);
   return out;
 }
@@ -296,14 +326,17 @@ function encodeSpacesInPublicUrls(html) {
   } catch { return html; }
 }
 
-function rewritePublicAssetUrls(html) {
+function rewritePublicAssetUrls(html, assetOrigin) {
   try {
     if (!html) return html;
-    let out = html.replace(/(href|src)=("|')\/profiles\//gi, (m, a, q) => `${a}=${q}/api/profiles/`);
-    out = out.replace(/(href|src)=("|')\/properties\//gi, (m, a, q) => `${a}=${q}/api/properties/`);
+    const origin = assetOrigin ? assetOrigin.replace(/\/+$/, '') : '';
+    const profilesBase = origin ? `${origin}/api/profiles/` : '/api/profiles/';
+    const propertiesBase = origin ? `${origin}/api/properties/` : '/api/properties/';
+    let out = html.replace(/(href|src)=("|')\/profiles\//gi, (m, a, q) => `${a}=${q}${profilesBase}`);
+    out = out.replace(/(href|src)=("|')\/properties\//gi, (m, a, q) => `${a}=${q}${propertiesBase}`);
     // Also rewrite inside CSS url()
-    out = out.replace(/url\((['"]?)\/profiles\//gi, (m, q) => `url(${q}/api/profiles/`);
-    out = out.replace(/url\((['"]?)\/properties\//gi, (m, q) => `url(${q}/api/properties/`);
+    out = out.replace(/url\((['"]?)\/profiles\//gi, (m, q) => `url(${q}${profilesBase}`);
+    out = out.replace(/url\((['"]?)\/properties\//gi, (m, q) => `url(${q}${propertiesBase}`);
     return out;
   } catch { return html; }
 }
@@ -403,9 +436,10 @@ export async function previewTemplate(req, res) {
     const properties = tenantDb ? await fetchBrokerAndProperties(tenantDb) : [];
     const base = `/site/preview/${template}`;
     const origin = `${req.protocol}://${req.get('host')}`;
+    const assetOrigin = resolveAssetOrigin(req);
     const nav = { home: `${base}`, properties: `${base}/properties`, about: `${base}/about`, contact: `${base}/contact`, privacy: `${base}/privacy`, terms: `${base}/terms` };
     const featuredProperties = pickFeatured(properties);
-    const context = { ...buildSiteContext({ broker, properties, page: view, nav, assetOrigin: origin }), featuredProperties };
+    const context = { ...buildSiteContext({ broker, properties, page: view, nav, assetOrigin }), featuredProperties };
     // Use Express view engine + layouts when available
     const viewRel = getTemplateViewRel(template, view);
     const layoutRel = getTemplateLayoutRel(template);
@@ -416,7 +450,7 @@ export async function previewTemplate(req, res) {
         return res.status(500).send(isProd ? 'Server error' : String(err?.message || err));
       }
       try {
-        const out = finalizeTemplateHtml(html, template, manifest);
+        const out = finalizeTemplateHtml(html, template, manifest, assetOrigin);
         return res.send(out);
       } catch (renderErr) {
         const isProd = process.env.NODE_ENV === 'production';
@@ -489,9 +523,10 @@ export async function serveSiteBySlug(req, res) {
       }
     } catch {}
     const origin = `${req.protocol}://${req.get('host')}`;
+    const assetOrigin = resolveAssetOrigin(req);
     const nav = { home: `/site/${slug}`, properties: `/site/${slug}/properties`, about: `/site/${slug}/about`, contact: `/site/${slug}/contact`, privacy: `/site/${slug}/privacy`, terms: `/site/${slug}/terms` };
     const featuredProperties = pickFeatured(properties);
-    const context = { ...buildSiteContext({ broker, properties, page: view, nav, assetOrigin: origin }), featuredProperties };
+    const context = { ...buildSiteContext({ broker, properties, page: view, nav, assetOrigin }), featuredProperties };
     const viewRel = getTemplateViewRel(site.template, view);
     const layoutRel = getTemplateLayoutRel(site.template);
     const manifest = await getTemplateAssetManifest(site.template);
@@ -501,7 +536,7 @@ export async function serveSiteBySlug(req, res) {
         return res.status(500).send(isProd ? 'Server error' : String(err?.message || err));
       }
       try {
-        const out = finalizeTemplateHtml(html, site.template, manifest);
+        const out = finalizeTemplateHtml(html, site.template, manifest, assetOrigin);
         return res.send(out);
       } catch (renderErr) {
         const isProd = process.env.NODE_ENV === 'production';
