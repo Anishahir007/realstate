@@ -129,6 +129,20 @@ export default function NewProperty() {
 
   async function handleSubmit() {
     setErrors('');
+    
+    // Validate required fields
+    const missing = [];
+    if (!basic.title || basic.title.trim() === '') missing.push('Title');
+    if (!basic.state || basic.state.trim() === '') missing.push('State');
+    if (!basic.city || basic.city.trim() === '') missing.push('City');
+    if (!basic.building_type) missing.push('Building Type');
+    if (!basic.property_type) missing.push('Property Type');
+    
+    if (missing.length > 0) {
+      setErrors(`Please fill in all required fields: ${missing.join(', ')}`);
+      return;
+    }
+    
     try {
       // Single API to create property and all related data
       const payload = { basic, features, highlights, amenities, nearby_landmarks: nearby };

@@ -102,40 +102,50 @@ export async function createProperty(req, res) {
     const userId = req.user?.id || 1; // use authenticated broker id or default seeded owner (id=1)
     const tenantPool = await getTenantPool(tenantDb);
 
-    const cols = ['user_id','property_for','building_type','property_type','title','description','state','city','locality','sub_locality','society_name','address','status'];
-    const placeholders = cols.map(() => '?');
-    const params = cols.map((c) => body[c] ?? null);
-    params[0] = userId; // enforce owner as authenticated user
+    // Use transaction to ensure all-or-nothing
+    const conn = await tenantPool.getConnection();
+    try {
+      await conn.beginTransaction();
 
-    const [insertRes] = await tenantPool.query(`INSERT INTO properties (${cols.join(',')}) VALUES (${placeholders.join(',')})`, params);
-    const newId = insertRes.insertId;
-    // Seed related tables so forms have records immediately
-    try {
-      await tenantPool.query('INSERT INTO property_features (property_id) VALUES (?)', [newId]);
-      await tenantPool.query('INSERT INTO property_highlights (property_id, highlights) VALUES (?, ?)', [newId, JSON.stringify([])]);
-      await tenantPool.query('INSERT INTO property_amenities (property_id, amenities) VALUES (?, ?)', [newId, JSON.stringify([])]);
-      await tenantPool.query('INSERT INTO property_landmarks (property_id, nearby_landmarks) VALUES (?, ?)', [newId, JSON.stringify([])]);
-    } catch (seedErr) {
-      // eslint-disable-next-line no-console
-      console.warn('createProperty seed warning:', seedErr?.message || seedErr);
+      const cols = ['user_id','property_for','building_type','property_type','title','description','state','city','locality','sub_locality','society_name','address','status'];
+      const placeholders = cols.map(() => '?');
+      const params = cols.map((c) => body[c] ?? null);
+      params[0] = userId; // enforce owner as authenticated user
+
+      const [insertRes] = await conn.query(`INSERT INTO properties (${cols.join(',')}) VALUES (${placeholders.join(',')})`, params);
+      const newId = insertRes.insertId;
+      
+      // Seed related tables so forms have records immediately
+      await conn.query('INSERT INTO property_features (property_id) VALUES (?)', [newId]);
+      await conn.query('INSERT INTO property_highlights (property_id, highlights) VALUES (?, ?)', [newId, JSON.stringify([])]);
+      await conn.query('INSERT INTO property_amenities (property_id, amenities) VALUES (?, ?)', [newId, JSON.stringify([])]);
+      await conn.query('INSERT INTO property_landmarks (property_id, nearby_landmarks) VALUES (?, ?)', [newId, JSON.stringify([])]);
+      
+      await conn.commit();
+      
+      // Notify super admin
+      try {
+        const brokerName = req.user?.full_name || req.user?.name || 'Unknown Broker';
+        const brokerEmail = req.user?.email || null;
+        const brokerId = req.user?.id || null;
+        await notifySuperAdmin({
+          type: 'property_created',
+          title: 'New property created',
+          message: `${body.title || 'Untitled Property'} - ${body.city || ''}, ${body.state || ''}`,
+          actorBrokerId: brokerId,
+          actorBrokerName: brokerName,
+          actorBrokerEmail: brokerEmail,
+        });
+      } catch (notifyErr) {
+        // Non-blocking
+      }
+      return res.status(201).json({ id: newId });
+    } catch (txErr) {
+      await conn.rollback();
+      throw txErr;
+    } finally {
+      conn.release();
     }
-    // Notify super admin
-    try {
-      const brokerName = req.user?.full_name || req.user?.name || 'Unknown Broker';
-      const brokerEmail = req.user?.email || null;
-      const brokerId = req.user?.id || null;
-      await notifySuperAdmin({
-        type: 'property_created',
-        title: 'New property created',
-        message: `${body.title || 'Untitled Property'} - ${body.city || ''}, ${body.state || ''}`,
-        actorBrokerId: brokerId,
-        actorBrokerName: brokerName,
-        actorBrokerEmail: brokerEmail,
-      });
-    } catch (notifyErr) {
-      // Non-blocking
-    }
-    return res.status(201).json({ id: newId });
   } catch (err) {   
     const isProd = process.env.NODE_ENV === 'production';
     // Log full error on server for debugging
