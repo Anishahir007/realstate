@@ -9,6 +9,9 @@ import dns from 'dns/promises';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const fsp = fs.promises;
+const TEMPLATE_ASSET_CACHE_TTL_MS = process.env.NODE_ENV === 'production' ? 5 * 60 * 1000 : 5 * 1000;
+const templateAssetCache = new Map();
 
 function getTemplatesRoot() {
   return path.resolve(__dirname, '..', 'templates');
@@ -21,6 +24,143 @@ function listTemplatesFromFs() {
     .filter((d) => d.isDirectory())
     .map((d) => d.name);
   return names.map((name) => ({ name, label: name.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()), previewImage: `/templates/${name}/assets/preview.jpg` }));
+}
+
+function toPosix(p) {
+  return p.replace(/\\/g, '/');
+}
+
+function escapeRegExp(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function buildVersionedUrl(base, relativePath, mtimeMs) {
+  const cleanBase = base.replace(/\/+$/, '');
+  const encoded = toPosix(relativePath).split('/').map((segment) => encodeURIComponent(segment)).join('/');
+  const versionSuffix = Number.isFinite(mtimeMs) ? `?v=${Math.round(mtimeMs)}` : '';
+  return `${cleanBase}/${encoded}${versionSuffix}`;
+}
+
+async function listAssetFiles(rootDir, extension) {
+  const results = [];
+
+  async function walk(currentDir, relative = '') {
+    let entries;
+    try {
+      entries = await fsp.readdir(currentDir, { withFileTypes: true });
+    } catch (err) {
+      if (err && err.code === 'ENOENT') return;
+      throw err;
+    }
+    for (const entry of entries) {
+      const absPath = path.join(currentDir, entry.name);
+      const relPath = relative ? `${relative}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) {
+        await walk(absPath, relPath);
+      } else if (entry.isFile() && entry.name.toLowerCase().endsWith(extension)) {
+        let stat;
+        try {
+          stat = await fsp.stat(absPath);
+        } catch {
+          stat = { mtimeMs: undefined };
+        }
+        results.push({ relative: toPosix(relPath), mtimeMs: stat.mtimeMs });
+      }
+    }
+  }
+
+  await walk(rootDir);
+  results.sort((a, b) => a.relative.localeCompare(b.relative));
+  return results;
+}
+
+async function buildTemplateAssetManifest(template) {
+  const baseHref = `/templates/${template}/`;
+  const publicBase = `/templates/${template}/public`;
+  const root = getTemplatesRoot();
+  const cssDir = path.join(root, template, 'public', 'css');
+  const jsDir = path.join(root, template, 'public', 'js');
+
+  try {
+    const [cssFiles, jsFiles] = await Promise.all([
+      listAssetFiles(cssDir, '.css'),
+      listAssetFiles(jsDir, '.js'),
+    ]);
+
+    return {
+      template,
+      baseHref,
+      css: cssFiles.map((file) => buildVersionedUrl(`${publicBase}/css`, file.relative, file.mtimeMs)),
+      js: jsFiles.map((file) => buildVersionedUrl(`${publicBase}/js`, file.relative, file.mtimeMs)),
+    };
+  } catch {
+    return { template, baseHref, css: [], js: [] };
+  }
+}
+
+async function getTemplateAssetManifest(template) {
+  const cached = templateAssetCache.get(template);
+  const now = Date.now();
+  if (cached && cached.expires > now) {
+    return cached.value;
+  }
+  const value = await buildTemplateAssetManifest(template);
+  templateAssetCache.set(template, { value, expires: now + TEMPLATE_ASSET_CACHE_TTL_MS });
+  return value;
+}
+
+function ensureBaseHref(html, baseHref) {
+  if (!html) return html;
+  const safeBase = baseHref.endsWith('/') ? baseHref : `${baseHref}/`;
+  const baseRegex = /<base[^>]*href=["'][^"']*["'][^>]*>/i;
+  if (baseRegex.test(html)) {
+    return html.replace(baseRegex, `<base href="${safeBase}">`);
+  }
+  if (html.includes('<head')) {
+    return html.replace('<head>', `<head><base href="${safeBase}">`);
+  }
+  return `<base href="${safeBase}">${html}`;
+}
+
+function stripLegacyTemplateAssets(html, template) {
+  if (!html) return html;
+  let out = html.replace(/<link[^>]+data-template-asset=["']css["'][^>]*>\s*/gi, '');
+  out = out.replace(/<script[^>]+data-template-asset=["']js["'][^>]*>\s*<\/script>\s*/gi, '');
+  const escapedTemplate = template ? escapeRegExp(template) : "[^\"']+";
+  const cssPattern = new RegExp(`<link[^>]+href=["']\/(?:api\/templates\/assets|templates\/${escapedTemplate}\/public)[^"']+\.css["'][^>]*>\\s*`, 'gi');
+  const jsPattern = new RegExp(`<script[^>]+src=["']\/(?:api\/templates\/assets|templates\/${escapedTemplate}\/public)[^"']+\.js["'][^>]*>\\s*<\\/script>`, 'gi');
+  out = out.replace(cssPattern, '');
+  out = out.replace(jsPattern, '');
+  return out;
+}
+
+function injectTemplateAssets(html, manifest) {
+  if (!html) return html;
+  let out = html;
+  if (manifest.css?.length) {
+    const cssTags = manifest.css.map((href) => `<link rel="stylesheet" href="${href}" data-template-asset="css">`).join('\n    ');
+    const block = `    <!-- template-css -->\n    ${cssTags}\n`;
+    out = out.includes('</head>')
+      ? out.replace('</head>', `${block}</head>`)
+      : `${block}${out}`;
+  }
+  if (manifest.js?.length) {
+    const jsTags = manifest.js.map((src) => `<script src="${src}" data-template-asset="js"></script>`).join('\n    ');
+    const block = `    <!-- template-js -->\n    ${jsTags}\n`;
+    out = out.includes('</body>')
+      ? out.replace('</body>', `${block}</body>`)
+      : `${out}\n${block}`;
+  }
+  return out;
+}
+
+function finalizeTemplateHtml(html, template, manifest) {
+  let out = ensureBaseHref(html, manifest.baseHref);
+  out = stripLegacyTemplateAssets(out, template);
+  out = injectTemplateAssets(out, manifest);
+  out = rewritePublicAssetUrls(out);
+  out = encodeSpacesInPublicUrls(out);
+  return out;
 }
 
 export async function listTemplates(req, res) {
@@ -147,91 +287,6 @@ function getTemplateLayoutRel(templateName) {
   return null;
 }
 
-function readTemplateAsset(templateName, assetPath) {
-  const p = path.join(getTemplatesRoot(), templateName, assetPath);
-  if (fs.existsSync(p)) return fs.readFileSync(p, 'utf-8');
-  return '';
-}
-
-function injectBaseHref(html, baseHref) {
-  try {
-    if (!html) return html;
-    const safe = String(baseHref || '/');
-    if (html.includes('<head')) {
-      return html.replace('<head>', `<head><base href="${safe}">`);
-    }
-    // Fallback prepend
-    return `<base href="${safe}">` + html;
-  } catch {
-    return html;
-  }
-}
-
-function tryInlineTemplateCss(html, templateName) {
-  try {
-    const root = getTemplatesRoot();
-    const cssDir = path.join(root, templateName, 'public', 'css');
-    if (!fs.existsSync(cssDir)) return html;
-    const cssFiles = [
-      'style.css',
-      'navbar.css',
-      'responsive.css',
-      'hero.css',
-      'featured.css',
-      'insights.css',
-      'contacthome.css',
-      'testimonials.css',
-      'about.css',
-    ].filter(f => fs.existsSync(path.join(cssDir, f)));
-    if (cssFiles.length === 0) return html;
-    const blocks = cssFiles.map(f => {
-      try { return `<style>\n${fs.readFileSync(path.join(cssDir, f), 'utf-8')}\n</style>`; } catch { return ''; }
-    }).join('\n');
-    if (!blocks.trim()) return html;
-    if (html.includes('</head>')) return html.replace('</head>', `${blocks}\n</head>`);
-    return blocks + html;
-  } catch {
-    return html;
-  }
-}
-
-function rewriteTemplateAssetUrls(html) {
-  try {
-    if (!html) return html;
-    let out = html.replace(/(href|src)=["']\/templates\//g, (m, p1) => `${p1}="/api/templates/assets/`);
-    // Replace CSS url(/templates/..)
-    out = out.replace(/url\((['"]?)\/templates\//g, (m, q) => `url(${q}/api/templates/assets/`);
-    return out;
-  } catch { return html; }
-}
-
-function stripExternalTemplateAssets(html) {
-  try {
-    if (!html) return html;
-    // Remove link tags that point to template css (both /templates and /api/templates/assets)
-    let out = html.replace(/<link[^>]+href=["']\/(api\/templates\/assets|templates)\/[^"']+\.css["'][^>]*>/gi, '');
-    // Remove script tags that point to template js
-    out = out.replace(/<script[^>]+src=["']\/(api\/templates\/assets|templates)\/[^"']+\.js["'][^>]*><\/script>/gi, '');
-    return out;
-  } catch { return html; }
-}
-
-function tryInlineTemplateJs(html, templateName) {
-  try {
-    const root = getTemplatesRoot();
-    const jsDir = path.join(root, templateName, 'public', 'js');
-    if (!fs.existsSync(jsDir)) return html;
-    const jsFiles = ['hero.js', 'testimonials.js'].filter(f => fs.existsSync(path.join(jsDir, f)));
-    if (jsFiles.length === 0) return html;
-    const blocks = jsFiles.map(f => {
-      try { return `<script>\n${fs.readFileSync(path.join(jsDir, f), 'utf-8')}\n</script>`; } catch { return ''; }
-    }).join('\n');
-    if (!blocks.trim()) return html;
-    if (html.includes('</body>')) return html.replace('</body>', `${blocks}\n</body>`);
-    return html + blocks;
-  } catch { return html; }
-}
-
 function encodeSpacesInPublicUrls(html) {
   try {
     if (!html) return html;
@@ -354,15 +409,19 @@ export async function previewTemplate(req, res) {
     // Use Express view engine + layouts when available
     const viewRel = getTemplateViewRel(template, view);
     const layoutRel = getTemplateLayoutRel(template);
+    const manifest = await getTemplateAssetManifest(template);
     return res.render(viewRel, { ...context, layout: layoutRel || false }, (err, html) => {
-      if (err) return res.status(500).send(process.env.NODE_ENV === 'production' ? 'Server error' : String(err?.message || err));
-      let out = injectBaseHref(html, `/templates/${template}/`);
-      out = tryInlineTemplateCss(out, template);
-      out = tryInlineTemplateJs(out, template);
-      out = rewriteTemplateAssetUrls(out);
-      out = stripExternalTemplateAssets(out);
-      out = encodeSpacesInPublicUrls(out);
-      return res.send(out);
+      if (err) {
+        const isProd = process.env.NODE_ENV === 'production';
+        return res.status(500).send(isProd ? 'Server error' : String(err?.message || err));
+      }
+      try {
+        const out = finalizeTemplateHtml(html, template, manifest);
+        return res.send(out);
+      } catch (renderErr) {
+        const isProd = process.env.NODE_ENV === 'production';
+        return res.status(500).send(isProd ? 'Server error' : String(renderErr?.message || renderErr));
+      }
     });
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';
@@ -435,15 +494,19 @@ export async function serveSiteBySlug(req, res) {
     const context = { ...buildSiteContext({ broker, properties, page: view, nav, assetOrigin: origin }), featuredProperties };
     const viewRel = getTemplateViewRel(site.template, view);
     const layoutRel = getTemplateLayoutRel(site.template);
+    const manifest = await getTemplateAssetManifest(site.template);
     return res.render(viewRel, { ...context, layout: layoutRel || false }, (err, html) => {
-      if (err) return res.status(500).send(process.env.NODE_ENV === 'production' ? 'Server error' : String(err?.message || err));
-      let out = injectBaseHref(html, `/templates/${site.template}/`);
-      out = tryInlineTemplateCss(out, site.template);
-      out = tryInlineTemplateJs(out, site.template);
-      out = rewriteTemplateAssetUrls(out);
-      out = stripExternalTemplateAssets(out);
-      out = encodeSpacesInPublicUrls(out);
-      return res.send(out);
+      if (err) {
+        const isProd = process.env.NODE_ENV === 'production';
+        return res.status(500).send(isProd ? 'Server error' : String(err?.message || err));
+      }
+      try {
+        const out = finalizeTemplateHtml(html, site.template, manifest);
+        return res.send(out);
+      } catch (renderErr) {
+        const isProd = process.env.NODE_ENV === 'production';
+        return res.status(500).send(isProd ? 'Server error' : String(renderErr?.message || renderErr));
+      }
     });
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';
