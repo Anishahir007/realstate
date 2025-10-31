@@ -317,6 +317,25 @@ function makeAbsoluteIfNeeded(p, assetOrigin) {
   } catch { return p; }
 }
 
+function resolveAssetOrigin(req, fallbackOrigin) {
+  try {
+    const candidates = [
+      process.env.ASSET_ORIGIN,
+      process.env.PUBLIC_ASSET_ORIGIN,
+      process.env.BACKEND_ASSET_ORIGIN,
+      process.env.PUBLIC_ORIGIN,
+    ].map((v) => (v || '').toString().trim()).filter(Boolean);
+    let resolved = candidates.find(Boolean);
+    if (!resolved) {
+      const prodDefault = process.env.NODE_ENV === 'production' ? 'https://backend.proker.xyz' : '';
+      resolved = prodDefault || fallbackOrigin || '';
+    }
+    return resolved.replace(/\/$/, '');
+  } catch {
+    return (fallbackOrigin || '').replace(/\/$/, '');
+  }
+}
+
 function buildSiteContext({ broker, properties, page, nav, assetOrigin }) {
   const normalizedBroker = broker ? { ...broker, photo: makeAbsoluteIfNeeded(normalizeAssetPath(broker.photo, 'profiles'), assetOrigin) } : broker;
   const normalizedProps = Array.isArray(properties)
@@ -382,7 +401,7 @@ export async function previewTemplate(req, res) {
     const properties = tenantDb ? await fetchBrokerAndProperties(tenantDb) : [];
     const base = `/site/preview/${template}`;
     const origin = `${req.protocol}://${req.get('host')}`;
-    const assetOrigin = (process.env.ASSET_ORIGIN || process.env.PUBLIC_ASSET_ORIGIN || process.env.PUBLIC_ORIGIN || origin).replace(/\/$/, '');
+    const assetOrigin = resolveAssetOrigin(req, origin);
     const nav = { home: `${base}`, properties: `${base}/properties`, about: `${base}/about`, contact: `${base}/contact`, privacy: `${base}/privacy`, terms: `${base}/terms` };
     const featuredProperties = pickFeatured(properties);
     const context = { ...buildSiteContext({ broker, properties, page: view, nav, assetOrigin }), featuredProperties };
@@ -465,7 +484,7 @@ export async function serveSiteBySlug(req, res) {
       }
     } catch {}
     const origin = `${req.protocol}://${req.get('host')}`;
-    const assetOrigin = (process.env.ASSET_ORIGIN || process.env.PUBLIC_ASSET_ORIGIN || process.env.PUBLIC_ORIGIN || origin).replace(/\/$/, '');
+    const assetOrigin = resolveAssetOrigin(req, origin);
     const nav = { home: `/site/${slug}`, properties: `/site/${slug}/properties`, about: `/site/${slug}/about`, contact: `/site/${slug}/contact`, privacy: `/site/${slug}/privacy`, terms: `/site/${slug}/terms` };
     const featuredProperties = pickFeatured(properties);
     const context = { ...buildSiteContext({ broker, properties, page: view, nav, assetOrigin }), featuredProperties };
