@@ -256,21 +256,55 @@ function rewritePublicAssetUrls(html) {
 function normalizeAssetPath(u, defaultBucket) {
   try {
     if (!u) return '';
-    let s = String(u).trim().replace(/\\/g, '/');
-    // Remove leading './' or 'public/'
-    s = s.replace(/^\.\//, '').replace(/^public\//i, '');
-    // Already absolute http(s)
-    if (/^https?:\/\//i.test(s)) return s;
-    // Ensure bucket prefix
-    if (!/^\//.test(s) && !/^profiles\//i.test(s) && !/^properties\//i.test(s)) {
-      if (defaultBucket) s = `${defaultBucket.replace(/\/$/, '')}/` + s;
+    let s = String(u).trim();
+    if (!s) return '';
+    // Preserve and strip query/hash temporarily
+    let query = '';
+    let hash = '';
+    const hashIndex = s.indexOf('#');
+    if (hashIndex !== -1) {
+      hash = s.slice(hashIndex);
+      s = s.slice(0, hashIndex);
     }
-    // Force absolute path so <base href> won't break it
-    s = '/' + s.replace(/^\//, '');
-    // URL-encode spaces and special chars but keep slashes
+    const queryIndex = s.indexOf('?');
+    if (queryIndex !== -1) {
+      query = s.slice(queryIndex);
+      s = s.slice(0, queryIndex);
+    }
+
+    s = s.replace(/\\/g, '/');
+    // Remove leading './'
+    s = s.replace(/^\.+\//, '');
+    // Remove leading slashes but remember if it existed
+    s = s.replace(/^\/+/, '');
+    // Strip duplicated public/ prefixes
+    s = s.replace(/^public\//i, '');
+    // Strip template folder references (templates/<name>/public/...)
+    const templatePublicMatch = s.match(/^templates\/[^/]+\/public\/(.+)$/i);
+    if (templatePublicMatch) {
+      s = templatePublicMatch[1];
+    }
+    // If path still contains assets/{profiles|properties}/ prefix, trim it down
+    const assetsMatch = s.match(/(?:^|\/)assets\/(profiles|properties)\/(.+)$/i);
+    if (assetsMatch) {
+      s = `${assetsMatch[1].toLowerCase()}/${assetsMatch[2]}`;
+    }
+
+    // Already absolute http(s)
+    if (/^https?:\/\//i.test(u)) {
+      return String(u).trim();
+    }
+
+    // Ensure bucket prefix
+    if (!/^profiles\//i.test(s) && !/^properties\//i.test(s)) {
+      if (defaultBucket) s = `${defaultBucket.replace(/\/$/, '')}/${s}`;
+    }
+
+    s = '/' + s.replace(/^\/+/, '');
     const parts = s.split('/');
-    const encoded = parts.map((p, idx) => idx === 0 ? p : encodeURIComponent(p));
-    return encoded.join('/');
+    const encoded = parts.map((part, idx) => idx === 0 ? part : encodeURIComponent(part));
+    const built = encoded.join('/');
+    return `${built}${query}${hash}`;
   } catch { return u; }
 }
 
