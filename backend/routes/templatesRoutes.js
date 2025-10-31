@@ -1,36 +1,27 @@
 import { Router } from 'express';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import {
-  listTemplates,
-  previewTemplate,
-  publishTemplateAsSite,
-  listMySites,
-  connectCustomDomain,
-  checkCustomDomain,
-  setTemplateStatus,
-  previewTemplatePage,
-} from '../controllers/templatesController.js';
+import { listTemplates, previewTemplate, publishTemplateAsSite, listMySites, serveSiteBySlug, connectCustomDomain, checkCustomDomain, setTemplateStatus, previewTemplatePage } from '../controllers/templatesController.js';
 
 const router = Router();
 
-// Template catalogue & status management
-router.get('/list', requireAuth, listTemplates);
+// Broker can list templates and preview (EJS-only)
+router.get('/list', requireAuth, listTemplates); // brokers and super admins can list; filtering handled in controller
+// Super admin: set template status
 router.post('/admin/set-status', requireAuth, requireRole('super_admin'), setTemplateStatus);
-
-// Preview experiences
+// Lightweight preview page that bootstraps with token query
 router.get('/admin/preview-page/:template', previewTemplatePage);
 router.get('/preview/:template', requireAuth, previewTemplate);
-router.get('/preview/:template/:page', requireAuth, previewTemplate);
 
-// Publishing and broker site management
+// Broker can publish
 router.post('/publish', requireAuth, requireRole('broker'), publishTemplateAsSite);
 router.get('/my-sites', requireAuth, requireRole('broker'), listMySites);
 
-// Custom domain lifecycle
+// Custom domain
 router.post('/connect-domain', requireAuth, requireRole('broker'), connectCustomDomain);
 router.get('/check-domain', requireAuth, requireRole('broker'), checkCustomDomain);
 
-// Legacy guard – public site routing handled at app level
+// Public EJS pages are handled at the app level (e.g., app.get('/site/:slug/:page?'))
+// This deprecated path exists only to avoid accidental handlerless routes in older deployments
 router.get('/site/:slug', (req, res) => res.status(410).send('Deprecated: use /site/:slug at app level'));
 
 export default router;

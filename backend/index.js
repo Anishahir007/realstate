@@ -1,4 +1,3 @@
-import fs from 'fs';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -33,71 +32,6 @@ app.set('views', path.join(__dirname, 'templates'));
 app.use(expressLayouts);
 // We'll pass layout per-render; keep default off
 app.set('layout', false);
-// Respect x-forwarded-* headers when behind a proxy/CDN (needed for HTTPS asset URLs)
-app.set('trust proxy', true);
-
-const isProd = process.env.NODE_ENV === 'production';
-const templatesRoot = path.join(__dirname, 'templates');
-const publicRoot = path.join(__dirname, 'public');
-const staticCacheControl = isProd ? 'public, max-age=31536000, immutable' : 'public, max-age=0, must-revalidate';
-const staticOptions = {
-  fallthrough: true,
-  setHeaders(res) {
-    res.setHeader('Cache-Control', staticCacheControl);
-  },
-};
-
-const templateStaticCache = new Map();
-
-function isSafeTemplateName(name) {
-  return typeof name === 'string' && /^[a-z0-9-_]+$/i.test(name);
-}
-
-function getTemplatePublicHandler(template) {
-  if (templateStaticCache.has(template)) {
-    return templateStaticCache.get(template);
-  }
-  const publicDir = path.join(templatesRoot, template, 'public');
-  try {
-    const stat = fs.statSync(publicDir);
-    if (!stat.isDirectory()) return null;
-  } catch {
-    return null;
-  }
-  const handler = express.static(publicDir, staticOptions);
-  templateStaticCache.set(template, handler);
-  return handler;
-}
-
-function createTemplateAssetsRouter() {
-  const router = express.Router({ mergeParams: true });
-
-  const serveTemplatePublic = (req, res, next) => {
-    const { template } = req.params;
-    if (!isSafeTemplateName(template)) return res.status(404).end();
-    const handler = getTemplatePublicHandler(template);
-    if (!handler) return res.status(404).end();
-    return handler(req, res, next);
-  };
-
-  router.use('/:template/public', serveTemplatePublic);
-  router.use('/:template/assets', serveTemplatePublic); // optional alias for legacy asset URLs
-  router.use(express.static(templatesRoot, staticOptions));
-  return router;
-}
-
-const templateAssetsRouter = createTemplateAssetsRouter();
-app.use('/templates', templateAssetsRouter);
-
-const legacyTemplateAssets = express.Router({ mergeParams: true });
-legacyTemplateAssets.use('/:template', (req, res, next) => {
-  const { template } = req.params;
-  if (!isSafeTemplateName(template)) return res.status(404).end();
-  const handler = getTemplatePublicHandler(template);
-  if (!handler) return res.status(404).end();
-  return handler(req, res, next);
-});
-app.use('/api/templates/assets', legacyTemplateAssets);
 
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
@@ -105,27 +39,22 @@ app.use(helmet({
   contentSecurityPolicy: {
     useDefaults: true,
     directives: {
-      'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
-      'script-src': ["'self'", "'unsafe-inline'"],
-      'img-src': [
-        "'self'",
-        'data:',
-        'blob:',
-        'https://images.unsplash.com',
-        'https://plus.unsplash.com',
-        'https://images.pexels.com',
-        process.env.PUBLIC_ORIGIN || 'https://www.proker.xyz',
-        'https://www.proker.xyz',
-        'https://proker.xyz',
-      ],
-      'font-src': ["'self'", 'data:', 'https://fonts.gstatic.com'],
-    },
-  },
+      // Allow template inline <style> fallback and external CSS under same origin
+      "style-src": ["'self'", "'unsafe-inline'"],
+      // Allow Unsplash, Pexels and our own asset hosts
+      "img-src": ["'self'", "data:", "https://images.unsplash.com", "https://plus.unsplash.com", "https://images.pexels.com", process.env.PUBLIC_ORIGIN || 'https://www.proker.xyz', 'https://www.proker.xyz', 'https://proker.xyz', 'https://prokers.cloud'],
+      // Allow scripts from same origin and inline (template JS)
+      "script-src": ["'self'", "'unsafe-inline'"],
+      // Fonts/images via data: are fine
+      "font-src": ["'self'", "data:"],
+    }
+  }
 }));
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 
+const isProd = process.env.NODE_ENV === 'production';
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true, legacyHeaders: false });
 if (isProd) {
   // Only enforce rate limits in production
@@ -159,20 +88,19 @@ app.use('/api/broker-users', brokerUserRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api/leads', leadsRoutes);
+// Serve template assets FIRST so it doesn't get swallowed by /api/templates router
+app.use('/api/templates/assets', express.static(path.join(__dirname, 'templates')));
 app.use('/api/templates', templatesRoutes);
-
-function mountStaticDir(url, dir) {
-  app.use(url, express.static(dir, staticOptions));
-}
-
 // Serve uploaded images
-mountStaticDir('/profiles', path.join(publicRoot, 'profiles'));
-mountStaticDir('/properties', path.join(publicRoot, 'properties'));
+app.use('/profiles', express.static('public/profiles'));
+app.use('/properties', express.static('public/properties'));  
 // API-prefixed mirrors for environments that only proxy /api to backend
-mountStaticDir('/api/profiles', path.join(publicRoot, 'profiles'));
-mountStaticDir('/api/properties', path.join(publicRoot, 'properties'));
+app.use('/api/profiles', express.static('public/profiles'));
+app.use('/api/properties', express.static('public/properties'));
+// Serve template public assets (CSS/JS/images)
+app.use('/templates', express.static(path.join(__dirname, 'templates')));
 // Serve any other files under /public at root (e.g., /public/* and relative links)
-app.use(express.static(publicRoot, staticOptions));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Public preview of a backend EJS template (no auth)
 app.get('/site/preview/:template', previewTemplate);
@@ -200,7 +128,7 @@ app.get('/resolve-host', (req, res) => {
 // Site by slug pages (generic handler to support deep paths without path-to-regexp wildcards)
 app.use('/site/:slug', (req, res) => {
   // When mounted via app.use, req.baseUrl is '/site/:slug', req.path is the remainder (e.g., '/', '/properties', '/x/y')
-  const remainder = req.path || '/';
+  const remainder = (req.path || '/');
   const cleaned = remainder.replace(/^\/+|\/+$/g, '');
   const last = cleaned.split('/').filter(Boolean).pop() || '';
   req.params.page = /^[a-z0-9-_]+$/i.test(last) ? last : 'home';
@@ -211,14 +139,12 @@ app.use('/site/:slug', (req, res) => {
 app.use(async (req, res, next) => {
   try {
     // Skip API and static asset routes
-    if (req.path.startsWith('/api') || req.path.startsWith('/profiles') || req.path.startsWith('/properties') || req.path.startsWith('/templates')) {
-      return next();
-    }
+    if (req.path.startsWith('/api') || req.path.startsWith('/profiles') || req.path.startsWith('/properties') || req.path.startsWith('/templates')) return next();
     const host = (req.headers['x-forwarded-host'] || req.headers.host || '').toString().split(',')[0].trim();
     if (!host) return next();
     const site = getSiteByDomain(host);
     if (!site) return next();
-    const raw = req.path || '/';
+    const raw = (req.path || '/');
     const last = raw.replace(/^\/+|\/+$/g, '').split('/').filter(Boolean).pop() || 'home';
     const page = /^[a-z0-9-_]+$/i.test(last) ? last : 'home';
     // Delegate rendering to existing site renderer
