@@ -33,6 +33,8 @@ app.set('views', path.join(__dirname, 'templates'));
 app.use(expressLayouts);
 // We'll pass layout per-render; keep default off
 app.set('layout', false);
+// Respect x-forwarded-* headers when behind a proxy/CDN (needed for HTTPS asset URLs)
+app.set('trust proxy', true);
 
 const isProd = process.env.NODE_ENV === 'production';
 const templatesRoot = path.join(__dirname, 'templates');
