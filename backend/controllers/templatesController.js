@@ -337,18 +337,15 @@ function resolveAssetOrigin(req, fallbackOrigin) {
 }
 
 function buildSiteContext({ broker, properties, page, nav, assetOrigin }) {
-  const base = (assetOrigin || '').replace(/\/$/, '');
-  const normalizedBroker = broker ? { ...broker, photo: makeAbsoluteIfNeeded(normalizeAssetPath(broker.photo, 'profiles'), base) } : broker;
+  const normalizedBroker = broker ? { ...broker, photo: makeAbsoluteIfNeeded(normalizeAssetPath(broker.photo, 'profiles'), assetOrigin) } : broker;
   const normalizedProps = Array.isArray(properties)
-    ? properties.map((p) => ({ ...p, image_url: makeAbsoluteIfNeeded(normalizeAssetPath(p?.image_url, 'properties'), base) }))
+    ? properties.map((p) => ({ ...p, image_url: makeAbsoluteIfNeeded(normalizeAssetPath(p?.image_url, 'properties'), assetOrigin) }))
     : [];
   return {
     site: {
       title: normalizedBroker?.full_name ? `${normalizedBroker.full_name} Real Estate` : 'Real Estate',
       broker: normalizedBroker,
-      assetOrigin: base,
     },
-    assetOrigin: base,
     page,
     properties: normalizedProps,
     nav: nav || { home: '#', properties: '#', about: '#', contact: '#'},

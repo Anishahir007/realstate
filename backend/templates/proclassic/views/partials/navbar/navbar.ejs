@@ -1,11 +1,8 @@
 <nav class="pc-navbar">
   <div class="pc-container pc-navbar__row">
     <div class="pc-brand">
-      <% const rawPhoto = site && site.broker && site.broker.photo; %>
-      <% const assetBase = (typeof assetOrigin === 'string' && assetOrigin) ? assetOrigin : (site && site.assetOrigin ? site.assetOrigin : ''); %>
-      <% const normalizedPhoto = rawPhoto ? (/^https?:\/\//i.test(rawPhoto) ? rawPhoto : ((assetBase || '') + (rawPhoto.startsWith('/') ? rawPhoto : `/${rawPhoto}`))) : ''; %>
-      <% if (normalizedPhoto) { %>
-        <img class="pc-avatar" src="<%= normalizedPhoto %>" alt="<%= (site && site.broker && site.broker.full_name) || 'Broker' %>" />
+      <% if (site && site.broker && site.broker.photo) { %>
+        <img class="pc-avatar" src="<%= site.broker.photo %>" alt="<%= (site && site.broker && site.broker.full_name) || 'Broker' %>" />
       <% } %>
       <span><%= (site && site.broker && site.broker.full_name) || 'Broker' %></span>
       <span class="pc-badge">ProClassic</span>
