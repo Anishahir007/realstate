@@ -1,7 +1,23 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import './broker.css';
 import { useSuperAdmin } from '../../../context/SuperAdminContext.jsx';
+
+const COLUMN_OPTIONS = [
+  { id: 'broker', label: 'Broker' },
+  { id: 'email', label: 'Email' },
+  { id: 'phone', label: 'Phone' },
+  { id: 'licenseNo', label: 'License No' },
+  { id: 'location', label: 'Location' },
+  { id: 'company', label: 'Company' },
+  { id: 'subscription', label: 'Subscription' },
+  { id: 'status', label: 'Status' },
+  { id: 'properties', label: 'Properties' },
+  { id: 'leads', label: 'Leads' },
+  { id: 'actions', label: 'Actions' },
+];
+
+const DEFAULT_COLUMN_IDS = ['broker', 'company', 'subscription', 'status', 'properties', 'leads', 'actions'];
 
 // Small helpers to create deterministic mock values for UI-only fields
 function deriveSubscription(id) {
@@ -37,6 +53,8 @@ export default function SuperAdminBroker() {
     phone: '',
     password: '',
     license_no: '',
+    location: '',
+    company_name: '',
     status: 'active',
     photo: null,
   });
@@ -46,10 +64,16 @@ export default function SuperAdminBroker() {
     email: '',
     phone: '',
     license_no: '',
+    location: '',
+    company_name: '',
     status: 'active',
     photo: null,
   });
   const [submitting, setSubmitting] = useState(false);
+  const [columnMenuOpen, setColumnMenuOpen] = useState(false);
+  const [visibleColumnIds, setVisibleColumnIds] = useState(() => DEFAULT_COLUMN_IDS);
+  const columnButtonRef = useRef(null);
+  const columnMenuRef = useRef(null);
 
   const headers = useMemo(() => ({ Authorization: token ? `Bearer ${token}` : '' }), [token]);
   const filteredBrokers = useMemo(() => {
@@ -72,6 +96,73 @@ export default function SuperAdminBroker() {
     const leads = brokers.reduce((sum, b) => sum + (Number(b.leadsCount) || 0), 0);
     return { total, active, inactive, leads };
   }, [brokers]);
+
+  const visibleColumns = useMemo(
+    () => COLUMN_OPTIONS.filter((col) => visibleColumnIds.includes(col.id)),
+    [visibleColumnIds]
+  );
+
+  const getMinWidth = (colId) => {
+    const widths = {
+      broker: '180px',
+      email: '180px',
+      phone: '120px',
+      licenseNo: '120px',
+      location: '120px',
+      company: '150px',
+      subscription: '110px',
+      status: '100px',
+      properties: '110px',
+      leads: '110px',
+      actions: '100px',
+    };
+    return widths[colId] || '120px';
+  };
+
+  const getColumnSizes = (columns) => {
+    // For default columns (7 or fewer), use flexible sizing without forcing min-width
+    // This prevents unnecessary scrollbar when content fits
+    // Broker column gets 2fr, others get 1fr
+    if (columns.length <= 7) {
+      return columns.map((col) => col.id === 'broker' ? '2fr' : '1fr').join(' ');
+    }
+    // For more columns, use minmax to ensure readability
+    // Broker column gets 2fr, others get 1fr with min-width
+    return columns.map((col) => {
+      if (col.id === 'broker') {
+        const minWidth = getMinWidth(col.id);
+        return `minmax(${minWidth}, 2fr)`;
+      }
+      const minWidth = getMinWidth(col.id);
+      return `minmax(${minWidth}, 1fr)`;
+    }).join(' ');
+  };
+
+  const toggleColumn = (id) => {
+    setVisibleColumnIds((prev) => {
+      const set = new Set(prev);
+      if (set.has(id)) set.delete(id); else set.add(id);
+      return COLUMN_OPTIONS.map((col) => col.id).filter((colId) => set.has(colId));
+    });
+  };
+
+  useEffect(() => {
+    if (!columnMenuOpen) return undefined;
+    function handleClickOutside(event) {
+      if (!columnMenuRef.current || !columnButtonRef.current) return;
+      if (columnMenuRef.current.contains(event.target) || columnButtonRef.current.contains(event.target)) return;
+      setColumnMenuOpen(false);
+    }
+    function handleEsc(event) {
+      if (event.key === 'Escape') setColumnMenuOpen(false);
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEsc);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEsc);
+    };
+  }, [columnMenuOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -108,7 +199,7 @@ export default function SuperAdminBroker() {
   }
 
   function openAdd() {
-    setFormAdd({ full_name: '', email: '', phone: '', password: '', license_no: '', status: 'active', photo: null });
+    setFormAdd({ full_name: '', email: '', phone: '', password: '', license_no: '', location: '', company_name: '', status: 'active', photo: null });
     setShowAdd(true);
   }
 
@@ -123,6 +214,8 @@ export default function SuperAdminBroker() {
       fd.append('phone', formAdd.phone || '');
       fd.append('password', formAdd.password);
       fd.append('license_no', formAdd.license_no || '');
+      fd.append('location', formAdd.location || '');
+      fd.append('company_name', formAdd.company_name || '');
       fd.append('status', formAdd.status || 'active');
       if (formAdd.photo) fd.append('photo', formAdd.photo);
       await axios.post(`${apiBase}/api/broker/createbroker`, fd, { headers: { ...headers } });
@@ -156,7 +249,17 @@ export default function SuperAdminBroker() {
       const resp = await axios.get(`${apiBase}/api/broker/getbroker/${brokerId}`, { headers });
       const b = resp.data?.data;
       if (b) {
-        setFormEdit({ id: b.id, full_name: b.name || '', email: b.email || '', phone: b.phone || '', license_no: b.licenseNo || '', status: b.status || 'active', photo: null });
+        setFormEdit({ 
+          id: b.id, 
+          full_name: b.name || '', 
+          email: b.email || '', 
+          phone: b.phone || '', 
+          license_no: b.licenseNo || '', 
+          location: b.location || '', 
+          company_name: b.companyName || '', 
+          status: b.status || 'active', 
+          photo: null 
+        });
         setShowEdit(true);
       }
     } catch (e) {
@@ -174,6 +277,8 @@ export default function SuperAdminBroker() {
       fd.append('email', formEdit.email);
       fd.append('phone', formEdit.phone || '');
       fd.append('license_no', formEdit.license_no || '');
+      fd.append('location', formEdit.location || '');
+      fd.append('company_name', formEdit.company_name || '');
       fd.append('status', formEdit.status || 'active');
       if (formEdit.photo) fd.append('photo', formEdit.photo);
       await axios.put(`${apiBase}/api/broker/updatebroker/${formEdit.id}`, fd, { headers: { ...headers } });
@@ -210,6 +315,36 @@ export default function SuperAdminBroker() {
         </div>
         <div className="bm-actions">
           <button className="bm-btn bm-btn-light" onClick={exportCsv}>Export Leads</button>
+          <div className="bm-tableactions">
+            <button
+              type="button"
+              ref={columnButtonRef}
+              className="bm-columns-btn"
+              onClick={() => setColumnMenuOpen((open) => !open)}
+            >
+              <span aria-hidden>🗂️</span>
+              <span>Columns</span>
+            </button>
+            {columnMenuOpen && (
+              <div 
+                className="bm-colmenu" 
+                ref={columnMenuRef} 
+                role="menu"
+              >
+                <div className="bm-colmenu-head">Show columns</div>
+                {COLUMN_OPTIONS.map((col) => (
+                  <label key={col.id} className="bm-colmenu-item">
+                    <input
+                      type="checkbox"
+                      checked={visibleColumnIds.includes(col.id)}
+                      onChange={() => toggleColumn(col.id)}
+                    />
+                    <span>{col.label}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
           <button className="bm-btn bm-btn-primary" onClick={openAdd}>+ Add New Broker</button>
         </div>
       </div>
@@ -256,59 +391,97 @@ export default function SuperAdminBroker() {
           </div>
         </div>
 
-        <div className="bm-table">
-          <div className="bm-thead">
-            <div>Broker</div>
-            <div>Company</div>
-            <div>Subscription</div>
-            <div>Status</div>
-            <div>Properties</div>
-            <div>Leads</div>
-            <div>Actions</div>
-          </div>
+        <div className="bm-table-wrap">
+          <div className="bm-table">
+            <div className="bm-thead" style={{ gridTemplateColumns: getColumnSizes(visibleColumns) }}>
+              {visibleColumns.map((col) => (
+                <div key={col.id}>{col.label}</div>
+              ))}
+            </div>
 
-          {loading && <div className="bm-row"><div className="bm-loading">Loading...</div></div>}
-          {!!error && !loading && <div className="bm-row"><div className="bm-error">{error}</div></div>}
-          {!loading && !error && filteredBrokers.length === 0 && <div className="bm-row"><div>No brokers found</div></div>}
+            {loading && <div className="bm-row" style={{ gridTemplateColumns: getColumnSizes(visibleColumns) }}><div className="bm-loading" style={{ gridColumn: `1 / -1` }}>Loading...</div></div>}
+            {!!error && !loading && <div className="bm-row" style={{ gridTemplateColumns: getColumnSizes(visibleColumns) }}><div className="bm-error" style={{ gridColumn: `1 / -1` }}>{error}</div></div>}
+            {!loading && !error && filteredBrokers.length === 0 && <div className="bm-row" style={{ gridTemplateColumns: getColumnSizes(visibleColumns) }}><div style={{ gridColumn: `1 / -1` }}>No brokers found</div></div>}
 
           {!loading && !error && filteredBrokers.map((b) => {
             const sub = deriveSubscription(b.id);
             const companyName = b.companyName || deriveCompany(b.name).company;
             const properties = (typeof b.propertiesCount === 'number') ? b.propertiesCount : (10 + pseudoCount(b.id, 40));
             const leads = (typeof b.leadsCount === 'number') ? b.leadsCount : (15 + pseudoCount(b.id * 7, 30));
+            
+            const renderCell = (colId) => {
+              switch (colId) {
+                case 'broker':
+                  return (
+                    <div className="bm-broker">
+                      <div className="bm-avatar" aria-hidden>{String(b.name || 'B').split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase()}</div>
+                      <div className="bm-broker-info">
+                        <div className="bm-broker-name">{b.name}</div>
+                        {visibleColumnIds.includes('email') ? null : <div className="bm-broker-email">{b.email}</div>}
+                      </div>
+                    </div>
+                  );
+                case 'email':
+                  return <div style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.email || '—'}</div>;
+                case 'phone':
+                  return <div>{b.phone || '—'}</div>;
+                case 'licenseNo':
+                  return <div>{b.licenseNo || '—'}</div>;
+                case 'location':
+                  return <div>{b.location || '—'}</div>;
+                case 'company':
+                  return (
+                    <div className="bm-company">
+                      <div className="bm-company-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{companyName}</div>
+                    </div>
+                  );
+                case 'subscription':
+                  return (
+                    <div>
+                      <span className={`bm-tag bm-tag-${sub.toLowerCase()}`}>{sub}</span>
+                    </div>
+                  );
+                case 'status':
+                  return (
+                    <div>
+                      <span className={`bm-badge bm-badge-${String(b.status || 'active').toLowerCase()}`}>{String(b.status || 'active').charAt(0).toUpperCase() + String(b.status || 'active').slice(1)}</span>
+                    </div>
+                  );
+                case 'properties':
+                  return (
+                    <div className="bm-col-center">
+                      <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden><path fill="#64748b" d="M3 11h18v2H3v-2Zm2 4h14v2H5v-2ZM7 7h10v2H7V7Z"/></svg>
+                      <span>{properties}</span>
+                    </div>
+                  );
+                case 'leads':
+                  return (
+                    <div className="bm-col-center">
+                      <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden><path fill="#64748b" d="M20 7H4v10h16V7Zm2-2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2ZM7 8h3v3H7V8Zm0 5h10v2H7v-2Zm5-5h5v3h-5V8Z"/></svg>
+                      <span>{leads}</span>
+                    </div>
+                  );
+                case 'actions':
+                  return (
+                    <div className="bm-actions-col">
+                      <button className="bm-link" onClick={() => openView(b.id)} title="View" aria-label="View">👁️</button>
+                      <button className="bm-link" onClick={() => openEdit(b.id)} title="Edit" aria-label="Edit">✏️</button>
+                    </div>
+                  );
+                default:
+                  return <div>—</div>;
+              }
+            };
+
             return (
-              <div key={b.id} className="bm-row">
-                <div className="bm-broker">
-                  <div className="bm-avatar" aria-hidden>{String(b.name || 'B').split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase()}</div>
-                  <div className="bm-broker-info">
-                    <div className="bm-broker-name">{b.name}</div>
-                    <div className="bm-broker-email">{b.email}</div>
-                  </div>
-                </div>
-                <div className="bm-company">
-                  <div className="bm-company-name">{companyName}</div>
-                </div>
-                <div>
-                  <span className={`bm-tag bm-tag-${sub.toLowerCase()}`}>{sub}</span>
-                </div>
-                <div>
-                  <span className={`bm-badge bm-badge-${String(b.status || 'active').toLowerCase()}`}>{String(b.status || 'active').charAt(0).toUpperCase() + String(b.status || 'active').slice(1)}</span>
-                </div>
-                <div className="bm-col-center">
-                  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden><path fill="#64748b" d="M3 11h18v2H3v-2Zm2 4h14v2H5v-2ZM7 7h10v2H7V7Z"/></svg>
-                  <span>{properties}</span>
-                </div>
-                <div className="bm-col-center">
-                  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden><path fill="#64748b" d="M20 7H4v10h16V7Zm2-2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2ZM7 8h3v3H7V8Zm0 5h10v2H7v-2Zm5-5h5v3h-5V8Z"/></svg>
-                  <span>{leads}</span>
-                </div>
-                <div className="bm-actions-col">
-                  <button className="bm-link" onClick={() => openView(b.id)} title="View" aria-label="View">👁️</button>
-                  <button className="bm-link" onClick={() => openEdit(b.id)} title="Edit" aria-label="Edit">✏️</button>
-                </div>
+              <div key={b.id} className="bm-row" style={{ gridTemplateColumns: getColumnSizes(visibleColumns) }}>
+                {visibleColumns.map((col) => (
+                  <div key={col.id} style={{ overflow: 'hidden' }}>{renderCell(col.id)}</div>
+                ))}
               </div>
             );
           })}
+          </div>
         </div>
       </div>
 
@@ -339,6 +512,14 @@ export default function SuperAdminBroker() {
               <div className="superadminbroker-formrow">
                 <label>License No</label>
                 <input value={formAdd.license_no} onChange={(e) => setFormAdd({ ...formAdd, license_no: e.target.value })} />
+              </div>
+              <div className="superadminbroker-formrow">
+                <label>Location</label>
+                <input value={formAdd.location} onChange={(e) => setFormAdd({ ...formAdd, location: e.target.value })} />
+              </div>
+              <div className="superadminbroker-formrow">
+                <label>Company Name</label>
+                <input value={formAdd.company_name} onChange={(e) => setFormAdd({ ...formAdd, company_name: e.target.value })} />
               </div>
               <div className="superadminbroker-formrow">
                 <label>Status</label>
@@ -433,6 +614,14 @@ export default function SuperAdminBroker() {
               <div className="superadminbroker-formrow">
                 <label>License No</label>
                 <input value={formEdit.license_no} onChange={(e) => setFormEdit({ ...formEdit, license_no: e.target.value })} />
+              </div>
+              <div className="superadminbroker-formrow">
+                <label>Location</label>
+                <input value={formEdit.location} onChange={(e) => setFormEdit({ ...formEdit, location: e.target.value })} />
+              </div>
+              <div className="superadminbroker-formrow">
+                <label>Company Name</label>
+                <input value={formEdit.company_name} onChange={(e) => setFormEdit({ ...formEdit, company_name: e.target.value })} />
               </div>
               <div className="superadminbroker-formrow">
                 <label>Status</label>

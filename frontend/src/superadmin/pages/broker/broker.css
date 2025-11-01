@@ -22,9 +22,14 @@
 .bm-section-head { display: flex; justify-content: space-between; align-items: end; padding: 12px; border-bottom: 1px solid #e5e7eb; }
 .bm-section-sub { color: #6b7280; margin-top: 4px; }
 
+.bm-table-wrap { overflow-x: auto; width: 100%; -webkit-overflow-scrolling: touch; }
+.bm-table-wrap::-webkit-scrollbar { height: 8px; }
+.bm-table-wrap::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+.bm-table-wrap::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+.bm-table-wrap::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 .bm-table { width: 100%; }
-.bm-thead { display: grid; grid-template-columns: 2fr 2fr 1.2fr 1.2fr 1fr 1fr 1fr; gap: 10px; padding: 12px; color: #6b7280; font-weight: 600; background: #fafafa; border-bottom: 1px solid #e5e7eb; }
-.bm-row { display: grid; grid-template-columns: 2fr 2fr 1.2fr 1.2fr 1fr 1fr 1fr; gap: 10px; padding: 12px; border-bottom: 1px solid #f1f5f9; align-items: center; }
+.bm-thead { display: grid; gap: 10px; padding: 12px; color: #6b7280; font-weight: 600; background: #fafafa; border-bottom: 1px solid #e5e7eb; }
+.bm-row { display: grid; gap: 10px; padding: 12px; border-bottom: 1px solid #f1f5f9; align-items: center; }
 .bm-loading { color: #64748b; }
 .bm-error { color: #b91c1c; }
 
@@ -34,7 +39,7 @@
 .bm-broker-name { font-weight: 600; }
 .bm-broker-email { color: #64748b; font-size: 12px; }
 
-.bm-company-name { font-weight: 600; }
+.bm-company-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
 .bm-company-domain { color: #64748b; font-size: 12px; }
 
 .bm-tag { padding: 4px 8px; border-radius: 9999px; font-size: 12px; display: inline-block; }
@@ -50,6 +55,14 @@
 .bm-col-center { display: flex; align-items: center; gap: 6px; color: #111827; }
 .bm-actions-col { display: flex; gap: 8px; }
 .bm-link { background: transparent; border: none; cursor: pointer; font-size: 16px; }
+
+.bm-tableactions { position: relative; }
+.bm-columns-btn { display: flex; align-items: center; gap: 6px; padding: 8px 12px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer; font-size: 14px; }
+.bm-columns-btn:hover { background: #e2e8f0; }
+.bm-colmenu { position: absolute; top: calc(100% + 8px); right: 0; width: 200px; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 18px 30px rgba(15,23,42,0.18); padding: 14px; display: grid; gap: 10px; z-index: 30; }
+.bm-colmenu-head { font-size: 12px; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding-bottom: 8px; border-bottom: 1px solid #e2e8f0; margin-bottom: 4px; }
+.bm-colmenu-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #1f2937; cursor: pointer; padding: 4px 0; }
+.bm-colmenu-item input { width: 14px; height: 14px; cursor: pointer; }
 
 /* Reuse modal styles from previous implementation */
 .superadminbroker-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
