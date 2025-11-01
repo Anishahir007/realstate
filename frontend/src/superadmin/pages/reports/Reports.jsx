@@ -40,6 +40,35 @@ const formatCurrency = (value) => {
   return `₹${num.toLocaleString('en-IN')}`;
 };
 
+// Export CSV utility
+const exportToCSV = (data, filename) => {
+  if (!data || data.length === 0) {
+    alert('No data to export');
+    return;
+  }
+  
+  // Convert data to CSV format
+  const headers = Object.keys(data[0]).map(h => `"${h.replace(/"/g, '""')}"`).join(',');
+  const rows = data.map(row => 
+    Object.values(row).map(val => {
+      const str = String(val || '');
+      return `"${str.replace(/"/g, '""')}"`;
+    }).join(',')
+  );
+  
+  const csvContent = [headers, ...rows].join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  
+  link.setAttribute('href', url);
+  link.setAttribute('download', filename);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
 export default function Reports() {
   const { token, apiBase } = useSuperAdmin();
   const [activeTab, setActiveTab] = useState('brokers');
@@ -67,6 +96,90 @@ export default function Reports() {
         setLoading(false);
       });
   }, [activeTab, dateRange, apiBase, headers, token]);
+
+  // Export handlers
+  const handleExportBrokers = () => {
+    if (!data) return;
+    const { monthlyTrend = [], topBrokers = [] } = data;
+    
+    const exportData = [
+      ...monthlyTrend.map(d => ({
+        Month: d.month,
+        'Brokers Added': d.count,
+      })),
+      { Month: '', 'Brokers Added': '' },
+      { Month: 'Top Brokers by Properties', 'Brokers Added': '' },
+      ...topBrokers.map((b, idx) => ({
+        Month: `${idx + 1}. ${b.brokerName}`,
+        'Brokers Added': b.propertyCount,
+      })),
+    ];
+    exportToCSV(exportData, `broker-reports-${dateRange}-${new Date().toISOString().split('T')[0]}.csv`);
+  };
+
+  const handleExportProperties = () => {
+    if (!data) return;
+    const { byType = [], byCity = [], monthlyTrend = [] } = data;
+    
+    const exportData = [
+      ...monthlyTrend.map(d => ({
+        Month: d.month,
+        'Properties Added': d.count,
+      })),
+      { Month: '', 'Properties Added': '' },
+      { Month: 'Properties by Type', 'Properties Added': '' },
+      ...byType.map(t => ({
+        Month: t.type,
+        'Properties Added': t.count,
+      })),
+      { Month: '', 'Properties Added': '' },
+      { Month: 'Top Cities', 'Properties Added': '' },
+      ...byCity.map((c, idx) => ({
+        Month: `${idx + 1}. ${c.city}`,
+        'Properties Added': c.count,
+      })),
+    ];
+    exportToCSV(exportData, `property-reports-${dateRange}-${new Date().toISOString().split('T')[0]}.csv`);
+  };
+
+  const handleExportLeads = () => {
+    if (!data) return;
+    const { bySource = [], monthlyTrend = [], brokerLeads = [] } = data;
+    
+    const exportData = [
+      ...monthlyTrend.map(d => ({
+        Month: d.month,
+        'Leads Generated': d.count,
+      })),
+      { Month: '', 'Leads Generated': '' },
+      { Month: 'Leads by Source', 'Leads Generated': '' },
+      ...bySource.map(s => ({
+        Month: s.source,
+        'Leads Generated': s.count,
+      })),
+      { Month: '', 'Leads Generated': '' },
+      { Month: 'Top Brokers by Leads', 'Leads Generated': '' },
+      ...brokerLeads.map((b, idx) => ({
+        Month: `${idx + 1}. ${b.brokerName}`,
+        'Leads Generated': b.count,
+      })),
+    ];
+    exportToCSV(exportData, `leads-reports-${dateRange}-${new Date().toISOString().split('T')[0]}.csv`);
+  };
+
+  const handleExportAnalytics = () => {
+    if (!data) return;
+    const { brokerPerformance = [] } = data;
+    
+    const exportData = brokerPerformance.map((b, idx) => ({
+      Rank: idx + 1,
+      'Broker Name': b.brokerName,
+      Properties: b.properties,
+      Leads: b.leads,
+      'Conversion Rate (%)': b.conversionRate,
+    }));
+    exportToCSV(exportData, `analytics-report-${dateRange}-${new Date().toISOString().split('T')[0]}.csv`);
+  };
 
   const renderBrokerReports = () => {
     if (!data) return <div className="reports-empty">No data available</div>;
@@ -145,7 +258,12 @@ export default function Reports() {
         </div>
 
         <div className="reports-table-card">
-          <h3 className="reports-table-title">Top Brokers by Properties</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3 className="reports-table-title" style={{ margin: 0 }}>Top Brokers by Properties</h3>
+            <button type="button" onClick={handleExportBrokers} className="reports-export-btn">
+              📥 Export CSV
+            </button>
+          </div>
           <div className="reports-table">
             <div className="reports-table-header">
               <div>Broker Name</div>
@@ -228,6 +346,11 @@ export default function Reports() {
 
     return (
       <div className="reports-content">
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+          <button type="button" onClick={handleExportProperties} className="reports-export-btn">
+            📥 Export CSV
+          </button>
+        </div>
         <div className="reports-stats-grid">
           <div className="reports-stat-card">
             <div className="reports-stat-icon">🏠</div>
@@ -367,7 +490,12 @@ export default function Reports() {
         </div>
 
         <div className="reports-table-card">
-          <h3 className="reports-table-title">Top Brokers by Leads</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3 className="reports-table-title" style={{ margin: 0 }}>Top Brokers by Leads</h3>
+            <button type="button" onClick={handleExportLeads} className="reports-export-btn">
+              📥 Export CSV
+            </button>
+          </div>
           <div className="reports-table">
             <div className="reports-table-header">
               <div>Broker Name</div>
@@ -445,7 +573,12 @@ export default function Reports() {
         </div>
 
         <div className="reports-table-card">
-          <h3 className="reports-table-title">Broker Performance</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3 className="reports-table-title" style={{ margin: 0 }}>Broker Performance</h3>
+            <button type="button" onClick={handleExportAnalytics} className="reports-export-btn">
+              📥 Export CSV
+            </button>
+          </div>
           <div className="reports-table reports-table-analytics">
             <div className="reports-table-header reports-table-header-analytics">
               <div>Broker Name</div>

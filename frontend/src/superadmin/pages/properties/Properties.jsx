@@ -71,6 +71,7 @@ export default function SuperAdminProperties() {
   const [visibleColumnIds, setVisibleColumnIds] = useState(() => DEFAULT_COLUMN_IDS);
   const [columnFilters, setColumnFilters] = useState({});
   const [openFilterMenu, setOpenFilterMenu] = useState(null);
+  const [displayLimit, setDisplayLimit] = useState(10);
   const headers = useMemo(() => ({ Authorization: token ? `Bearer ${token}` : '' }), [token]);
   const columnButtonRef = useRef(null);
   const columnMenuRef = useRef(null);
@@ -84,7 +85,10 @@ export default function SuperAdminProperties() {
       setError('');
       try {
         const { data } = await axios.get(`${apiBase}/api/properties/admin/all`, { headers });
-        if (!cancelled) setItems(Array.isArray(data?.data) ? data.data : []);
+        if (!cancelled) {
+          setItems(Array.isArray(data?.data) ? data.data : []);
+          setDisplayLimit(10); // Reset pagination when new data loads
+        }
       } catch (e) {
         if (!cancelled) setError(e?.response?.data?.message || e?.message || 'Failed to load');
       } finally {
@@ -156,6 +160,22 @@ export default function SuperAdminProperties() {
       return `${x.title} ${x.brokerName} ${x.city} ${x.state}`.toLowerCase().includes(q);
     });
   }, [items, query, typeFilter, columnFilters]);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setDisplayLimit(10);
+  }, [query, typeFilter, columnFilters]);
+
+  // Get paginated results
+  const paginatedFiltered = useMemo(() => {
+    return filtered.slice(0, displayLimit);
+  }, [filtered, displayLimit]);
+
+  const hasMore = filtered.length > displayLimit;
+
+  const handleSeeMore = () => {
+    setDisplayLimit(prev => prev + 10);
+  };
 
   useEffect(() => {
     if (!columnMenuOpen) return undefined;
@@ -411,7 +431,7 @@ export default function SuperAdminProperties() {
                   <td colSpan={visibleColumns.length + 1} className="superadminbrokerproperties-table-empty">No properties found</td>
                 </tr>
               ) : (
-                filtered.map((p) => {
+                paginatedFiltered.map((p) => {
                   const location = [p.locality, p.city, p.state].filter(Boolean).join(', ') || '—';
                   const builtUp = formatArea(p.area, p.areaUnit);
                   const carpet = formatArea(p.carpetArea, p.carpetAreaUnit);
@@ -444,6 +464,17 @@ export default function SuperAdminProperties() {
             </tbody>
           </table>
         </div>
+        {hasMore && (
+          <div style={{ textAlign: 'center', padding: '20px' }}>
+            <button
+              onClick={handleSeeMore}
+              className="superadminbrokerproperties-btn superadminbrokerproperties-btn-primary"
+              style={{ minWidth: '150px' }}
+            >
+              See More
+            </button>
+          </div>
+        )}
       </div>
 
       {selected && (

@@ -476,7 +476,8 @@ export async function deleteProperty(req, res) {
 // ========== Super Admin: cross-tenant property listing ==========
 export async function listAllBrokerPropertiesAdmin(req, res) {
   try {
-    const limit = Math.max(1, Math.min(50, parseInt(req.query.limit, 10) || 10));
+    // Remove limit or set it very high to return all properties (frontend will handle pagination)
+    const limit = req.query.limit ? Math.max(1, Math.min(10000, parseInt(req.query.limit, 10))) : 10000;
     const [brokers] = await pool.query('SELECT id, full_name, tenant_db FROM brokers WHERE tenant_db IS NOT NULL');
     const out = [];
     for (const br of brokers) {

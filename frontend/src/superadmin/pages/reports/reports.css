@@ -299,6 +299,31 @@
   font-size: 16px;
 }
 
+.reports-export-btn {
+  padding: 10px 20px;
+  border: 1px solid #2563eb;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #2563eb, #4338ca);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.reports-export-btn:hover {
+  background: linear-gradient(135deg, #1d4ed8, #3730a3);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  transform: translateY(-1px);
+}
+
+.reports-export-btn:active {
+  transform: translateY(0);
+}
+
 @media (max-width: 768px) {
   .reports-header {
     flex-direction: column;
