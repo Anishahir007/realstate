@@ -25,7 +25,7 @@ const storage = multer.diskStorage({
 
 export const uploadBanner = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit (increased from 5MB)
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|webp|svg/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -149,7 +149,7 @@ export async function updateTemplateBanner(req, res) {
     const { templateName } = req.params;
 
     if (!req.file) {
-      return res.status(400).json({ message: 'No file uploaded' });
+      return res.status(400).json({ message: 'No file uploaded. Please select an image file (max 10MB).' });
     }
 
     const bannerPath = `/templates/banners/${req.file.filename}`;
