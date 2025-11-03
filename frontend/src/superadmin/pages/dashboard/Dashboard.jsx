@@ -259,6 +259,8 @@ export default function Dashboard() {
   const [propertiesLoading, setPropertiesLoading] = useState(false);
   const [columnMenuOpen, setColumnMenuOpen] = useState(false);
   const [visibleColumnIds, setVisibleColumnIds] = useState(() => DEFAULT_COLUMN_IDS);
+  const [columnFilters, setColumnFilters] = useState({});
+  const [openFilterMenu, setOpenFilterMenu] = useState(null);
   const monthParts = useMemo(() => getMonthParts(monthDraft), [monthDraft]);
   const monthYearOptions = useMemo(() => {
     const current = new Date().getFullYear();
@@ -268,6 +270,7 @@ export default function Dashboard() {
   }, [monthParts.year]);
   const columnButtonRef = useRef(null);
   const columnMenuRef = useRef(null);
+  const filterMenuRefs = useRef({});
 
   const monthValid = useMemo(() => /^\d{4}-\d{2}$/.test(monthDraft), [monthDraft]);
   const yearValid = useMemo(() => {
@@ -348,6 +351,32 @@ export default function Dashboard() {
       document.removeEventListener('keydown', handleEsc);
     };
   }, [columnMenuOpen]);
+
+  // Handle click outside for filter menus
+  useEffect(() => {
+    if (openFilterMenu === null) return undefined;
+    function handleClickOutside(event) {
+      const menuRef = filterMenuRefs.current[openFilterMenu];
+      const buttonRef = document.querySelector(`[data-filter-col="${openFilterMenu}"]`);
+      if (!menuRef && !buttonRef) return;
+      if (menuRef?.contains(event.target) || buttonRef?.contains(event.target)) return;
+      setOpenFilterMenu(null);
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [openFilterMenu]);
+
+  const toggleFilter = (colId) => {
+    setOpenFilterMenu(openFilterMenu === colId ? null : colId);
+  };
+
+  const setColumnFilter = (colId, value) => {
+    setColumnFilters(prev => ({
+      ...prev,
+      [colId]: value === 'All' ? undefined : value,
+    }));
+    setOpenFilterMenu(null);
+  };
 
   const toggleColumn = (id) => {
     setVisibleColumnIds((prev) => {
@@ -512,6 +541,70 @@ export default function Dashboard() {
     loadRecentProperties();
     return () => { cancelled = true; };
   }, [superAdmin?.token, superAdmin?.apiBase, filter.key, filter.from, filter.to, filter.monthValue, filter.yearValue]);
+
+  // Extract unique values for each filterable column
+  const filterValues = useMemo(() => {
+    const values = {
+      type: [...new Set(recentProperties.map(x => x.type || x.property_type).filter(Boolean))].sort(),
+      buildingType: [...new Set(recentProperties.map(x => x.buildingType || x.building_type).filter(Boolean))].sort(),
+      propertyFor: [...new Set(recentProperties.map(x => x.propertyFor).filter(Boolean))].sort(),
+      saleType: [...new Set(recentProperties.map(x => x.saleType).filter(Boolean))].sort(),
+      availability: [...new Set(recentProperties.map(x => x.availability).filter(Boolean))].sort(),
+      approvingAuthority: [...new Set(recentProperties.map(x => x.approvingAuthority).filter(Boolean))].sort(),
+      ownership: [...new Set(recentProperties.map(x => x.ownership).filter(Boolean))].sort(),
+      reraStatus: [...new Set(recentProperties.map(x => x.reraStatus).filter(Boolean))].sort(),
+      reraNumber: [...new Set(recentProperties.map(x => x.reraNumber).filter(Boolean))].sort(),
+      furnishingStatus: [...new Set(recentProperties.map(x => x.furnishingStatus).filter(Boolean))].sort(),
+      facing: [...new Set(recentProperties.map(x => x.facing).filter(Boolean))].sort(),
+      flooringType: [...new Set(recentProperties.map(x => x.flooringType).filter(Boolean))].sort(),
+      location: [...new Set(recentProperties.map(x => {
+        const parts = [x.locality, x.city, x.state].filter(Boolean);
+        return parts.length ? parts.join(', ') : '';
+      }).filter(Boolean))].sort(),
+      broker: [...new Set(recentProperties.map(x => x.brokerName).filter(Boolean))].sort(),
+      status: [...new Set(recentProperties.map(x => x.status).filter(Boolean))].sort(),
+      price: [], // Range filter would be complex, skip for now
+    };
+    return values;
+  }, [recentProperties]);
+
+  const getColumnValue = (colId, p) => {
+    switch (colId) {
+      case 'type': return p.type || p.property_type;
+      case 'buildingType': return p.buildingType || p.building_type;
+      case 'propertyFor': return p.propertyFor;
+      case 'saleType': return p.saleType;
+      case 'availability': return p.availability;
+      case 'approvingAuthority': return p.approvingAuthority;
+      case 'ownership': return p.ownership;
+      case 'reraStatus': return p.reraStatus;
+      case 'reraNumber': return p.reraNumber;
+      case 'furnishingStatus': return p.furnishingStatus;
+      case 'facing': return p.facing;
+      case 'flooringType': return p.flooringType;
+      case 'location': {
+        const parts = [p.locality, p.city, p.state].filter(Boolean);
+        return parts.length ? parts.join(', ') : '';
+      }
+      case 'broker': return p.brokerName;
+      case 'status': return p.status;
+      default: return null;
+    }
+  };
+
+  // Filter properties based on column filters
+  const filteredProperties = useMemo(() => {
+    return recentProperties.filter((x) => {
+      // Apply column filters
+      for (const [colId, filterValue] of Object.entries(columnFilters)) {
+        if (filterValue && filterValue !== 'All') {
+          const colValue = getColumnValue(colId, x);
+          if (String(colValue) !== String(filterValue)) return false;
+        }
+      }
+      return true;
+    });
+  }, [recentProperties, columnFilters]);
 
   const visibleColumns = useMemo(() => COLUMN_OPTIONS.filter((col) => visibleColumnIds.includes(col.id)), [visibleColumnIds]);
 
@@ -939,9 +1032,61 @@ export default function Dashboard() {
                 <tr>
                   <th scope="col" className="col-checkbox"><input type="checkbox" aria-label="Select all" /></th>
                   <th scope="col">Property</th>
-                  {visibleColumns.map((col) => (
-                    <th key={col.id} scope="col" className={`col-${col.id}`}>{col.label}</th>
-                  ))}
+                  {visibleColumns.map((col) => {
+                    const filterValuesForCol = filterValues[col.id] || [];
+                    const hasFilter = filterValuesForCol.length > 0;
+                    const currentFilter = columnFilters[col.id];
+                    const isMenuOpen = openFilterMenu === col.id;
+                    return (
+                      <th key={col.id} scope="col" className={`col-${col.id}`}>
+                        <div className="superadmindashboard-th-filter">
+                          <span>{col.label}</span>
+                          {hasFilter && (
+                            <div className="superadmindashboard-th-filter-btn-wrap">
+                              <button
+                                type="button"
+                                data-filter-col={col.id}
+                                className={`superadmindashboard-th-filter-btn ${currentFilter ? 'active' : ''}`}
+                                onClick={() => toggleFilter(col.id)}
+                                title="Filter"
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                                </svg>
+                              </button>
+                              {isMenuOpen && (
+                                <div
+                                  className="superadmindashboard-filter-menu"
+                                  ref={(el) => { if (el) filterMenuRefs.current[col.id] = el; }}
+                                >
+                                  <div className="superadmindashboard-filter-menu-item">
+                                    <button
+                                      type="button"
+                                      className={!currentFilter ? 'active' : ''}
+                                      onClick={() => setColumnFilter(col.id, 'All')}
+                                    >
+                                      All
+                                    </button>
+                                  </div>
+                                  {filterValuesForCol.map((val) => (
+                                    <div key={val} className="superadmindashboard-filter-menu-item">
+                                      <button
+                                        type="button"
+                                        className={currentFilter === val ? 'active' : ''}
+                                        onClick={() => setColumnFilter(col.id, val)}
+                                      >
+                                        {val}
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody>
@@ -949,8 +1094,8 @@ export default function Dashboard() {
                   <tr>
                     <td colSpan={visibleColumns.length + 2} className="superadmindashboard-table-empty">Loading properties…</td>
                   </tr>
-                ) : recentProperties.length ? (
-                  recentProperties.map((row) => {
+                ) : filteredProperties.length ? (
+                  filteredProperties.map((row) => {
                     const areaText = formatArea(row.area, row.areaUnit);
                     const dateLabel = row.createdAt ? DATE_DISPLAY.format(new Date(row.createdAt)) : '—';
                     const brokerLabel = row.brokerName || '—';
