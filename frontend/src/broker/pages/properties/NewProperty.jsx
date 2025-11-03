@@ -638,47 +638,112 @@ export default function NewProperty() {
       return;
     }
     
+    let propertyId = null;
     try {
       // Single API to create property and all related data
       const payload = { basic, features, highlights, amenities, nearby_landmarks: nearby };
       const { data: created } = await axios.post(`${apiBase}/api/properties/createproperty/full`, payload, {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
       });
-      const id = created.id;
+      
+      if (!created || !created.id) {
+        throw new Error('Property creation failed: Invalid response from server');
+      }
+      
+      propertyId = created.id;
 
-      // 4) media uploads per tab
+      // Media uploads per tab - if any fails, rollback by deleting property
       const tabs = ['exterior','bedroom','bathroom','kitchen','floor_plan','location_map','other'];
-      for (const tab of tabs) {
-        const arr = files?.[tab] || [];
-        // eslint-disable-next-line no-restricted-syntax
-        for (const [idx, file] of arr.entries()) {
-          const fd = new FormData();
-          fd.append('file', file);
-          fd.append('media_type', 'image');
-          fd.append('category', tab);
-          // eslint-disable-next-line no-await-in-loop
-          const { data: mediaResp } = await axios.post(`${apiBase}/api/properties/${id}/media`, fd, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          // set primary if selected locally
-          if (files?.primary && files.primary.tab === tab && files.primary.idx === idx && mediaResp?.id) {
+      try {
+        for (const tab of tabs) {
+          const arr = files?.[tab] || [];
+          // eslint-disable-next-line no-restricted-syntax
+          for (const [idx, file] of arr.entries()) {
+            const fd = new FormData();
+            fd.append('file', file);
+            fd.append('media_type', 'image');
+            fd.append('category', tab);
             // eslint-disable-next-line no-await-in-loop
-            await axios.post(`${apiBase}/api/properties/setprimary/${id}/${mediaResp.id}`, {}, {
+            const { data: mediaResp } = await axios.post(`${apiBase}/api/properties/${propertyId}/media`, fd, {
               headers: { Authorization: `Bearer ${token}` },
             });
+            // set primary if selected locally
+            if (files?.primary && files.primary.tab === tab && files.primary.idx === idx && mediaResp?.id) {
+              // eslint-disable-next-line no-await-in-loop
+              await axios.post(`${apiBase}/api/properties/setprimary/${propertyId}/${mediaResp.id}`, {}, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+            }
           }
         }
-      }
-      if (files?.youtube_url) {
-        await axios.post(`${apiBase}/api/properties/${id}/video`, { url: files.youtube_url, category: 'video' }, {
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        });
-      }
+        
+        // Video upload if provided
+        if (files?.youtube_url) {
+          await axios.post(`${apiBase}/api/properties/${propertyId}/video`, { url: files.youtube_url, category: 'video' }, {
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          });
+        }
 
-      alert('Property created');
-      setStep(1);
+        // Success - all operations completed
+        alert('Property created successfully');
+        setStep(1);
+        // Reset form
+        setBasic({
+          property_for: 'sell',
+          building_type: 'residential',
+          property_type: 'flat',
+          title: '',
+          description: '',
+          state: '', city: '', locality: '', sub_locality: '', society_name: '', address: ''
+        });
+        setFeatures({
+          built_up_area: '', area_unit: 'sqft',
+          carpet_area: '', carpet_area_unit: '',
+          super_area: '', super_area_unit: '',
+          expected_price: '', booking_amount: '', maintenance_charges: '',
+          sale_type: 'new_property', no_of_floors: 1, availability: 'ready_to_move',
+          possession_by: '', property_on_floor: '', furnishing_status: 'unfurnished', facing: '', flooring_type: '',
+          ownership: 'freehold', rera_status: 'not_applicable', rera_number: '', age_years: '',
+          num_bedrooms: '', num_bathrooms: '', num_balconies: ''
+        });
+        setHighlights([]);
+        setAmenities([]);
+        setNearby([]);
+        setFiles([]);
+        setShowCarpet(false);
+        setShowSuper(false);
+      } catch (mediaErr) {
+        // If media upload fails, delete the created property to maintain data integrity
+        if (propertyId) {
+          try {
+            await axios.delete(`${apiBase}/api/properties/deleteproperty/${propertyId}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+          } catch (deleteErr) {
+            // eslint-disable-next-line no-console
+            console.error('Failed to cleanup property after media upload error:', deleteErr);
+          }
+        }
+        throw new Error(`Media upload failed: ${mediaErr?.response?.data?.message || mediaErr?.message || 'Unknown error'}. Property creation has been rolled back.`);
+      }
     } catch (err) {
-      setErrors(err?.response?.data?.message || err?.message || 'Failed to save');
+      // Error in property creation or media upload
+      const errorMsg = err?.response?.data?.message || err?.message || 'Failed to save property';
+      setErrors(errorMsg);
+      // eslint-disable-next-line no-console
+      console.error('Property creation error:', err);
+      
+      // Ensure no partial data remains
+      if (propertyId) {
+        try {
+          await axios.delete(`${apiBase}/api/properties/deleteproperty/${propertyId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+        } catch (cleanupErr) {
+          // eslint-disable-next-line no-console
+          console.error('Cleanup failed:', cleanupErr);
+        }
+      }
     }
   }
 

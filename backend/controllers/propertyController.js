@@ -336,6 +336,7 @@ export async function addPropertyVideo(req, res) {
 }
 
 export async function createPropertyFull(req, res) {
+  let conn = null;
   try {
     const tenantDb = getTenantDb(req);
     if (!tenantDb) return res.status(400).json({ message: 'Missing tenant' });
@@ -348,23 +349,32 @@ export async function createPropertyFull(req, res) {
     const amenities = Array.isArray(body.amenities) ? body.amenities : [];
     const nearby = Array.isArray(body.nearby_landmarks) ? body.nearby_landmarks : [];
 
+    // Validate required fields
     const required = ['building_type','property_type','title','state','city'];
     for (const f of required) {
-      if (!basic[f]) return res.status(400).json({ message: `Missing field ${f}` });
+      if (!basic[f] || (typeof basic[f] === 'string' && basic[f].trim() === '')) {
+        return res.status(400).json({ message: `Missing required field: ${f}` });
+      }
     }
 
     const tenantPool = await getTenantPool(tenantDb);
-    const conn = await tenantPool.getConnection();
-    try {
-      await conn.beginTransaction();
+    conn = await tenantPool.getConnection();
+    
+    await conn.beginTransaction();
 
+    try {
       // Insert base property
       const cols = ['user_id','property_for','building_type','property_type','title','description','state','city','locality','sub_locality','society_name','address','status'];
       const placeholders = cols.map(() => '?').join(',');
       const params = cols.map((c) => basic[c] ?? null);
       params[0] = userId;
+      
       const [propRes] = await conn.query(`INSERT INTO properties (${cols.join(',')}) VALUES (${placeholders})`, params);
       const propertyId = propRes.insertId;
+
+      if (!propertyId || propertyId <= 0) {
+        throw new Error('Failed to create property: Invalid property ID returned');
+      }
 
       // Insert features (normalize additional_rooms)
       const featureCols = ['built_up_area','area_unit','carpet_area','carpet_area_unit','super_area','super_area_unit','expected_price','booking_amount','maintenance_charges','sale_type','no_of_floors','availability','possession_by','property_on_floor','furnishing_status','facing','flooring_type','age_years','additional_rooms','approving_authority','ownership','rera_status','rera_number','num_bedrooms','num_bathrooms','num_balconies'];
@@ -372,8 +382,14 @@ export async function createPropertyFull(req, res) {
       if (Array.isArray(featuresPayload.additional_rooms)) {
         featuresPayload.additional_rooms = JSON.stringify(featuresPayload.additional_rooms);
       } else if (featuresPayload.additional_rooms && typeof featuresPayload.additional_rooms !== 'string') {
-        try { featuresPayload.additional_rooms = JSON.stringify(featuresPayload.additional_rooms); } catch { featuresPayload.additional_rooms = String(featuresPayload.additional_rooms); }
+        try { 
+          featuresPayload.additional_rooms = JSON.stringify(featuresPayload.additional_rooms); 
+        } catch { 
+          featuresPayload.additional_rooms = String(featuresPayload.additional_rooms); 
+        }
       }
+      
+      // Always insert features row (even if empty) to maintain referential integrity
       if (featureCols.some((c) => featuresPayload[c] !== undefined && featuresPayload[c] !== null && featuresPayload[c] !== '')) {
         const fParams = featureCols.map((c) => featuresPayload[c] ?? null);
         await conn.query(
@@ -384,23 +400,55 @@ export async function createPropertyFull(req, res) {
         await conn.query('INSERT INTO property_features (property_id) VALUES (?)', [propertyId]);
       }
 
-      // Highlights, amenities, landmarks
-      await conn.query('INSERT INTO property_highlights (property_id, highlights) VALUES (?, ?) ON DUPLICATE KEY UPDATE highlights = VALUES(highlights)', [propertyId, JSON.stringify(highlights)]);
-      await conn.query('INSERT INTO property_amenities (property_id, amenities) VALUES (?, ?) ON DUPLICATE KEY UPDATE amenities = VALUES(amenities)', [propertyId, JSON.stringify(amenities)]);
-      await conn.query('INSERT INTO property_landmarks (property_id, nearby_landmarks) VALUES (?, ?) ON DUPLICATE KEY UPDATE nearby_landmarks = VALUES(nearby_landmarks)', [propertyId, JSON.stringify(nearby)]);
+      // Highlights, amenities, landmarks - always insert to maintain referential integrity
+      await conn.query(
+        'INSERT INTO property_highlights (property_id, highlights) VALUES (?, ?) ON DUPLICATE KEY UPDATE highlights = VALUES(highlights)', 
+        [propertyId, JSON.stringify(highlights)]
+      );
+      await conn.query(
+        'INSERT INTO property_amenities (property_id, amenities) VALUES (?, ?) ON DUPLICATE KEY UPDATE amenities = VALUES(amenities)', 
+        [propertyId, JSON.stringify(amenities)]
+      );
+      await conn.query(
+        'INSERT INTO property_landmarks (property_id, nearby_landmarks) VALUES (?, ?) ON DUPLICATE KEY UPDATE nearby_landmarks = VALUES(nearby_landmarks)', 
+        [propertyId, JSON.stringify(nearby)]
+      );
 
+      // Commit transaction only if all inserts succeed
       await conn.commit();
       return res.status(201).json({ id: propertyId });
     } catch (txErr) {
-      try { await conn.rollback(); } catch {}
+      // Rollback on any error within transaction
+      if (conn) {
+        try { 
+          await conn.rollback(); 
+          // eslint-disable-next-line no-console
+          console.error('Transaction rolled back due to error:', txErr);
+        } catch (rollbackErr) {
+          // eslint-disable-next-line no-console
+          console.error('Rollback failed:', rollbackErr);
+        }
+      }
       throw txErr;
-    } finally {
-      conn.release();
     }
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('createPropertyFull error:', err);
-    return res.status(500).json({ message: 'Server error', error: String(err?.message || err) });
+    const errorMessage = err?.message || String(err);
+    const isProd = process.env.NODE_ENV === 'production';
+    return res.status(500).json({ 
+      message: 'Failed to create property. No data was saved.', 
+      error: isProd ? 'Internal server error' : errorMessage 
+    });
+  } finally {
+    if (conn) {
+      try {
+        conn.release();
+      } catch (releaseErr) {
+        // eslint-disable-next-line no-console
+        console.error('Connection release error:', releaseErr);
+      }
+    }
   }
 }
 
