@@ -133,42 +133,51 @@ export async function updateTemplateStatus(req, res) {
     const [existing] = await pool.query('SELECT id FROM templates WHERE name = ?', [templateName]);
     
     if (existing.length === 0) {
-      // Check what columns exist in the table
+      // Check what columns exist in the table and which are required (NOT NULL without default)
       let columns = [];
       let hasLabelColumn = false;
       let hasSlugColumn = false;
+      let hasCodeColumn = false;
+      let codeColumnRequired = false;
       try {
         [columns] = await pool.query('DESCRIBE templates');
         hasLabelColumn = columns.some(col => col.Field === 'label');
         hasSlugColumn = columns.some(col => col.Field === 'slug');
+        const codeCol = columns.find(col => col.Field === 'code');
+        hasCodeColumn = !!codeCol;
+        // Check if code column is NOT NULL and has no default
+        if (codeCol) {
+          codeColumnRequired = codeCol.Null === 'NO' && (!codeCol.Default || codeCol.Default === 'NULL');
+        }
       } catch {}
 
       const label = templateName.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
       const slug = templateName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const code = templateName.toUpperCase(); // Use template name as code
       
       // Build INSERT query based on available columns
-      if (hasSlugColumn && hasLabelColumn) {
-        await pool.query(
-          'INSERT INTO templates (name, slug, label, status) VALUES (?, ?, ?, ?)',
-          [templateName, slug, label, status]
-        );
-      } else if (hasSlugColumn) {
-        await pool.query(
-          'INSERT INTO templates (name, slug, status) VALUES (?, ?, ?)',
-          [templateName, slug, status]
-        );
-      } else if (hasLabelColumn) {
-        await pool.query(
-          'INSERT INTO templates (name, label, status) VALUES (?, ?, ?)',
-          [templateName, label, status]
-        );
-      } else {
-        // If neither exists, just insert name and status
-        await pool.query(
-          'INSERT INTO templates (name, status) VALUES (?, ?)',
-          [templateName, status]
-        );
+      const insertCols = ['name'];
+      const insertVals = [templateName];
+      
+      if (hasSlugColumn) {
+        insertCols.push('slug');
+        insertVals.push(slug);
       }
+      if (hasCodeColumn && codeColumnRequired) {
+        insertCols.push('code');
+        insertVals.push(code);
+      }
+      if (hasLabelColumn) {
+        insertCols.push('label');
+        insertVals.push(label);
+      }
+      insertCols.push('status');
+      insertVals.push(status);
+      
+      await pool.query(
+        `INSERT INTO templates (${insertCols.join(', ')}) VALUES (${insertCols.map(() => '?').join(', ')})`,
+        insertVals
+      );
     } else {
       await pool.query('UPDATE templates SET status = ? WHERE name = ?', [status, templateName]);
     }
@@ -204,42 +213,51 @@ export async function updateTemplateBanner(req, res) {
     const [existing] = await pool.query('SELECT id FROM templates WHERE name = ?', [templateName]);
     
     if (existing.length === 0) {
-      // Check what columns exist in the table
+      // Check what columns exist in the table and which are required (NOT NULL without default)
       let columns = [];
       let hasLabelColumn = false;
       let hasSlugColumn = false;
+      let hasCodeColumn = false;
+      let codeColumnRequired = false;
       try {
         [columns] = await pool.query('DESCRIBE templates');
         hasLabelColumn = columns.some(col => col.Field === 'label');
         hasSlugColumn = columns.some(col => col.Field === 'slug');
+        const codeCol = columns.find(col => col.Field === 'code');
+        hasCodeColumn = !!codeCol;
+        // Check if code column is NOT NULL and has no default
+        if (codeCol) {
+          codeColumnRequired = codeCol.Null === 'NO' && (!codeCol.Default || codeCol.Default === 'NULL');
+        }
       } catch {}
 
       const label = templateName.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
       const slug = templateName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const code = templateName.toUpperCase(); // Use template name as code
       
       // Build INSERT query based on available columns
-      if (hasSlugColumn && hasLabelColumn) {
-        await pool.query(
-          'INSERT INTO templates (name, slug, label, banner_image) VALUES (?, ?, ?, ?)',
-          [templateName, slug, label, bannerPath]
-        );
-      } else if (hasSlugColumn) {
-        await pool.query(
-          'INSERT INTO templates (name, slug, banner_image) VALUES (?, ?, ?)',
-          [templateName, slug, bannerPath]
-        );
-      } else if (hasLabelColumn) {
-        await pool.query(
-          'INSERT INTO templates (name, label, banner_image) VALUES (?, ?, ?)',
-          [templateName, label, bannerPath]
-        );
-      } else {
-        // If neither exists, just insert name and banner_image
-        await pool.query(
-          'INSERT INTO templates (name, banner_image) VALUES (?, ?)',
-          [templateName, bannerPath]
-        );
+      const insertCols = ['name'];
+      const insertVals = [templateName];
+      
+      if (hasSlugColumn) {
+        insertCols.push('slug');
+        insertVals.push(slug);
       }
+      if (hasCodeColumn && codeColumnRequired) {
+        insertCols.push('code');
+        insertVals.push(code);
+      }
+      if (hasLabelColumn) {
+        insertCols.push('label');
+        insertVals.push(label);
+      }
+      insertCols.push('banner_image');
+      insertVals.push(bannerPath);
+      
+      await pool.query(
+        `INSERT INTO templates (${insertCols.join(', ')}) VALUES (${insertCols.map(() => '?').join(', ')})`,
+        insertVals
+      );
     } else {
       // Delete old banner if exists
       const [old] = await pool.query('SELECT banner_image FROM templates WHERE name = ?', [templateName]);
