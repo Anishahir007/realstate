@@ -1,98 +1,131 @@
-.pl-wrap {
-  padding: 16px;
-}
-.pl-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-.pl-search {
-  display: flex;
-  gap: 8px;
-}
-.pl-search input {
-  padding: 8px 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  min-width: 260px;
-}
-.pl-search button {
-  padding: 8px 12px;
-  background: #111827;
-  color: white;
-  border: 0;
-  border-radius: 8px;
-  cursor: pointer;
-}
-.pl-search button:hover {
-  background: #0b1220;
-}
+.brokerproperties-carousel { position: relative; }
+.brokerproperties-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(17,24,39,0.6); color: #fff; border: none; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; display: grid; place-items: center; }
+.brokerproperties-prev { left: 6px; }
+.brokerproperties-next { right: 6px; }
+.brokerproperties-thumbs { display: flex; gap: 8px; margin-top: 8px; }
+.brokerproperties-thumb { width: 50px; height: 38px; object-fit: cover; border-radius: 6px; border: 2px solid transparent; cursor: pointer; }
+.brokerproperties-thumb.active { border-color: #2563eb; }
+.brokerproperties-root { display: flex; flex-direction: column; gap: 14px; padding: 24px; max-width: 1400px; margin: 0 auto; }
+.brokerproperties-head { display: flex; align-items: center; justify-content: space-between; }
+.brokerproperties-title { margin: 0; font-size: 28px; font-weight: 700; color: #0f172a; }
+.brokerproperties-sub { color: #6b7280; margin-top: 4px; font-size: 14px; }
+.brokerproperties-actions { display: flex; gap: 10px; }
+.brokerproperties-btn { border: 1px solid #e5e7eb; padding: 8px 12px; border-radius: 10px; cursor: pointer; background: #fff; font-size: 14px; }
+.brokerproperties-btn-primary { background: #2563eb; color: #fff; border-color: #2563eb; font-weight: 600; }
+.brokerproperties-btn-primary:hover { background: #1d4ed8; }
 
-.pl-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 14px;
-}
-.pl-card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 14px;
-  box-shadow: 0 2px 6px rgba(17, 24, 39, 0.04);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.pl-card-title {
-  font-weight: 700;
-  color: #0f172a;
-}
-.pl-card-sub {
-  font-size: 12px;
-  color: #64748b;
-}
-.pl-card-body {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.pl-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 14px;
-  color: #111827;
-}
-.pl-row span {
-  color: #6b7280;
-}
-.pl-card-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-.pl-card-actions button {
-  padding: 8px 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background: #f8fafc;
-  cursor: pointer;
-}
-.pl-card-actions button:hover {
-  background: #eef2f7;
-}
+.brokerproperties-toolbar { display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 10px; }
+.brokerproperties-search { flex: 1; display: flex; align-items: center; gap: 8px; border: 1px solid #e5e7eb; border-radius: 10px; padding: 8px 10px; background: #fff; }
+.brokerproperties-search input { border: 0; outline: none; flex: 1; font-size: 14px; }
+.brokerproperties-select { border: 1px solid #e5e7eb; border-radius: 10px; padding: 8px 10px; background: #fff; font-size: 14px; cursor: pointer; }
 
-.pl-muted {
-  color: #64748b;
-}
-.pl-error {
-  color: #ef4444;
-}
+.brokerproperties-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 4px rgba(15,23,42,0.06); }
+.brokerproperties-tablewrap { overflow-x: auto; }
+.brokerproperties-table { width: 100%; border-collapse: collapse; color: #0f172a; font-size: 13px; }
+.brokerproperties-table thead th { text-align: left; font-size: 12px; font-weight: 700; color: #64748b; letter-spacing: 0.04em; text-transform: uppercase; padding: 14px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+.brokerproperties-table tbody td { padding: 14px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+.brokerproperties-table tbody tr:last-child td { border-bottom: none; }
+.brokerproperties-loading { color: #64748b; padding: 18px; text-align: center; }
+.brokerproperties-error { color: #b91c1c; padding: 18px; text-align: center; }
+.brokerproperties-table-empty { padding: 18px; color: #64748b; text-align: center; }
+
+.property-cell { display: flex; align-items: center; gap: 12px; }
+.property-thumb { flex: 0 0 64px; height: 48px; border-radius: 10px; overflow: hidden; border: 1px solid #e2e8f0; background: #fff; }
+.property-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.property-meta { display: flex; flex-direction: column; gap: 4px; }
+.property-title { font-weight: 600; color: #0f172a; font-size: 14px; }
+.property-sub { font-size: 12px; color: #64748b; }
+
+.brokerproperties-actions-col { display: flex; gap: 8px; justify-content: center; }
+.brokerproperties-link { background: transparent; border: none; cursor: pointer; font-size: 16px; }
+
+.brokerproperties-detail { display: grid; grid-template-columns: 1.4fr 1.6fr; gap: 16px; }
+.brokerproperties-detail-img { width: 100%; height: 220px; object-fit: cover; border-radius: 10px; border: 1px solid #e5e7eb; }
+.brokerproperties-detail-title { margin: 0 0 4px 0; font-size: 20px; font-weight: 700; color: #0f172a; }
+.brokerproperties-detail-price { font-size: 22px; font-weight: 800; margin-bottom: 10px; color: #0f172a; }
+.brokerproperties-detail-desc { margin-top: 12px; border-top: 1px solid #e5e7eb; padding-top: 10px; }
+.brokerproperties-summary { margin-bottom: 8px; }
+.brokerproperties-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 18px; margin-top: 6px; }
+.brokerproperties-meta > div { display: grid; grid-template-columns: 110px 1fr; gap: 8px; align-items: baseline; }
+.brokerproperties-meta dt { color: #6b7280; font-size: 12px; }
+.brokerproperties-meta dd { margin: 0; font-weight: 600; color: #0f172a; }
+.brokerproperties-modal { max-width: 1040px; max-height: 90vh; overflow: auto; background: #fff; border-radius: 14px; box-shadow: 0 10px 30px rgba(2, 6, 23, 0.25); }
+.brokerproperties-detail-left { background: #fafafa; border: 1px solid #e5e7eb; border-radius: 12px; padding: 10px; }
+.brokerproperties-section { margin-top: 12px; }
+.brokerproperties-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.brokerproperties-chip { background: #111827; color: #fff; padding: 4px 8px; border-radius: 9999px; font-size: 12px; }
+
+/* Read-only inputs */
+.brokerproperties-formgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; margin-top: 12px; }
+.brokerproperties-field { display: flex; flex-direction: column; gap: 6px; }
+.brokerproperties-label { color: #6b7280; font-size: 12px; font-weight: 500; }
+.brokerproperties-field input { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 10px; color: #111827; font-size: 14px; }
+.brokerproperties-field input:disabled { color: #111827; cursor: not-allowed; }
+.brokerproperties-miniinputs { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 10px; }
+
+.brokerproperties-tableactions { display: flex; position: relative; }
+.brokerproperties-columns-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px; border: 1px solid #cbd5f5; background: #fff; color: #1f2937; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease; }
+.brokerproperties-columns-btn:hover { background: #f8faff; border-color: #a5b4fc; box-shadow: 0 4px 10px rgba(59,130,246,0.18); }
+.brokerproperties-colmenu { position: absolute; top: calc(100% + 8px); right: 0; width: 200px; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 18px 30px rgba(15,23,42,0.18); padding: 14px; display: grid; gap: 10px; z-index: 30; }
+.brokerproperties-colmenu-head { font-size: 12px; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; }
+.brokerproperties-colmenu-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #1f2937; cursor: pointer; }
+.brokerproperties-colmenu-item input { width: 14px; height: 14px; cursor: pointer; }
+
+.col-price,
+.col-status,
+.col-location,
+.col-type,
+.col-buildingType,
+.col-propertyFor,
+.col-saleType,
+.col-availability,
+.col-approvingAuthority,
+.col-ownership,
+.col-reraStatus,
+.col-reraNumber,
+.col-floors,
+.col-propertyOnFloor,
+.col-furnishingStatus,
+.col-facing,
+.col-flooringType,
+.col-ageYears,
+.col-bedrooms,
+.col-bathrooms,
+.col-builtArea,
+.col-carpetArea,
+.col-superArea,
+.col-bookingAmount,
+.col-maintenanceCharges,
+.col-possessionBy,
+.col-date { color: #475569; }
+.col-price,
+.col-bookingAmount,
+.col-maintenanceCharges { font-weight: 600; color: #0f172a; }
+.col-status { display: flex; justify-content: center; }
+.col-actions { display: flex; justify-content: center; }
+.status-pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; text-transform: capitalize; background: #f1f5f9; color: #1f2937; }
+.status-dot { width: 8px; height: 8px; border-radius: 999px; background: currentColor; display: inline-block; }
+.status-pill-active { background: rgba(34,197,94,0.12); color: #15803d; }
+.status-pill-inactive { background: rgba(148,163,184,0.16); color: #475569; }
+.status-pill-sold { background: rgba(249,115,22,0.12); color: #c2410c; }
+
+/* Column filter styles */
+.brokerproperties-th-filter { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.brokerproperties-th-filter > span { flex: 1; min-width: 0; }
+.brokerproperties-th-filter-btn-wrap { position: relative; flex-shrink: 0; }
+.brokerproperties-th-filter-btn { background: transparent; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s ease; color: #64748b; min-width: 24px; }
+.brokerproperties-th-filter-btn:hover { background: #f8fafc; border-color: #cbd5e1; color: #475569; }
+.brokerproperties-th-filter-btn.active { background: #2563eb; border-color: #2563eb; color: #fff; }
+.brokerproperties-th-filter-btn svg { width: 14px; height: 14px; display: block; }
+.brokerproperties-filter-menu { position: absolute; top: calc(100% + 4px); right: 0; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; box-shadow: 0 8px 24px rgba(15,23,42,0.15); padding: 6px; max-height: 280px; overflow-y: auto; z-index: 50; min-width: 180px; max-width: 280px; }
+.brokerproperties-filter-menu-item { margin-bottom: 2px; }
+.brokerproperties-filter-menu-item:last-child { margin-bottom: 0; }
+.brokerproperties-filter-menu-item button { width: 100%; text-align: left; padding: 8px 12px; border: none; background: transparent; border-radius: 6px; cursor: pointer; font-size: 13px; color: #1f2937; transition: background 0.15s ease; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brokerproperties-filter-menu-item button:hover { background: #f8fafc; }
+.brokerproperties-filter-menu-item button.active { background: #eff6ff; color: #2563eb; font-weight: 600; }
 
 /* Modal */
-.pl-modal-backdrop {
+.brokerproperties-modal-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.4);
@@ -102,157 +135,54 @@
   z-index: 60;
   padding: 20px;
 }
-.pl-modal {
-  width: min(1100px, 96vw);
-  max-height: 90vh;
-  overflow: auto;
-  background: #fff;
-  border-radius: 14px;
-  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.25);
-}
-.pl-modal-header {
+
+.brokerproperties-view-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 14px 16px;
   border-bottom: 1px solid #e5e7eb;
 }
-.pl-modal-title {
-  font-weight: 800;
+
+.brokerproperties-view-title {
+  margin: 0;
   font-size: 18px;
+  font-weight: 800;
   color: #0f172a;
 }
-.pl-close {
+
+.brokerproperties-view-sub {
+  color: #64748b;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.brokerproperties-iconbtn {
   border: 0;
   width: 32px;
   height: 32px;
   border-radius: 8px;
   background: #f3f4f6;
   cursor: pointer;
-}
-.pl-close:hover {
-  background: #e5e7eb;
-}
-.pl-modal-sub {
-  padding: 10px 16px;
-  color: #64748b;
-  font-size: 13px;
-}
-
-.pl-detail-grid {
-  display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  gap: 16px;
-  padding: 14px 16px 20px;
-}
-.pl-media-strip {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-  gap: 10px;
-}
-.pl-thumb {
-  width: 100%;
-  aspect-ratio: 4/3;
-  object-fit: cover;
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
+  font-size: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #9ca3af;
-  font-size: 12px;
+  color: #64748b;
 }
-.pl-thumb--primary {
-  outline: 2px solid #111827;
+
+.brokerproperties-iconbtn:hover {
+  background: #e5e7eb;
 }
-.pl-thumb--placeholder {
+
+.brokerproperties-view-label {
+  font-size: 14px;
   font-weight: 600;
-}
-
-.pl-form {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-.pl-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.pl-field--full {
-  grid-column: 1 / -1;
-}
-.pl-field label {
-  font-size: 12px;
-  color: #6b7280;
-}
-.pl-input {
-  padding: 10px 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  background: #f9fafb;
-  color: #111827;
-  min-height: 40px;
-  display: flex;
-  align-items: center;
-}
-.pl-input--textarea {
-  min-height: 80px;
-  align-items: flex-start;
-}
-
-.pl-chip-group {
-  grid-column: 1 / -1;
-  background: #f9fafb;
-  border: 1px dashed #e5e7eb;
-  border-radius: 10px;
-  padding: 10px;
-}
-.pl-chip-title {
-  font-weight: 700;
   color: #111827;
   margin-bottom: 8px;
 }
-.pl-chip-wrap {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.pl-chip {
-  background: #0f172a;
-  color: white;
-  font-size: 12px;
-  padding: 6px 10px;
-  border-radius: 999px;
-}
 
-.pl-tags {
-  grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
-.pl-tag-group {
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 10px;
-}
-.pl-tag-title {
-  font-weight: 700;
-  color: #111827;
-  margin-bottom: 8px;
-}
-.pl-tag-wrap {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.pl-tag {
-  background: #111827;
-  color: white;
-  font-size: 12px;
-  padding: 6px 10px;
-  border-radius: 999px;
+@media (max-width: 950px) {
+  .brokerproperties-table { font-size: 12px; }
+  .brokerproperties-detail { grid-template-columns: 1fr; }
 }

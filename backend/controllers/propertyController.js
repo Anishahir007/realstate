@@ -39,7 +39,12 @@ export async function listProperties(req, res) {
     const tenantPool = await getTenantPool(tenantDb);
     const [rows] = await tenantPool.query(
       `SELECT p.id, p.title, p.city, p.state, p.locality, p.address, p.property_type, p.building_type,
-              pf.expected_price, pf.built_up_area, pf.area_unit, p.created_at
+              p.property_for, p.status,
+              pf.expected_price, pf.built_up_area, pf.area_unit, p.created_at,
+              (SELECT pm.file_url FROM property_media pm 
+               WHERE pm.property_id = p.id 
+               ORDER BY pm.is_primary DESC, pm.id ASC 
+               LIMIT 1) as primary_image
        FROM properties p
        LEFT JOIN property_features pf ON pf.property_id = p.id
        ${whereSql}
