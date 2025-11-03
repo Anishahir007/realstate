@@ -34,6 +34,7 @@ export default function Navbar({ site: siteProp }) {
           <NavLink to={`${base}/properties`} className={({ isActive }) => `pc-link ${isActive ? 'active' : ''}`}>Find Properties</NavLink>
           <NavLink to={`${base}/contact`} className={({ isActive }) => `pc-link ${isActive ? 'active' : ''}`}>Contact Us</NavLink>
           <NavLink to={`${base}/privacy`} className={({ isActive }) => `pc-link ${isActive ? 'active' : ''}`}>Privacy</NavLink>
+          <NavLink to={`${base}/privacy`} className={({ isActive }) => `pc-link ${isActive ? 'active' : ''}`}>Terms</NavLink>
         </nav>
         <button className="pc-search" aria-label="Search">🔍</button>
       </div>
