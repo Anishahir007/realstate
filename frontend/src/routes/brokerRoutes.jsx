@@ -5,6 +5,7 @@ import BrokerDashboard from '../broker/pages/Dashboard/Dashboard.jsx';
 import BrokerUsers from '../broker/pages/users/User.jsx';
 import BrokerLayout from '../broker/components/Layout.jsx';
 import BrokerPanelBrokercrm from '../broker/pages/crm/Brokercrm.jsx';
+import BrokerLeadDetail from '../broker/pages/crm/LeadDetail.jsx';
 import BrokerViewProfile from '../broker/pages/settings/view-profile/ViewProfile.jsx';
 import PropertiesList from '../broker/pages/properties/PropertiesList.jsx';
 import NewProperty from '../broker/pages/properties/NewProperty.jsx';
@@ -29,6 +30,7 @@ export function BrokerRoutes() {
         <Route path="dashboard" element={<BrokerDashboard />} />
         <Route path="users" element={<BrokerUsers />} />
         <Route path="crm" element={<BrokerPanelBrokercrm />} />
+        <Route path="crm/lead/:id" element={<BrokerLeadDetail />} />
         <Route path="properties" element={<PropertiesList />} />
         <Route path="properties/new" element={<NewProperty />} />
         <Route path="settings/view-profile" element={<BrokerViewProfile />} />

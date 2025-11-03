@@ -4,6 +4,7 @@ import { getApiBase } from '../../utils/apiBase.js';
 import { Outlet } from 'react-router-dom';
 import ProClassicLayout from './proclassic/layout/ProClassicLayout.jsx';
 import ClassicLayout from './classic/layout/ClassicLayout.jsx';
+import PremiumLayout from './premium/layout/PremiumLayout.jsx';
 
 export default function DomainSiteRenderer() {
   const [ctx, setCtx] = useState(null);
@@ -34,7 +35,9 @@ export default function DomainSiteRenderer() {
   const site = ctx.site;
   const properties = ctx.properties || [];
   const tpl = (ctx.template || site?.template || 'proclassic').toLowerCase();
-  const Layout = tpl === 'classic' ? ClassicLayout : ProClassicLayout;
+  let Layout = ProClassicLayout;
+  if (tpl === 'classic') Layout = ClassicLayout;
+  else if (tpl === 'premium') Layout = PremiumLayout;
   return (
     <Layout site={site} properties={properties}>
       <Outlet context={{ site, properties, template: tpl }} />

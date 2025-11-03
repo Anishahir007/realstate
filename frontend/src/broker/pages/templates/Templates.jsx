@@ -96,8 +96,32 @@ export default function Templates() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 16 }}>
         {items.map((t) => (
           <div key={t.name} style={{ border: '1px solid #eee', borderRadius: 12, padding: 12 }}>
-            <div style={{ height: 140, background: '#f5f5f5', borderRadius: 8, marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span>{t.label}</span>
+            <div style={{ height: 200, background: '#f5f5f5', borderRadius: 8, marginBottom: 8, overflow: 'hidden', position: 'relative', border: '1px solid #e5e7eb' }}>
+              {t.banner_image ? (
+                <img
+                  src={`${apiBase}${t.banner_image}`}
+                  alt={`${t.label} template`}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+              ) : null}
+              <div
+                style={{
+                  display: t.banner_image ? 'none' : 'flex',
+                  width: '100%',
+                  height: '100%',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#64748b',
+                  fontSize: 18,
+                  fontWeight: 600,
+                }}
+              >
+                {t.label}
+              </div>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => onPreview(t.name)}>Preview</button>

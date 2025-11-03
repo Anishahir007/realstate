@@ -15,6 +15,7 @@ import notificationRoutes from './routes/notificationRoutes.js';
 import leadsRoutes from './routes/leadsRoutes.js';
 import systemRoutes from './routes/systemRoutes.js';
 import templatesRoutes from './routes/templatesRoutes.js';
+import templateManagementRoutes from './routes/templateManagementRoutes.js';
 import reportsRoutes from './routes/reportsRoutes.js';
 import { recordResponseMs } from './utils/metrics.js';
 
@@ -72,12 +73,15 @@ app.use('/api/reports', reportsRoutes);
 // Serve template assets FIRST so it doesn't get swallowed by /api/templates router
 app.use('/api/templates/assets', express.static(path.join(__dirname, 'templates')));
 app.use('/api/templates', templatesRoutes);
+app.use('/api/template-management', templateManagementRoutes);
 // Serve uploaded images
 app.use('/profiles', express.static('public/profiles'));
-app.use('/properties', express.static('public/properties'));  
+app.use('/properties', express.static('public/properties'));
+app.use('/templates/banners', express.static('public/templates/banners'));
 // API-prefixed mirrors for environments that only proxy /api to backend
 app.use('/api/profiles', express.static('public/profiles'));
 app.use('/api/properties', express.static('public/properties'));
+app.use('/api/templates/banners', express.static('public/templates/banners'));
 // Serve any other files under /public at root (e.g., /public/* and relative links)
 app.use(express.static(path.join(__dirname, 'public')));
 

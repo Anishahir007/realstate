@@ -55,6 +55,30 @@ export async function listTemplates(req, res) {
       // Fallback to legacy backend templates folder (if any exists)
       items = listTemplatesFromFs();
     }
+
+    // Fetch template data from database (status, banner_image) and merge
+    try {
+      const [dbTemplates] = await pool.query('SELECT name, status, banner_image FROM templates');
+      const dbMap = new Map(dbTemplates.map(t => [t.name, t]));
+      
+      // Only return active templates for brokers, merge banner_image
+      items = items.map(item => {
+        const db = dbMap.get(item.name);
+        // Only show active templates to brokers
+        if (db && db.status !== 'active') {
+          return null;
+        }
+        return {
+          ...item,
+          banner_image: db?.banner_image || null,
+        };
+      }).filter(Boolean);
+    } catch (dbErr) {
+      // If templates table doesn't exist yet, just return FS templates
+      // eslint-disable-next-line no-console
+      console.error('Error fetching templates from DB:', dbErr);
+    }
+
     return res.json({ data: items });
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';

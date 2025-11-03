@@ -376,3 +376,62 @@ export async function listBrokersWithStats(req, res) {
   }
 }
 
+// ========== Broker Dashboard Stats ==========
+export async function getBrokerDashboardStats(req, res) {
+  try {
+    const brokerId = req.user?.id;
+    if (!brokerId) return res.status(401).json({ message: 'Unauthorized' });
+
+    // Get broker's tenant_db
+    const [brokerRows] = await pool.query(
+      'SELECT tenant_db FROM brokers WHERE id = ? LIMIT 1',
+      [brokerId]
+    );
+    const broker = brokerRows?.[0];
+    if (!broker || !broker.tenant_db) {
+      return res.json({
+        data: {
+          totalProperties: 0,
+          totalLeads: 0,
+        },
+      });
+    }
+
+    const tenantPool = await getTenantPool(broker.tenant_db);
+
+    // Get total properties count (all properties)
+    const [[propCount]] = await tenantPool.query(
+      'SELECT COUNT(*) AS total FROM properties'
+    );
+    const totalProperties = Number(propCount?.total || 0);
+
+    // Get total leads count
+    let totalLeads = 0;
+    try {
+      await ensureTenantLeadsTableExists(tenantPool);
+      const [[leadCount]] = await tenantPool.query('SELECT COUNT(*) AS total FROM leads');
+      totalLeads = Number(leadCount?.total || 0);
+    } catch (leadErr) {
+      // If leads table doesn't exist or error, just return 0
+      // eslint-disable-next-line no-console
+      console.error('Error fetching leads count:', leadErr);
+      totalLeads = 0;
+    }
+
+    return res.json({
+      data: {
+        totalProperties,
+        totalLeads,
+      },
+    });
+  } catch (err) {
+    const isProd = process.env.NODE_ENV === 'production';
+    // eslint-disable-next-line no-console
+    console.error('getBrokerDashboardStats error:', err);
+    return res.status(500).json({
+      message: 'Server error',
+      error: isProd ? undefined : String(err?.message || err),
+    });
+  }
+}
+

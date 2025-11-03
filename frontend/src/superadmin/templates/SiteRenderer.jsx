@@ -3,6 +3,7 @@ import { Outlet, useParams } from 'react-router-dom';
 import axios from 'axios';
 import ClassicLayout from './classic/layout/ClassicLayout.jsx';
 import ProClassicLayout from './proclassic/layout/ProClassicLayout.jsx';
+import PremiumLayout from './premium/layout/PremiumLayout.jsx';
 import ViewProperty from './proclassic/pages/ViewProperty.jsx';
 
 // For now, always use classic. You can switch based on stored template.
@@ -32,7 +33,9 @@ export default function SiteRenderer() {
   const site = ctx.site;
   const properties = ctx.properties || [];
   const tpl = (ctx.template || site?.template || 'proclassic').toLowerCase();
-  const Layout = tpl === 'classic' ? ClassicLayout : ProClassicLayout;
+  let Layout = ProClassicLayout;
+  if (tpl === 'classic') Layout = ClassicLayout;
+  else if (tpl === 'premium') Layout = PremiumLayout;
   // Render children via Outlet defined in App routes
   return (
     <Layout site={site} properties={properties}>
