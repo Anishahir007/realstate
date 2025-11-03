@@ -71,16 +71,31 @@ export async function getAllTemplates(req, res) {
     // Get templates from filesystem
     const fsTemplates = listTemplatesFromFrontend();
     
-    // Get templates from database
-    const [dbTemplates] = await pool.query('SELECT * FROM templates');
+    // Get templates from database - use specific columns to avoid errors if some columns don't exist
+    let dbTemplates = [];
+    try {
+      const [results] = await pool.query('SELECT name, status, banner_image, preview_image, description, label FROM templates');
+      dbTemplates = results || [];
+    } catch (dbErr) {
+      // If query fails (e.g., column doesn't exist), try with minimal columns
+      try {
+        const [results] = await pool.query('SELECT name, status, banner_image FROM templates');
+        dbTemplates = results || [];
+      } catch {
+        // If templates table doesn't exist or query fails, just use empty array
+        dbTemplates = [];
+      }
+    }
     const dbMap = new Map(dbTemplates.map(t => [t.name, t]));
 
     // Merge: use DB data if exists, otherwise create from FS
     const templates = fsTemplates.map(t => {
       const db = dbMap.get(t.name);
+      // Use db.label if exists, otherwise use t.label (from filesystem), otherwise generate from name
+      const label = db?.label || t.label || t.name.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
       return {
         name: t.name,
-        label: db?.label || t.label,
+        label: label,
         status: db?.status || 'active',
         banner_image: db?.banner_image || null,
         preview_image: db?.preview_image || null,
@@ -118,11 +133,27 @@ export async function updateTemplateStatus(req, res) {
     const [existing] = await pool.query('SELECT id FROM templates WHERE name = ?', [templateName]);
     
     if (existing.length === 0) {
+      // Check if label column exists
+      let hasLabelColumn = false;
+      try {
+        const [columns] = await pool.query('DESCRIBE templates');
+        hasLabelColumn = columns.some(col => col.Field === 'label');
+      } catch {}
+
       const label = templateName.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-      await pool.query(
-        'INSERT INTO templates (name, label, status) VALUES (?, ?, ?)',
-        [templateName, label, status]
-      );
+      
+      if (hasLabelColumn) {
+        await pool.query(
+          'INSERT INTO templates (name, label, status) VALUES (?, ?, ?)',
+          [templateName, label, status]
+        );
+      } else {
+        // If label column doesn't exist, just insert name and status
+        await pool.query(
+          'INSERT INTO templates (name, status) VALUES (?, ?)',
+          [templateName, status]
+        );
+      }
     } else {
       await pool.query('UPDATE templates SET status = ? WHERE name = ?', [status, templateName]);
     }
@@ -158,11 +189,27 @@ export async function updateTemplateBanner(req, res) {
     const [existing] = await pool.query('SELECT id FROM templates WHERE name = ?', [templateName]);
     
     if (existing.length === 0) {
+      // Check if label column exists by trying to describe the table
+      let hasLabelColumn = false;
+      try {
+        const [columns] = await pool.query('DESCRIBE templates');
+        hasLabelColumn = columns.some(col => col.Field === 'label');
+      } catch {}
+
       const label = templateName.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-      await pool.query(
-        'INSERT INTO templates (name, label, banner_image) VALUES (?, ?, ?)',
-        [templateName, label, bannerPath]
-      );
+      
+      if (hasLabelColumn) {
+        await pool.query(
+          'INSERT INTO templates (name, label, banner_image) VALUES (?, ?, ?)',
+          [templateName, label, bannerPath]
+        );
+      } else {
+        // If label column doesn't exist, just insert name and banner_image
+        await pool.query(
+          'INSERT INTO templates (name, banner_image) VALUES (?, ?)',
+          [templateName, bannerPath]
+        );
+      }
     } else {
       // Delete old banner if exists
       const [old] = await pool.query('SELECT banner_image FROM templates WHERE name = ?', [templateName]);
