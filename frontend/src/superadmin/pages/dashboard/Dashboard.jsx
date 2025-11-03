@@ -261,6 +261,7 @@ export default function Dashboard() {
   const [visibleColumnIds, setVisibleColumnIds] = useState(() => DEFAULT_COLUMN_IDS);
   const [columnFilters, setColumnFilters] = useState({});
   const [openFilterMenu, setOpenFilterMenu] = useState(null);
+  const [displayLimit, setDisplayLimit] = useState(10);
   const monthParts = useMemo(() => getMonthParts(monthDraft), [monthDraft]);
   const monthYearOptions = useMemo(() => {
     const current = new Date().getFullYear();
@@ -605,6 +606,22 @@ export default function Dashboard() {
       return true;
     });
   }, [recentProperties, columnFilters]);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setDisplayLimit(10);
+  }, [columnFilters, filter.key, filter.from, filter.to, filter.monthValue, filter.yearValue]);
+
+  // Get paginated results
+  const paginatedFiltered = useMemo(() => {
+    return filteredProperties.slice(0, displayLimit);
+  }, [filteredProperties, displayLimit]);
+
+  const hasMore = filteredProperties.length > displayLimit;
+
+  const handleSeeMore = () => {
+    setDisplayLimit(prev => prev + 10);
+  };
 
   const visibleColumns = useMemo(() => COLUMN_OPTIONS.filter((col) => visibleColumnIds.includes(col.id)), [visibleColumnIds]);
 
@@ -1094,8 +1111,8 @@ export default function Dashboard() {
                   <tr>
                     <td colSpan={visibleColumns.length + 2} className="superadmindashboard-table-empty">Loading properties…</td>
                   </tr>
-                ) : filteredProperties.length ? (
-                  filteredProperties.map((row) => {
+                ) : paginatedFiltered.length ? (
+                  paginatedFiltered.map((row) => {
                     const areaText = formatArea(row.area, row.areaUnit);
                     const dateLabel = row.createdAt ? DATE_DISPLAY.format(new Date(row.createdAt)) : '—';
                     const brokerLabel = row.brokerName || '—';
@@ -1177,6 +1194,29 @@ export default function Dashboard() {
               </tbody>
             </table>
           </div>
+          {hasMore && (
+            <div style={{ textAlign: 'center', padding: '20px' }}>
+              <button
+                onClick={handleSeeMore}
+                style={{
+                  background: '#2563eb',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '10px 24px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  minWidth: '150px',
+                  transition: 'background 0.2s ease'
+                }}
+                onMouseEnter={(e) => e.target.style.background = '#1d4ed8'}
+                onMouseLeave={(e) => e.target.style.background = '#2563eb'}
+              >
+                See More
+              </button>
+            </div>
+          )}
         </section>
       </main>
     </div>
