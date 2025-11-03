@@ -10,6 +10,7 @@ import SuperAdminViewProfile from '../superadmin/pages/settings/view-profile/Vie
 
 
 import SuperAdminAdmincrm from '../superadmin/pages/crm/Admincrm.jsx';
+import LeadDetail from '../superadmin/pages/crm/LeadDetail.jsx';
 import Reports from '../superadmin/pages/reports/Reports.jsx';
 import Notifications from '../superadmin/pages/notifications/Notifications.jsx';
 import { SuperAdminProvider } from '../context/SuperAdminContext.jsx';
@@ -35,6 +36,7 @@ export function SuperAdminRoutes() {
         
         <Route path="properties" element={<SuperAdminProperties />} />
         <Route path="crm" element={<SuperAdminAdmincrm />} />
+        <Route path="crm/lead/:id/:source" element={<LeadDetail />} />
         <Route path="reports" element={<Reports />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="settings/view-profile" element={<SuperAdminViewProfile />} />
