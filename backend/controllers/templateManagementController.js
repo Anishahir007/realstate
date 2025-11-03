@@ -74,7 +74,7 @@ export async function getAllTemplates(req, res) {
     // Get templates from database - use specific columns to avoid errors if some columns don't exist
     let dbTemplates = [];
     try {
-      const [results] = await pool.query('SELECT name, status, banner_image, preview_image, description, label FROM templates');
+      const [results] = await pool.query('SELECT name, slug, status, banner_image, preview_image, description, label FROM templates');
       dbTemplates = results || [];
     } catch (dbErr) {
       // If query fails (e.g., column doesn't exist), try with minimal columns
@@ -133,22 +133,37 @@ export async function updateTemplateStatus(req, res) {
     const [existing] = await pool.query('SELECT id FROM templates WHERE name = ?', [templateName]);
     
     if (existing.length === 0) {
-      // Check if label column exists
+      // Check what columns exist in the table
+      let columns = [];
       let hasLabelColumn = false;
+      let hasSlugColumn = false;
       try {
-        const [columns] = await pool.query('DESCRIBE templates');
+        [columns] = await pool.query('DESCRIBE templates');
         hasLabelColumn = columns.some(col => col.Field === 'label');
+        hasSlugColumn = columns.some(col => col.Field === 'slug');
       } catch {}
 
       const label = templateName.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+      const slug = templateName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
       
-      if (hasLabelColumn) {
+      // Build INSERT query based on available columns
+      if (hasSlugColumn && hasLabelColumn) {
+        await pool.query(
+          'INSERT INTO templates (name, slug, label, status) VALUES (?, ?, ?, ?)',
+          [templateName, slug, label, status]
+        );
+      } else if (hasSlugColumn) {
+        await pool.query(
+          'INSERT INTO templates (name, slug, status) VALUES (?, ?, ?)',
+          [templateName, slug, status]
+        );
+      } else if (hasLabelColumn) {
         await pool.query(
           'INSERT INTO templates (name, label, status) VALUES (?, ?, ?)',
           [templateName, label, status]
         );
       } else {
-        // If label column doesn't exist, just insert name and status
+        // If neither exists, just insert name and status
         await pool.query(
           'INSERT INTO templates (name, status) VALUES (?, ?)',
           [templateName, status]
@@ -189,22 +204,37 @@ export async function updateTemplateBanner(req, res) {
     const [existing] = await pool.query('SELECT id FROM templates WHERE name = ?', [templateName]);
     
     if (existing.length === 0) {
-      // Check if label column exists by trying to describe the table
+      // Check what columns exist in the table
+      let columns = [];
       let hasLabelColumn = false;
+      let hasSlugColumn = false;
       try {
-        const [columns] = await pool.query('DESCRIBE templates');
+        [columns] = await pool.query('DESCRIBE templates');
         hasLabelColumn = columns.some(col => col.Field === 'label');
+        hasSlugColumn = columns.some(col => col.Field === 'slug');
       } catch {}
 
       const label = templateName.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+      const slug = templateName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
       
-      if (hasLabelColumn) {
+      // Build INSERT query based on available columns
+      if (hasSlugColumn && hasLabelColumn) {
+        await pool.query(
+          'INSERT INTO templates (name, slug, label, banner_image) VALUES (?, ?, ?, ?)',
+          [templateName, slug, label, bannerPath]
+        );
+      } else if (hasSlugColumn) {
+        await pool.query(
+          'INSERT INTO templates (name, slug, banner_image) VALUES (?, ?, ?)',
+          [templateName, slug, bannerPath]
+        );
+      } else if (hasLabelColumn) {
         await pool.query(
           'INSERT INTO templates (name, label, banner_image) VALUES (?, ?, ?)',
           [templateName, label, bannerPath]
         );
       } else {
-        // If label column doesn't exist, just insert name and banner_image
+        // If neither exists, just insert name and banner_image
         await pool.query(
           'INSERT INTO templates (name, banner_image) VALUES (?, ?)',
           [templateName, bannerPath]

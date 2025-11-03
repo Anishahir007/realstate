@@ -88,6 +88,46 @@ PREPARE alterIfNotExists FROM @preparedStatement;
 EXECUTE alterIfNotExists;
 DEALLOCATE PREPARE alterIfNotExists;
 
+-- Add slug column if it doesn't exist (and make it have a default value)
+SET @columnname = "slug";
+SET @preparedStatement = (SELECT IF(
+  (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE
+      (table_name = @tablename)
+      AND (table_schema = @dbname)
+      AND (column_name = @columnname)
+  ) > 0,
+  "SELECT 'Column slug already exists.'",
+  CONCAT("ALTER TABLE ", @tablename, " ADD COLUMN ", @columnname, " VARCHAR(255) NULL AFTER name")
+));
+PREPARE alterIfNotExists FROM @preparedStatement;
+EXECUTE alterIfNotExists;
+DEALLOCATE PREPARE alterIfNotExists;
+
+-- If slug column exists but doesn't allow NULL, make it nullable or add default
+-- This handles the case where slug exists but requires a value
+SET @preparedStatement = (SELECT IF(
+  (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE
+      (table_name = @tablename)
+      AND (table_schema = @dbname)
+      AND (column_name = @columnname)
+      AND (is_nullable = 'NO')
+      AND (column_default IS NULL)
+  ) > 0,
+  CONCAT("ALTER TABLE ", @tablename, " MODIFY COLUMN ", @columnname, " VARCHAR(255) NULL"),
+  "SELECT 'Column slug is already nullable or has default.'"
+));
+PREPARE alterIfNeeded FROM @preparedStatement;
+EXECUTE alterIfNeeded;
+DEALLOCATE PREPARE alterIfNeeded;
+
 -- Update existing rows to have proper label if label column was just added
 UPDATE templates SET label = REPLACE(REPLACE(name, '-', ' '), '_', ' ') WHERE label = '' OR label IS NULL;
+
+-- Update existing rows to have slug based on name if slug is null
+-- Simple slug generation: lowercase and replace non-alphanumeric with dashes
+UPDATE templates SET slug = LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(name, '_', '-'), ' ', '-'), '.', '-'), '--', '-'), '--', '-'), '--', '-')) WHERE slug IS NULL OR slug = '';
 
