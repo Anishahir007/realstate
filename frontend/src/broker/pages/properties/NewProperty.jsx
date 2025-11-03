@@ -3,11 +3,58 @@ import axios from 'axios';
 import { useBroker } from '../../../context/BrokerContext.jsx';
 import './newProperty.css';
 
-function Section({ title, children }) {
+function AccordionSection({ 
+  title, 
+  children, 
+  isOpen, 
+  onToggle, 
+  progress = 0, 
+  progressLabel = null,
+  stepNumber,
+  canEdit = true
+}) {
+  const handleEditClick = (e) => {
+    e.stopPropagation();
+    if (canEdit) {
+      onToggle();
+    }
+  };
+
+  const handleHeaderClick = () => {
+    if (canEdit || stepNumber === 1) {
+      onToggle();
+    }
+  };
+
   return (
-    <div className="np-section">
-      <div className="np-title">{title}</div>
-      {children}
+    <div className={`np-accordion-section ${isOpen ? 'np-accordion-open' : ''} ${!canEdit && stepNumber > 1 ? 'np-accordion-locked' : ''}`}>
+      <div className="np-accordion-header" onClick={handleHeaderClick} style={{ cursor: (canEdit || stepNumber === 1) ? 'pointer' : 'not-allowed', opacity: (!canEdit && stepNumber > 1) ? 0.6 : 1 }}>
+        <div className="np-accordion-header-left">
+          <span className="np-step-number">{stepNumber}</span>
+          <span className="np-accordion-title">{title}</span>
+        </div>
+        <div className="np-accordion-header-right">
+          <div className="np-progress-wrapper">
+            <div className="np-progress-bar">
+              <div className="np-progress-fill" style={{ width: `${progress}%` }}></div>
+            </div>
+            {progressLabel && <span className="np-progress-text">{progressLabel}</span>}
+          </div>
+          {canEdit && (
+            <button type="button" className="np-edit-btn" onClick={handleEditClick}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M11.333 2.00004C11.5084 1.82473 11.7163 1.68604 11.9439 1.59231C12.1715 1.49858 12.4142 1.45166 12.6593 1.45431C12.9044 1.45696 13.146 1.50911 13.3707 1.60735C13.5954 1.70559 13.7985 1.84783 13.968 2.02537C14.1375 2.20291 14.2699 2.41211 14.3578 2.64048C14.4457 2.86885 14.4873 3.11189 14.48 3.35604C14.4727 3.60019 14.4167 3.84059 14.3147 4.06271C14.2128 4.28483 14.067 4.48418 13.886 4.64837L13.333 5.20004L10.8 2.66671L11.333 2.00004ZM9.86667 3.53337L2.66667 10.7334V13.2667H5.2L12.4 6.06671L9.86667 3.53337Z" fill="currentColor"/>
+              </svg>
+              <span>Edit</span>
+            </button>
+          )}
+        </div>
+      </div>
+      {isOpen && (
+        <div className="np-accordion-content">
+          {children}
+        </div>
+      )}
     </div>
   );
 }
@@ -397,6 +444,7 @@ const propertyFieldConfig = {
 export default function NewProperty() {
   const { token, apiBase } = useBroker();
   const [step, setStep] = useState(1);
+  const [activeStep, setActiveStep] = useState(1); // Track which accordion section is open
   const [errors, setErrors] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
   const [lookups, setLookups] = useState(null);
@@ -613,6 +661,156 @@ export default function NewProperty() {
     );
   }
 
+  // Calculate progress for Step 1 (Property Info & Location)
+  const step1Progress = useMemo(() => {
+    let filled = 0;
+    let total = 7; // property_for, building_type, property_type, title, state, city, locality
+    if (basic.property_for) filled++;
+    if (basic.building_type) filled++;
+    if (basic.property_type) filled++;
+    if (basic.title?.trim()) filled++;
+    if (basic.state?.trim()) filled++;
+    if (basic.city?.trim()) filled++;
+    if (basic.locality?.trim()) filled++;
+    return Math.round((filled / total) * 100);
+  }, [basic]);
+
+  // Calculate progress for Step 2 (Property Features & Price)
+  const step2Progress = useMemo(() => {
+    const config = propertyFieldConfig[basic.property_type] || propertyFieldConfig.flat;
+    let filled = 0;
+    let total = config.mandatory.length;
+    
+    for (const field of config.mandatory) {
+      const value = features[field];
+      if (value !== undefined && value !== null && value !== '' && 
+          !(Array.isArray(value) && value.length === 0)) {
+        filled++;
+      }
+    }
+    
+    // Check conditional mandatory
+    if (config.conditionalMandatory) {
+      for (const [field, condition] of Object.entries(config.conditionalMandatory)) {
+        if (field === 'age_years' && !config.showAge) continue;
+        if (condition(features)) {
+          total++;
+          const value = features[field];
+          if (value !== undefined && value !== null && value !== '' && 
+              !(Array.isArray(value) && value.length === 0)) {
+            filled++;
+          }
+        }
+      }
+    }
+    
+    return total > 0 ? Math.round((filled / total) * 100) : 0;
+  }, [features, basic.property_type]);
+
+  // Calculate progress for Step 3 (Images/Videos)
+  const step3Progress = useMemo(() => {
+    let hasImages = false;
+    let hasDescription = false;
+    const tabs = ['exterior','bedroom','bathroom','kitchen','floor_plan','location_map','other'];
+    for (const tab of tabs) {
+      if (files?.[tab] && files[tab].length > 0) {
+        hasImages = true;
+        break;
+      }
+    }
+    if (basic.description?.trim()) hasDescription = true;
+    const filled = (hasImages ? 1 : 0) + (hasDescription ? 1 : 0);
+    return Math.round((filled / 2) * 100);
+  }, [files, basic.description]);
+
+  // Calculate progress for Step 4 (Amenities & Landmarks)
+  const step4Progress = useMemo(() => {
+    const hasAmenities = amenities.length > 0;
+    const hasLandmarks = nearby.length > 0;
+    const filled = (hasAmenities ? 1 : 0) + (hasLandmarks ? 1 : 0);
+    return Math.round((filled / 2) * 100);
+  }, [amenities, nearby]);
+
+  // Check if Step 1 is complete (all mandatory fields filled)
+  const isStep1Complete = useMemo(() => {
+    return basic.property_for && 
+           basic.building_type && 
+           basic.property_type && 
+           basic.title?.trim() && 
+           basic.state?.trim() && 
+           basic.city?.trim() && 
+           basic.locality?.trim();
+  }, [basic]);
+
+  // Check if Step 2 is complete (all mandatory fields filled)
+  const isStep2Complete = useMemo(() => {
+    const config = propertyFieldConfig[basic.property_type] || propertyFieldConfig.flat;
+    
+    // Check all mandatory fields
+    for (const field of config.mandatory) {
+      const value = features[field];
+      if (value === undefined || value === null || value === '' || 
+          (Array.isArray(value) && value.length === 0)) {
+        return false;
+      }
+    }
+    
+    // Check conditional mandatory fields
+    if (config.conditionalMandatory) {
+      for (const [field, condition] of Object.entries(config.conditionalMandatory)) {
+        if (field === 'age_years' && !config.showAge) continue;
+        if (condition(features)) {
+          const value = features[field];
+          if (value === undefined || value === null || value === '' || 
+              (Array.isArray(value) && value.length === 0)) {
+            return false;
+          }
+        }
+      }
+    }
+    
+    return true;
+  }, [features, basic.property_type]);
+
+  // Handle Save & Continue for Step 1
+  function handleStep1Continue() {
+    const missing = [];
+    if (!basic.property_for) missing.push('Property For');
+    if (!basic.building_type) missing.push('Building Type');
+    if (!basic.property_type) missing.push('Property Type');
+    if (!basic.title || basic.title.trim() === '') missing.push('Title');
+    if (!basic.state || basic.state.trim() === '') missing.push('State');
+    if (!basic.city || basic.city.trim() === '') missing.push('City');
+    if (!basic.locality || basic.locality.trim() === '') missing.push('Locality');
+    
+    if (missing.length > 0) {
+      setErrors(`Please fill in all required fields: ${missing.join(', ')}`);
+      return;
+    }
+    
+    setErrors('');
+    setActiveStep(2);
+  }
+
+  // Handle Save & Continue for Step 2
+  function handleStep2Continue() {
+    const validation = validateFields();
+    if (!validation.valid) {
+      const errorMessages = Object.values(validation.errors);
+      setErrors(`Please fill in all mandatory fields: ${errorMessages.join(', ')}`);
+      return;
+    }
+    
+    setErrors('');
+    setActiveStep(3);
+  }
+
+  // Handle Save & Continue for Step 3
+  function handleStep3Continue() {
+    setErrors('');
+    setActiveStep(4);
+  }
+
   async function handleSubmit() {
     setErrors('');
     setFieldErrors({});
@@ -753,38 +951,84 @@ export default function NewProperty() {
       {errors && <p className="np-error">{errors}</p>}
 
       {/* Step 1: Property Info & Location */}
-      <Section title={`Step 1: Property Info & Location`}>
-        <div className="np-field">
-          <label>Property For</label>
-          <div className="np-radio-row">
-            <label><input type="radio" name="property_for" value="sell" checked={basic.property_for==='sell'} onChange={onChange(setBasic)} /> Sell</label>
+      <AccordionSection
+        title="Property Info & Location"
+        isOpen={activeStep === 1}
+        onToggle={() => setActiveStep(activeStep === 1 ? 0 : 1)}
+        progress={step1Progress}
+        progressLabel={`${step1Progress}%`}
+        stepNumber={1}
+      >
+        <div className="np-accordion-body">
+          <div className="np-location-section">
+            <div className="np-section-title">Property Location:</div>
+            <div className="np-field">
+              <FieldLabel name="property_for" label="Property For" config={{ mandatory: ['property_for'] }} />
+              <div className="np-chips">
+                {[['sell','Sell'], ['rent','Rent/Lease'], ['pg','PG']].map(([val,label]) => (
+                  <button type="button" key={val} className={`np-chip${basic.property_for===val?' np-chip--active':''}`} onClick={() => setBasic((p) => ({ ...p, property_for: val }))}>{label}</button>
+                ))}
+              </div>
+            </div>
+            <div className="np-field">
+              <FieldLabel name="building_type" label="Building Type" config={{ mandatory: ['building_type'] }} />
+              <div className="np-chips">
+                <button type="button" className={`np-chip${basic.building_type==='residential'?' np-chip--active':''}`} onClick={() => setBasic((p) => ({ ...p, building_type: 'residential', property_type: 'flat' }))}>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginRight: 4 }}>
+                    <path d="M8 1L2 5V14H6V10H10V14H14V5L8 1Z" fill="currentColor"/>
+                  </svg>
+                  Residential
+                </button>
+                <button type="button" className={`np-chip${basic.building_type==='commercial'?' np-chip--active':''}`} onClick={() => setBasic((p) => ({ ...p, building_type: 'commercial', property_type: 'commercial_shop' }))}>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginRight: 4 }}>
+                    <path d="M2 2H14V14H2V2ZM4 4V12H6V4H4ZM10 4V12H12V4H10Z" fill="currentColor"/>
+                  </svg>
+                  Commercial
+                </button>
+              </div>
+            </div>
+            <div className="np-field">
+              <FieldLabel name="property_type" label="Property Type" config={{ mandatory: ['property_type'] }} />
+              <div className="np-chips">
+                {propertyTypes.map((t) => (
+                  <button type="button" key={t} onClick={() => setBasic((p) => ({ ...p, property_type: t }))} className={`np-chip${basic.property_type===t?' np-chip--active':''}`}>{t.replaceAll('_',' ')}</button>
+                ))}
+              </div>
+            </div>
+            <div className="np-grid-2">
+              <div className="np-field-wrapper" style={{ gridColumn: '1 / span 2' }}>
+                <FieldLabel name="title" label="Title" config={{ mandatory: ['title'] }} />
+                <input name="title" placeholder="Title" value={basic.title} onChange={onChange(setBasic)} className={fieldErrors.title ? 'np-input-error' : ''} />
+              </div>
+              <div className="np-field-wrapper">
+                <FieldLabel name="state" label="State" config={{ mandatory: ['state'] }} />
+                <input name="state" placeholder="State" value={basic.state} onChange={onChange(setBasic)} className={fieldErrors.state ? 'np-input-error' : ''} />
+              </div>
+              <div className="np-field-wrapper">
+                <FieldLabel name="city" label="City" config={{ mandatory: ['city'] }} />
+                <input name="city" placeholder="City" value={basic.city} onChange={onChange(setBasic)} className={fieldErrors.city ? 'np-input-error' : ''} />
+              </div>
+              <div className="np-field-wrapper">
+                <FieldLabel name="locality" label="Locality" config={{ mandatory: ['locality'] }} />
+                <input name="locality" placeholder="Locality" value={basic.locality} onChange={onChange(setBasic)} className={fieldErrors.locality ? 'np-input-error' : ''} />
+              </div>
+              <div className="np-field-wrapper">
+                <label>Building/Complex</label>
+                <input name="society_name" placeholder="Building/Complex" value={basic.society_name} onChange={onChange(setBasic)} />
+              </div>
+              <div className="np-field-wrapper" style={{ gridColumn: '1 / span 2' }}>
+                <label>Address</label>
+                <input name="address" placeholder="Enter Property Address" value={basic.address} onChange={onChange(setBasic)} />
+              </div>
+            </div>
+          </div>
+          <div className="np-step-actions">
+            <button type="button" className="np-btn-continue" onClick={handleStep1Continue}>
+              Save & Continue →
+            </button>
           </div>
         </div>
-        <div className="np-field">
-          <label>Building Type</label>
-          <div className="np-radio-row">
-            <label><input type="radio" name="building_type" value="residential" checked={basic.building_type==='residential'} onChange={onChange(setBasic)} /> Residential</label>
-            <label className="np-radio-gap"><input type="radio" name="building_type" value="commercial" checked={basic.building_type==='commercial'} onChange={onChange(setBasic)} /> Commercial</label>
-          </div>
-        </div>
-        <div className="np-field">
-          <label>Property Type</label>
-          <div className="np-chips">
-            {propertyTypes.map((t) => (
-              <button type="button" key={t} onClick={() => setBasic((p) => ({ ...p, property_type: t }))} className={`np-chip${basic.property_type===t?' np-chip--active':''}`}>{t.replaceAll('_',' ')}</button>
-            ))}
-          </div>
-        </div>
-        <div className="np-grid-2">
-          <input name="title" placeholder="Title" value={basic.title} onChange={onChange(setBasic)} />
-          <input name="state" placeholder="State" value={basic.state} onChange={onChange(setBasic)} />
-          <input name="city" placeholder="City" value={basic.city} onChange={onChange(setBasic)} />
-          <input name="locality" placeholder="Locality" value={basic.locality} onChange={onChange(setBasic)} />
-          <input name="sub_locality" placeholder="Sub Locality" value={basic.sub_locality} onChange={onChange(setBasic)} />
-          <input name="society_name" placeholder="Society/Apartment" value={basic.society_name} onChange={onChange(setBasic)} />
-        </div>
-        <textarea name="address" rows="3" placeholder="Address" value={basic.address} onChange={onChange(setBasic)} className="np-textarea" />
-      </Section>
+      </AccordionSection>
 
       {showFurnishModal && (
         <div className="np-modal-backdrop" onClick={() => setShowFurnishModal(false)}>
@@ -818,7 +1062,16 @@ export default function NewProperty() {
       )}
 
       {/* Step 2: Property Features & Price */}
-      <Section title="Step 2: Property Features & Price">
+      <AccordionSection
+        title="Property Features & Price"
+        isOpen={activeStep === 2}
+        onToggle={() => setActiveStep(activeStep === 2 ? 0 : 2)}
+        progress={step2Progress}
+        progressLabel={`${step2Progress}%`}
+        stepNumber={2}
+        canEdit={isStep1Complete}
+      >
+        <div className="np-accordion-body">
         <div className="np-grid-3">
           {/* Area Field - Built Up Area or Plot/Land Area */}
           <div className="np-field-wrapper" style={{ gridColumn: '1 / span 1' }}>
@@ -951,7 +1204,239 @@ export default function NewProperty() {
             </div>
           )}
         </div>
-      </Section>
+
+        {/* Step 2b: Transaction Type, Property Availability */}
+        <div className="np-subsection">
+          <div className="np-subsection-title">Transaction Type, Property Availability</div>
+          <div className="np-grid-3">
+            {/* Sale Type - always shown */}
+            <div className="np-field">
+              <FieldLabel name="sale_type" label="Sale Type" config={fieldConfig} />
+              <div className="np-chips">
+                {[['resale','Resale Property'], ['new_property','New Property']].map(([val,label]) => (
+                  <button key={val} type="button" className={`np-chip${features.sale_type===val?' np-chip--active':''}`} onClick={() => setFeatures(prev=>({ ...prev, sale_type: val }))}>{label}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* Number of Floors - conditional */}
+            {fieldConfig.showFloors && (
+              <div className="np-field">
+                <FieldLabel name="no_of_floors" label="Number of Floors" config={fieldConfig} />
+                <div className="np-chips">
+                  {[1,2,3,4,5,6].map(n => (
+                    <button key={n} type="button" className={`np-chip${Number(features.no_of_floors)===n?' np-chip--active':''}`} onClick={()=> setFeatures(prev=>({ ...prev, no_of_floors: n }))}>{n}</button>
+                  ))}
+                  <select className="np-more-select" value={Number(features.no_of_floors) > 6 ? String(features.no_of_floors) : ''} onChange={(e)=> setFeatures(prev=>({ ...prev, no_of_floors: Number(e.target.value) }))} style={{ marginLeft: 8 }}>
+                    <option value="">More</option>
+                    {Array.from({ length: 20 }, (_, i) => i+7).map(n => (
+                      <option key={n} value={n}>{n}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* Availability - conditional (only for properties with floors) */}
+            {fieldConfig.showFloors && (
+              <div className="np-field">
+                <FieldLabel name="availability" label="Availability" config={fieldConfig} />
+                <div className="np-chips">
+                  {['under_construction','ready_to_move','upcoming'].map(v => (
+                    <button key={v} type="button" className={`np-chip${features.availability===v?' np-chip--active':''}`} onClick={() => setFeatures(prev=>({ ...prev, availability: v }))}>{v.replaceAll('_',' ')}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Possession By - conditional */}
+            {fieldConfig.showFloors && features.availability !== 'ready_to_move' && (
+              <div className="np-field">
+                <FieldLabel name="possession_by" label="Possession By" config={fieldConfig} />
+                <select 
+                  name="possession_by" 
+                  value={features.possession_by || ''} 
+                  onChange={onChange(setFeatures)}
+                  className={fieldErrors.possession_by ? 'np-input-error' : ''}
+                >
+                  <option value="">Expected by</option>
+                  <option value="Within 3 Months">Within 3 Months</option>
+                  <option value="Within 6 Months">Within 6 Months</option>
+                  <option value="By 2025">By 2025</option>
+                  <option value="By 2026">By 2026</option>
+                  <option value="By 2027">By 2027</option>
+                  <option value="By 2028">By 2028</option>
+                  <option value="By 2029">By 2029</option>
+                </select>
+              </div>
+            )}
+
+            {/* Property on the Floor - conditional */}
+            {fieldConfig.showPropertyOnFloor && (
+              <div className="np-field">
+                <FieldLabel name="property_on_floor" label="Property on the Floor" config={fieldConfig} />
+                <div className="np-chips">
+                  {['Basement','Ground','1st','2nd'].map(v => (
+                    <button key={v} type="button" className={`np-chip${features.property_on_floor===v?' np-chip--active':''}`} onClick={() => setFeatures(prev=>({ ...prev, property_on_floor: v }))}>{v}</button>
+                  ))}
+                  <select className="np-more-select" value={features.property_on_floor?.endsWith('th') ? features.property_on_floor : ''} onChange={(e)=> setFeatures(prev=>({ ...prev, property_on_floor: e.target.value }))}>
+                    <option value="">11th</option>
+                    {Array.from({ length: 20 }, (_, i) => i+3).map(n => (
+                      <option key={n} value={`${n}th`}>{n}th</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* Furnishing Status - conditional */}
+            {fieldConfig.showFurnishing && (
+              <div className="np-field">
+                <label>Furnishing Status</label>
+                <div className="np-chips">
+                  {['furnished','semi_furnished','unfurnished'].map(v => (
+                    <button key={v} type="button" className={`np-chip${features.furnishing_status===v?' np-chip--active':''}`} onClick={() => { setFeatures(prev=>({ ...prev, furnishing_status: v })); if (v !== 'unfurnished') setShowFurnishModal(true); }}>{v.replaceAll('_','-')}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Facing - conditional */}
+            {fieldConfig.showFacing && (
+              <div className="np-field">
+                <label>Facing</label>
+                <select name="facing" value={features.facing || ''} onChange={onChange(setFeatures)}>
+                  <option value="">Select Facing</option>
+                  <option>East</option>
+                  <option>South</option>
+                  <option>West</option>
+                  <option>North</option>
+                  <option>South East</option>
+                  <option>South West</option>
+                  <option>North West</option>
+                  <option>North East</option>
+                </select>
+              </div>
+            )}
+
+            {/* Type of Flooring - conditional */}
+            {fieldConfig.showFlooring && (
+              <div className="np-field">
+                <label>Type of Flooring</label>
+                <select name="flooring_type" value={features.flooring_type || ''} onChange={onChange(setFeatures)}>
+                  <option value="">Select Type of Flooring</option>
+                  {['Bamboo','Brick','Carpet','Concrete','Granite','Hardwood','Laminate','Linoleum','Marble','Stone','Terrazzo','Tile','vinyl'].map(x => <option key={x}>{x}</option>)}
+                </select>
+              </div>
+            )}
+
+            {/* Age of Property - conditional */}
+            {fieldConfig.showAge && features.availability === 'ready_to_move' && (
+              <div className="np-field">
+                <FieldLabel name="age_years" label="Age of Property" config={fieldConfig} />
+                <select 
+                  name="age_years" 
+                  value={features.age_years || ''} 
+                  onChange={onChange(setFeatures)}
+                  className={fieldErrors.age_years ? 'np-input-error' : ''}
+                >
+                  <option value="">Select Age of Property</option>
+                  <option>Under Construction</option>
+                  <option>New Construction</option>
+                  <option>0 to 5 years</option>
+                  <option>5 to 10 years</option>
+                  <option>10 to 15 years</option>
+                  <option>15 to 20 years</option>
+                  <option>Above 20 years</option>
+                </select>
+              </div>
+            )}
+
+            {/* RERA Registration Status - always shown */}
+            <div className="np-field">
+              <FieldLabel name="rera_status" label="RERA Registration Status" config={fieldConfig} />
+              <div className="np-chips">
+                {['registered','applied','not_applicable'].map(v => (
+                  <button key={v} type="button" className={`np-chip${features.rera_status===v?' np-chip--active':''}`} onClick={() => setFeatures(prev=>({ ...prev, rera_status: v }))}>{v.replaceAll('_',' ')}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* RERA Number - conditional */}
+            {features.rera_status === 'registered' && (
+              <div className="np-field-wrapper">
+                <FieldLabel name="rera_number" label="RERA No." config={fieldConfig} />
+                <input 
+                  name="rera_number" 
+                  placeholder="Enter RERA No" 
+                  value={features.rera_number || ''} 
+                  onChange={onChange(setFeatures)}
+                  className={fieldErrors.rera_number ? 'np-input-error' : ''}
+                />
+              </div>
+            )}
+
+            {/* Additional Rooms - conditional */}
+            {fieldConfig.showAdditionalRooms && (
+              <div className="np-field" style={{ gridColumn: '1 / span 3' }}>
+                <label>Additional Rooms</label>
+                <div className="np-chips">
+                  {['Pooja Room','Study Room','Servant Room','Other Room'].map(room => (
+                    <button key={room} type="button" className={`np-chip${(features.additional_rooms||[]).includes(room)?' np-chip--active':''}`} onClick={() => {
+                      const list = new Set(features.additional_rooms || []);
+                      if (list.has(room)) list.delete(room); else list.add(room);
+                      setFeatures(prev=>({ ...prev, additional_rooms: Array.from(list) }));
+                    }}>{room}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Explaining The Property - conditional */}
+            {fieldConfig.showPropertyTags && (
+              <div className="np-field" style={{ gridColumn: '1 / span 3' }}>
+                <label>Explaining The Property</label>
+                <div className="np-chips">
+                  {['Reputed Builder','Well ventilated','Fully Renovated','Vastu compliant','Spacious','Ample Parking','Gated Society','Tasteful Interiors','Luxury lifestyle','Well Maintained','Plenty of Sunlight','Width of facing Road','Corner Property','Prime Location'].map(tag => (
+                    <button key={tag} type="button" className={`np-chip${(features.property_tags||[]).includes(tag)?' np-chip--active':''}`} onClick={() => {
+                      const list = new Set(features.property_tags || []);
+                      if (list.has(tag)) list.delete(tag); else list.add(tag);
+                      setFeatures(prev=>({ ...prev, property_tags: Array.from(list) }));
+                    }}>{tag}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Ownership Status - always shown */}
+            <div className="np-field" style={{ gridColumn: '1 / span 3' }}>
+              <label>Ownership Status</label>
+              <div className="np-chips">
+                {['freehold','leasehold','power_of_attorney','cooperative_society'].map(v => (
+                  <button key={v} type="button" className={`np-chip${features.ownership===v?' np-chip--active':''}`} onClick={() => setFeatures(prev=>({ ...prev, ownership: v }))}>{v.replaceAll('_',' ')}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* Approving Authority - always shown */}
+            <div className="np-field" style={{ gridColumn: '1 / span 3' }}>
+              <label>Which authority the property is approved by?</label>
+              <div className="np-chips">
+                {['BDA','BMRDA','MUDA'].map(a => (
+                  <button key={a} type="button" className={`np-chip${features.approving_authority===a?' np-chip--active':''}`} onClick={() => setFeatures(prev=>({ ...prev, approving_authority: a }))}>{a}</button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="np-step-actions">
+          <button type="button" className="np-btn-continue" onClick={handleStep2Continue}>
+            Save & Continue →
+          </button>
+        </div>
+        </div>
+      </AccordionSection>
 
       {showAreaCalc && (
         <div className="np-modal-backdrop" onClick={() => setShowAreaCalc(false)}>
@@ -1008,232 +1493,18 @@ export default function NewProperty() {
         </div>
       )}
 
-      {/* Availability & Property Details (dependent on availability) */}
-      <Section title="Step 2: Transaction Type, Property Availability">
-        <div className="np-grid-3">
-          {/* Sale Type - always shown */}
-          <div className="np-field">
-            <FieldLabel name="sale_type" label="Sale Type" config={fieldConfig} />
-            <div className="np-chips">
-              {[['resale','Resale Property'], ['new_property','New Property']].map(([val,label]) => (
-                <button key={val} type="button" className={`np-chip${features.sale_type===val?' np-chip--active':''}`} onClick={() => setFeatures(prev=>({ ...prev, sale_type: val }))}>{label}</button>
-              ))}
-            </div>
-          </div>
-
-          {/* Number of Floors - conditional */}
-          {fieldConfig.showFloors && (
-            <div className="np-field">
-              <FieldLabel name="no_of_floors" label="Number of Floors" config={fieldConfig} />
-              <div className="np-chips">
-                {[1,2,3,4,5,6].map(n => (
-                  <button key={n} type="button" className={`np-chip${Number(features.no_of_floors)===n?' np-chip--active':''}`} onClick={()=> setFeatures(prev=>({ ...prev, no_of_floors: n }))}>{n}</button>
-                ))}
-                <select className="np-more-select" value={Number(features.no_of_floors) > 6 ? String(features.no_of_floors) : ''} onChange={(e)=> setFeatures(prev=>({ ...prev, no_of_floors: Number(e.target.value) }))} style={{ marginLeft: 8 }}>
-                  <option value="">More</option>
-                  {Array.from({ length: 20 }, (_, i) => i+7).map(n => (
-                    <option key={n} value={n}>{n}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
-
-          {/* Availability - conditional (only for properties with floors) */}
-          {fieldConfig.showFloors && (
-            <div className="np-field">
-              <FieldLabel name="availability" label="Availability" config={fieldConfig} />
-              <div className="np-chips">
-                {['under_construction','ready_to_move','upcoming'].map(v => (
-                  <button key={v} type="button" className={`np-chip${features.availability===v?' np-chip--active':''}`} onClick={() => setFeatures(prev=>({ ...prev, availability: v }))}>{v.replaceAll('_',' ')}</button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Possession By - conditional */}
-          {fieldConfig.showFloors && features.availability !== 'ready_to_move' && (
-            <div className="np-field">
-              <FieldLabel name="possession_by" label="Possession By" config={fieldConfig} />
-              <select 
-                name="possession_by" 
-                value={features.possession_by || ''} 
-                onChange={onChange(setFeatures)}
-                className={fieldErrors.possession_by ? 'np-input-error' : ''}
-              >
-                <option value="">Expected by</option>
-                <option value="Within 3 Months">Within 3 Months</option>
-                <option value="Within 6 Months">Within 6 Months</option>
-                <option value="By 2025">By 2025</option>
-                <option value="By 2026">By 2026</option>
-                <option value="By 2027">By 2027</option>
-                <option value="By 2028">By 2028</option>
-                <option value="By 2029">By 2029</option>
-              </select>
-            </div>
-          )}
-
-          {/* Property on the Floor - conditional */}
-          {fieldConfig.showPropertyOnFloor && (
-            <div className="np-field">
-              <FieldLabel name="property_on_floor" label="Property on the Floor" config={fieldConfig} />
-              <div className="np-chips">
-                {['Basement','Ground','1st','2nd'].map(v => (
-                  <button key={v} type="button" className={`np-chip${features.property_on_floor===v?' np-chip--active':''}`} onClick={() => setFeatures(prev=>({ ...prev, property_on_floor: v }))}>{v}</button>
-                ))}
-                <select className="np-more-select" value={features.property_on_floor?.endsWith('th') ? features.property_on_floor : ''} onChange={(e)=> setFeatures(prev=>({ ...prev, property_on_floor: e.target.value }))}>
-                  <option value="">11th</option>
-                  {Array.from({ length: 20 }, (_, i) => i+3).map(n => (
-                    <option key={n} value={`${n}th`}>{n}th</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
-
-          {/* Furnishing Status - conditional */}
-          {fieldConfig.showFurnishing && (
-            <div className="np-field">
-              <label>Furnishing Status</label>
-              <div className="np-chips">
-                {['furnished','semi_furnished','unfurnished'].map(v => (
-                  <button key={v} type="button" className={`np-chip${features.furnishing_status===v?' np-chip--active':''}`} onClick={() => { setFeatures(prev=>({ ...prev, furnishing_status: v })); if (v !== 'unfurnished') setShowFurnishModal(true); }}>{v.replaceAll('_','-')}</button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Facing - conditional */}
-          {fieldConfig.showFacing && (
-            <div className="np-field">
-              <label>Facing</label>
-              <select name="facing" value={features.facing || ''} onChange={onChange(setFeatures)}>
-                <option value="">Select Facing</option>
-                <option>East</option>
-                <option>South</option>
-                <option>West</option>
-                <option>North</option>
-                <option>South East</option>
-                <option>South West</option>
-                <option>North West</option>
-                <option>North East</option>
-              </select>
-            </div>
-          )}
-
-          {/* Type of Flooring - conditional */}
-          {fieldConfig.showFlooring && (
-            <div className="np-field">
-              <label>Type of Flooring</label>
-              <select name="flooring_type" value={features.flooring_type || ''} onChange={onChange(setFeatures)}>
-                <option value="">Select Type of Flooring</option>
-                {['Bamboo','Brick','Carpet','Concrete','Granite','Hardwood','Laminate','Linoleum','Marble','Stone','Terrazzo','Tile','vinyl'].map(x => <option key={x}>{x}</option>)}
-              </select>
-            </div>
-          )}
-
-          {/* Age of Property - conditional */}
-          {fieldConfig.showAge && features.availability === 'ready_to_move' && (
-            <div className="np-field">
-              <FieldLabel name="age_years" label="Age of Property" config={fieldConfig} />
-              <select 
-                name="age_years" 
-                value={features.age_years || ''} 
-                onChange={onChange(setFeatures)}
-                className={fieldErrors.age_years ? 'np-input-error' : ''}
-              >
-                <option value="">Select Age of Property</option>
-                <option>Under Construction</option>
-                <option>New Construction</option>
-                <option>0 to 5 years</option>
-                <option>5 to 10 years</option>
-                <option>10 to 15 years</option>
-                <option>15 to 20 years</option>
-                <option>Above 20 years</option>
-              </select>
-            </div>
-          )}
-
-          {/* RERA Registration Status - always shown */}
-          <div className="np-field">
-            <FieldLabel name="rera_status" label="RERA Registration Status" config={fieldConfig} />
-            <div className="np-chips">
-              {['registered','applied','not_applicable'].map(v => (
-                <button key={v} type="button" className={`np-chip${features.rera_status===v?' np-chip--active':''}`} onClick={() => setFeatures(prev=>({ ...prev, rera_status: v }))}>{v.replaceAll('_',' ')}</button>
-              ))}
-            </div>
-          </div>
-
-          {/* RERA Number - conditional */}
-          {features.rera_status === 'registered' && (
-            <div className="np-field-wrapper">
-              <FieldLabel name="rera_number" label="RERA No." config={fieldConfig} />
-              <input 
-                name="rera_number" 
-                placeholder="Enter RERA No" 
-                value={features.rera_number || ''} 
-                onChange={onChange(setFeatures)}
-                className={fieldErrors.rera_number ? 'np-input-error' : ''}
-              />
-            </div>
-          )}
-
-          {/* Additional Rooms - conditional */}
-          {fieldConfig.showAdditionalRooms && (
-            <div className="np-field" style={{ gridColumn: '1 / span 3' }}>
-              <label>Additional Rooms</label>
-              <div className="np-chips">
-                {['Pooja Room','Study Room','Servant Room','Other Room'].map(room => (
-                  <button key={room} type="button" className={`np-chip${(features.additional_rooms||[]).includes(room)?' np-chip--active':''}`} onClick={() => {
-                    const list = new Set(features.additional_rooms || []);
-                    if (list.has(room)) list.delete(room); else list.add(room);
-                    setFeatures(prev=>({ ...prev, additional_rooms: Array.from(list) }));
-                  }}>{room}</button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Explaining The Property - conditional */}
-          {fieldConfig.showPropertyTags && (
-            <div className="np-field" style={{ gridColumn: '1 / span 3' }}>
-              <label>Explaining The Property</label>
-              <div className="np-chips">
-                {['Reputed Builder','Well ventilated','Fully Renovated','Vastu compliant','Spacious','Ample Parking','Gated Society','Tasteful Interiors','Luxury lifestyle','Well Maintained','Plenty of Sunlight','Width of facing Road','Corner Property','Prime Location'].map(tag => (
-                  <button key={tag} type="button" className={`np-chip${(features.property_tags||[]).includes(tag)?' np-chip--active':''}`} onClick={() => {
-                    const list = new Set(features.property_tags || []);
-                    if (list.has(tag)) list.delete(tag); else list.add(tag);
-                    setFeatures(prev=>({ ...prev, property_tags: Array.from(list) }));
-                  }}>{tag}</button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Ownership Status - always shown */}
-          <div className="np-field" style={{ gridColumn: '1 / span 3' }}>
-            <label>Ownership Status</label>
-            <div className="np-chips">
-              {['freehold','leasehold','power_of_attorney','cooperative_society'].map(v => (
-                <button key={v} type="button" className={`np-chip${features.ownership===v?' np-chip--active':''}`} onClick={() => setFeatures(prev=>({ ...prev, ownership: v }))}>{v.replaceAll('_',' ')}</button>
-              ))}
-            </div>
-          </div>
-
-          {/* Approving Authority - always shown */}
-          <div className="np-field" style={{ gridColumn: '1 / span 3' }}>
-            <label>Which authority the property is approved by?</label>
-            <div className="np-chips">
-              {['BDA','BMRDA','MUDA'].map(a => (
-                <button key={a} type="button" className={`np-chip${features.approving_authority===a?' np-chip--active':''}`} onClick={() => setFeatures(prev=>({ ...prev, approving_authority: a }))}>{a}</button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </Section>
 
       {/* Step 3: Describe Property, Images/Videos */}
-      <Section title="Step 3: Describe Property, Images/Videos">
+      <AccordionSection
+        title="Describe Property, Images / Videos"
+        isOpen={activeStep === 3}
+        onToggle={() => setActiveStep(activeStep === 3 ? 0 : 3)}
+        progress={step3Progress}
+        progressLabel={`${step3Progress}%`}
+        stepNumber={3}
+        canEdit={isStep1Complete && isStep2Complete}
+      >
+        <div className="np-accordion-body">
         <div className="np-tabs">
           {['exterior','bedroom','bathroom','kitchen','floor_plan','location_map','other'].map(tab => (
             <button key={tab} type="button" className={`np-chip${(files.activeTab||'exterior')===tab?' np-chip--active':''}`} onClick={() => setFiles(prev => ({ ...prev, activeTab: tab }))}>{tab.replaceAll('_',' ')}</button>
@@ -1289,10 +1560,25 @@ export default function NewProperty() {
           </div>
         )}
         <textarea name="description" rows="4" placeholder="Property Descriptions" value={basic.description} onChange={onChange(setBasic)} className="np-textarea" />
-      </Section>
+        <div className="np-step-actions">
+          <button type="button" className="np-btn-continue" onClick={handleStep3Continue}>
+            Save & Continue →
+          </button>
+        </div>
+        </div>
+      </AccordionSection>
 
       {/* Step 4: Amenities & Landmarks */}
-      <Section title="Step 4: Property Amenities & Land Mark">
+      <AccordionSection
+        title="Property Amenities & Land Mark"
+        isOpen={activeStep === 4}
+        onToggle={() => setActiveStep(activeStep === 4 ? 0 : 4)}
+        progress={step4Progress}
+        progressLabel={`${step4Progress}%`}
+        stepNumber={4}
+        canEdit={isStep1Complete && isStep2Complete}
+      >
+        <div className="np-accordion-body">
         <div className="np-field">
           <label style={{ fontWeight: 600 }}>Amenities</label>
           <div className="np-chips">
@@ -1318,11 +1604,13 @@ export default function NewProperty() {
             ))}
           </div>
         </div>
-      </Section>
-
-      <div className="np-actions">
-        <button className="np-btn" onClick={handleSubmit}>Submit</button>
-      </div>
+        <div className="np-step-actions">
+          <button type="button" className="np-btn-submit" onClick={handleSubmit}>
+            Submit Property
+          </button>
+        </div>
+        </div>
+      </AccordionSection>
     </div>
   );
 }

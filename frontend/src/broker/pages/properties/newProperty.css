@@ -30,7 +30,10 @@
 }
 
 .np-field {
-  margin-bottom: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 .np-radio-row { display: flex; align-items: center; gap: 16px; }
 .np-radio-gap { margin-left: 16px; }
@@ -41,12 +44,22 @@
 .new-property textarea {
   width: 100%;
   border: 1px solid #d1d5db;
-  border-radius: 8px;
-  padding: 8px 10px;
+  border-radius: 6px;
+  padding: 10px 12px;
   background: #fff;
-  color: #0f172a;
+  color: #111827;
+  font-size: 14px;
   outline: none;
   transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.new-property select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
 }
 .new-property input:not([type="radio"]):not([type="file"]):focus,
 .new-property select:focus,
@@ -55,29 +68,58 @@
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
-.np-chips { display: flex; flex-wrap: wrap; gap: 10px; }
+.np-chips { 
+  display: flex; 
+  flex-wrap: wrap; 
+  gap: 8px; 
+  align-items: center;
+}
 .np-chip {
-  padding: 7px 12px;
-  border-radius: 999px;
+  padding: 8px 16px;
+  border-radius: 6px;
   border: 1px solid #d1d5db;
   background: #fff;
   cursor: pointer;
-  font-size: 13px;
-  color: #111827;
+  font-size: 14px;
+  font-weight: 400;
+  color: #374151;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.np-chip:hover {
+  border-color: #9ca3af;
+  background: #f9fafb;
 }
 .np-chip--active {
-  background: #eef2ff;
+  background: #fff;
   border-color: #6366f1;
-  color: #3730a3;
+  color: #6366f1;
+  font-weight: 500;
 }
 
-.np-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-.np-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.np-grid-2 { 
+  display: grid; 
+  grid-template-columns: repeat(2, 1fr); 
+  gap: 16px; 
+}
+.np-grid-3 { 
+  display: grid; 
+  grid-template-columns: repeat(3, 1fr); 
+  gap: 16px; 
+  align-items: start;
+}
 .np-mt-8 { margin-top: 10px; }
 .np-right-inline { display: flex; align-items: center; }
 .np-link { color: #1d4ed8; cursor: pointer; text-decoration: none; }
 .np-link:hover { text-decoration: underline; }
-.np-washrooms { grid-column: 1 / span 3; margin-top: 6px; }
+.np-washrooms { 
+  grid-column: 1 / span 3; 
+  margin-top: 0;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 .np-inline-actions { display: flex; gap: 8px; }
 .np-small-btn { border: 1px solid #93c5fd; color: #1d4ed8; background: #eef6ff; padding: 4px 10px; border-radius: 14px; cursor: pointer; }
 .np-small-btn:disabled { opacity: .5; cursor: not-allowed; }
@@ -94,7 +136,22 @@
 .np-btn:hover { background: #0b1220; }
 
 /* More select style to match compact pill layout */
-.np-more-select { border: 1px solid #d1d5db; border-radius: 6px; padding: 6px 8px; background: #fff; width: auto; min-width: 72px; display: inline-block; }
+.np-more-select { 
+  border: 1px solid #d1d5db; 
+  border-radius: 6px; 
+  padding: 8px 28px 8px 12px; 
+  background: #fff; 
+  width: auto; 
+  min-width: 80px; 
+  display: inline-block;
+  font-size: 14px;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  margin-left: 8px;
+}
 /* Override global select width for inline 'More' only */
 .new-property .np-more-select { width: auto; }
 
@@ -157,14 +214,241 @@
 .np-field-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 .np-field-wrapper label {
   font-size: 14px;
   font-weight: 500;
   color: #374151;
+  margin-bottom: 0;
 }
 .np-hint {
   font-size: 12px;
   color: #6b7280;
+}
+
+/* Accordion Section Styles */
+.np-accordion-section {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  margin-bottom: 18px;
+  background: #fff;
+  box-shadow: 0 1px 0 rgba(16, 24, 40, 0.02);
+  overflow: hidden;
+}
+
+.np-accordion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.np-accordion-header:hover {
+  background-color: #f9fafb;
+}
+
+.np-accordion-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.np-step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #6366f1;
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.np-accordion-title {
+  font-weight: 600;
+  font-size: 16px;
+  color: #111827;
+}
+
+.np-accordion-header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.np-progress-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.np-progress-bar {
+  width: 120px;
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.np-progress-fill {
+  height: 100%;
+  background: #6366f1;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.np-progress-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  min-width: 40px;
+}
+
+.np-edit-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.np-edit-btn:hover {
+  background: #f9fafb;
+  border-color: #6366f1;
+  color: #6366f1;
+}
+
+.np-edit-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.np-accordion-content {
+  border-top: 1px solid #e5e7eb;
+}
+
+.np-accordion-body {
+  padding: 24px;
+}
+
+/* Location Section */
+.np-location-section {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.np-section-title {
+  font-weight: 600;
+  font-size: 16px;
+  color: #111827;
+  margin-bottom: 16px;
+}
+
+/* Subsection */
+.np-subsection {
+  margin-top: 32px;
+  padding-top: 32px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.np-subsection-title {
+  font-weight: 600;
+  font-size: 16px;
+  color: #111827;
+  margin-bottom: 24px;
+}
+
+/* Field Labels */
+.np-field label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.np-field label:not(.np-label-required) {
+  font-weight: 400;
+}
+
+/* Step Actions */
+.np-step-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.np-btn-continue {
+  background: #6366f1;
+  color: #fff;
+  padding: 10px 24px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: background-color 0.15s ease;
+}
+
+.np-btn-continue:hover {
+  background: #4f46e5;
+}
+
+.np-btn-submit {
+  background: #111827;
+  color: #fff;
+  padding: 10px 24px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: background-color 0.15s ease;
+}
+
+.np-btn-submit:hover {
+  background: #0b1220;
+}
+
+/* Better spacing for form sections */
+.np-accordion-section .np-grid-3 > .np-field {
+  margin-bottom: 20px;
+}
+
+/* Ensure consistent label spacing */
+.np-field > label:first-child {
+  margin-bottom: 8px;
+}
+
+/* Additional Rooms and Property Tags spacing */
+.np-field[style*="grid-column"] {
+  margin-bottom: 24px;
+}
+
+/* Locked accordion section styling */
+.np-accordion-locked .np-accordion-header {
+  cursor: not-allowed;
+}
+
+.np-accordion-locked .np-accordion-header:hover {
+  background-color: #fff;
 }
