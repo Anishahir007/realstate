@@ -1,0 +1,15 @@
+.pc-contact{background:#e6f0ff;padding:16px}
+.pc-contact__crumbs{max-width:1100px;margin:0 auto 12px;display:flex;gap:8px;color:#64748b;font-size:14px}
+.pc-contact__wrap{max-width:1100px;margin:0 auto;background:#cfe3ff;border-radius:8px;padding:16px;display:grid;grid-template-columns:280px 1fr;gap:16px}
+.pc-contact__aside{background:#fff;border-radius:8px;padding:16px}
+.pc-contact__title{margin:0 0 8px;font-size:18px}
+.pc-contact__row{margin:6px 0;color:#334155}
+.pc-contact__form{background:#dbeaff;border-radius:8px;padding:16px}
+.pc-contact__heading{margin:0 0 12px}
+.pc-contact__grid{display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:10px}
+.pc-input{background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:10px}
+.pc-textarea{background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:10px;grid-column:1/-1}
+.pc-actions{display:flex;gap:10px}
+.pc-btn{border:1px solid #cbd5e1;background:#fff;border-radius:6px;padding:8px 14px;cursor:pointer}
+.pc-btn--primary{background:#d4a135;color:#111;border-color:#d4a135}
+
