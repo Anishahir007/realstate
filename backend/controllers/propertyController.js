@@ -629,26 +629,40 @@ export async function listAllBrokerPropertiesAdmin(req, res) {
           let imageUrl = null;
           let primaryImage = null;
           let media = [];
+          const baseUrl = process.env.API_BASE_URL || req.protocol + '://' + req.get('host');
           try {
             const [mediaRows] = await tenantPool.query(
               'SELECT id, file_url, is_primary, category, media_type FROM property_media WHERE property_id = ? ORDER BY is_primary DESC, id ASC',
               [r.id]
             );
+            console.log(`[listAllBrokerPropertiesAdmin] Property ${r.id} - Found ${mediaRows?.length || 0} media items`);
             if (mediaRows && mediaRows.length > 0) {
-              media = mediaRows.map(m => ({
-                id: m.id,
-                file_url: m.file_url,
-                url: m.file_url,
-                is_primary: Boolean(m.is_primary),
-                category: m.category,
-                media_type: m.media_type
-              }));
+              media = mediaRows.map(m => {
+                const fileUrl = m.file_url || '';
+                // Ensure file_url starts with / if it's a relative path
+                const fullUrl = fileUrl.startsWith('http') ? fileUrl : (fileUrl.startsWith('/') ? `${baseUrl}${fileUrl}` : `${baseUrl}/${fileUrl}`);
+                return {
+                  id: m.id,
+                  file_url: fullUrl,
+                  url: fullUrl,
+                  is_primary: Boolean(m.is_primary),
+                  category: m.category,
+                  media_type: m.media_type
+                };
+              });
               const primary = mediaRows.find(m => m.is_primary) || mediaRows[0];
-              image = primary?.file_url || null;
-              imageUrl = primary?.file_url || null;
-              primaryImage = primary?.file_url || null;
+              const fileUrl = primary?.file_url || '';
+              const fullImageUrl = fileUrl.startsWith('http') ? fileUrl : (fileUrl.startsWith('/') ? `${baseUrl}${fileUrl}` : `${baseUrl}/${fileUrl}`);
+              image = fileUrl ? fullImageUrl : null;
+              imageUrl = fileUrl ? fullImageUrl : null;
+              primaryImage = fileUrl ? fullImageUrl : null;
+              console.log(`[listAllBrokerPropertiesAdmin] Property ${r.id} - Primary image URL: ${primaryImage}`);
+            } else {
+              console.log(`[listAllBrokerPropertiesAdmin] Property ${r.id} - No media found`);
             }
-          } catch {}
+          } catch (mediaErr) {
+            console.error(`[listAllBrokerPropertiesAdmin] Error fetching media for property ${r.id}:`, mediaErr);
+          }
           
           out.push({
             id: r.id,
