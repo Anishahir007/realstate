@@ -19,14 +19,15 @@ import ClassicContact from './superadmin/templates/classic/pages/Contact.jsx';
 export default function App() {
   const host = typeof window !== 'undefined' ? window.location.host : '';
   const isMainHost = /(^|\.)proker\.xyz$/i.test(host);
+  const isLocalhost = typeof window !== 'undefined' && (host.includes('localhost') || host.includes('127.0.0.1'));
   return (
     <BrowserRouter>
     <Suspense fallback={<div style={{ padding: 16 }}>Loading…</div>}>
       <Routes>
         
         {SuperAdminRoutes()}
-        {/* Clean custom-domain routes (only on non-main hosts) */}
-        {!isMainHost && (
+        {/* Clean custom-domain routes (only on non-main hosts and not localhost) */}
+        {!isMainHost && !isLocalhost && (
           <Route path="*" element={<DomainSiteRenderer />}>
             <Route index element={<HomeSwitch />} />
             <Route path="properties" element={<PropertiesSwitch />} />
