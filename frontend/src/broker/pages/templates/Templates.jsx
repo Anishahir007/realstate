@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useBroker } from '../../../context/BrokerContext.jsx';
+import './brokerTemplates.css';
 
 export default function Templates() {
   const { token, apiBase } = useBroker();
@@ -88,78 +89,124 @@ export default function Templates() {
     }
   }
 
-  if (loading) return <div style={{ padding: 16 }}>Loading templates…</div>;
+  if (loading) return <div className="brokerTemplates-loading">Loading templates…</div>;
 
   return (
-    <div style={{ padding: 16 }}>
-      <h2>Website Templates</h2>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 16 }}>
+    <div className="brokerTemplates-root">
+      <div className="brokerTemplates-header">
+        <h2 className="brokerTemplates-title">Website Templates</h2>
+        <p className="brokerTemplates-subtitle">Choose a template to create your professional real estate website</p>
+      </div>
+
+      <div className="brokerTemplates-grid">
         {items.map((t) => (
-          <div key={t.name} style={{ border: '1px solid #eee', borderRadius: 12, padding: 12 }}>
-            <div style={{ height: 200, background: '#f5f5f5', borderRadius: 8, marginBottom: 8, overflow: 'hidden', position: 'relative', border: '1px solid #e5e7eb' }}>
+          <div key={t.name} className="brokerTemplates-card">
+            <div className="brokerTemplates-card-image-wrapper">
               {t.banner_image ? (
                 <img
                   src={`${apiBase}${t.banner_image}`}
                   alt={`${t.label} template`}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  className="brokerTemplates-card-image"
                   onError={(e) => {
                     e.target.style.display = 'none';
                     if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
                   }}
                 />
               ) : null}
-              <div
-                style={{
-                  display: t.banner_image ? 'none' : 'flex',
-                  width: '100%',
-                  height: '100%',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#64748b',
-                  fontSize: 18,
-                  fontWeight: 600,
-                }}
-              >
+              <div className="brokerTemplates-card-placeholder">
                 {t.label}
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => onPreview(t.name)}>Preview</button>
-              <button disabled={publishing} onClick={() => onPublish(t.name)}>{publishing ? 'Publishing…' : 'Publish'}</button>
+            <div className="brokerTemplates-card-content">
+              <h3 className="brokerTemplates-card-name">{t.name || t.label}</h3>
+              {t.label && t.label !== t.name && (
+                <p className="brokerTemplates-card-label">{t.label}</p>
+              )}
+              <div className="brokerTemplates-card-actions">
+                <button 
+                  className="brokerTemplates-btn brokerTemplates-btn-preview"
+                  onClick={() => onPreview(t.name)}
+                >
+                  Preview
+                </button>
+                <button 
+                  className="brokerTemplates-btn brokerTemplates-btn-publish"
+                  disabled={publishing} 
+                  onClick={() => onPublish(t.name)}
+                >
+                  {publishing ? 'Publishing…' : 'Publish'}
+                </button>
+              </div>
             </div>
           </div>
         ))}
       </div>
 
-      <h3 style={{ marginTop: 24 }}>My Published Sites</h3>
-      <ul>
-        {sites.map((s) => (
-          <li key={s.slug}>
-            <strong>{s.template}</strong> — <code>{s.slug}</code> — <a href={s.urlPath || `/site/${s.slug}`} target="_blank" rel="noreferrer">Open</a>
-            {s.customDomain ? (<span> — Domain: <strong>{s.customDomain}</strong></span>) : null}
-          </li>
-        ))}
-      </ul>
+      {sites.length > 0 && (
+        <div className="brokerTemplates-sites-section">
+          <h3 className="brokerTemplates-section-title">My Published Sites</h3>
+          <ul className="brokerTemplates-sites-list">
+            {sites.map((s) => (
+              <li key={s.slug} className="brokerTemplates-site-item">
+                <div className="brokerTemplates-site-info">
+                  <span className="brokerTemplates-site-template">{s.template}</span>
+                  <span className="brokerTemplates-site-separator">—</span>
+                  <span className="brokerTemplates-site-slug">{s.slug}</span>
+                  {s.customDomain && (
+                    <>
+                      <span className="brokerTemplates-site-separator">—</span>
+                      <span className="brokerTemplates-site-domain">{s.customDomain}</span>
+                    </>
+                  )}
+                </div>
+                <a 
+                  href={s.urlPath || `/site/${s.slug}`} 
+                  target="_blank" 
+                  rel="noreferrer"
+                  className="brokerTemplates-site-link"
+                >
+                  Open →
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {sites[0] && (
-        <div style={{ marginTop: 16, padding: 12, border: '1px solid #eee', borderRadius: 8, maxWidth: 700 }}>
-          <h4>Connect Your Custom Domain</h4>
-          <div style={{ marginBottom: 8 }}>
+        <div className="brokerTemplates-domain-section">
+          <h4 className="brokerTemplates-domain-title">Connect Your Custom Domain</h4>
+          <div className="brokerTemplates-domain-form">
             <input
+              type="text"
               placeholder="yourdomain.com"
               value={sites[0]?.customDomain || domainInput}
               onChange={(e) => setDomainInput(e.target.value)}
               disabled={Boolean(sites[0]?.customDomain)}
-              style={{ padding: 8, width: 320, marginRight: 8 }}
+              className="brokerTemplates-domain-input"
             />
-            <button disabled={domainBusy || !domainInput || Boolean(sites[0]?.customDomain)} onClick={connectDomain}>Connect Domain</button>
-            <button disabled={domainBusy || !sites[0]?.slug} onClick={checkDomain} style={{ marginLeft: 8 }}>Check Status</button>
+            <button 
+              className="brokerTemplates-domain-btn brokerTemplates-domain-btn-connect"
+              disabled={domainBusy || !domainInput || Boolean(sites[0]?.customDomain)} 
+              onClick={connectDomain}
+            >
+              Connect Domain
+            </button>
+            <button 
+              className="brokerTemplates-domain-btn brokerTemplates-domain-btn-check"
+              disabled={domainBusy || !sites[0]?.slug} 
+              onClick={checkDomain}
+            >
+              Check Status
+            </button>
           </div>
-          <div style={{ background: '#fff7e6', padding: 8, borderRadius: 6, border: '1px solid #ffe58f', color: '#ad6800' }}>
+          <div className="brokerTemplates-domain-info">
             Please set your domain's A record to <code>72.61.136.84</code>
           </div>
           {domainStatus && (
-            <div style={{ marginTop: 8, color: domainStatus.ok ? 'green' : 'crimson' }}>{domainStatus.message}</div>
+            <div className={`brokerTemplates-domain-status ${domainStatus.ok ? 'brokerTemplates-domain-status-success' : 'brokerTemplates-domain-status-error'}`}>
+              {domainStatus.message}
+            </div>
           )}
         </div>
       )}

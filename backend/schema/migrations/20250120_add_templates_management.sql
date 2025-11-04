@@ -16,5 +16,6 @@ CREATE TABLE IF NOT EXISTS templates (
 -- Insert initial templates (if they don't exist)
 INSERT IGNORE INTO templates (name, label, status, banner_image, preview_image) VALUES
 ('classic', 'Classic', 'active', NULL, NULL),
-('proclassic', 'Proclassic', 'active', NULL, NULL);
+('proclassic', 'Proclassic', 'active', NULL, NULL),
+('premium', 'Premium', 'active', NULL, NULL);
 
