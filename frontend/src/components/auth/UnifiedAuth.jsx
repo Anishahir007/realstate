@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import axios from "axios";
 import "./UnifiedAuth.css";
+import { FiEye, FiEyeOff } from "react-icons/fi";
 import { SuperAdminProvider } from "../../context/SuperAdminContext.jsx";
 import { BrokerProvider, useBroker } from "../../context/BrokerContext.jsx";
 import { AppUserProvider, useAppUser } from "../../context/UserRoleContext.jsx";
@@ -48,6 +49,7 @@ function UnifiedAuthInner() {
   const [passwordError, setPasswordError] = useState("");
   const [otpId, setOtpId] = useState("");
   const [otpCode, setOtpCode] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const apiBase =
     broker?.apiBase ||
@@ -201,14 +203,24 @@ function UnifiedAuthInner() {
         />
 
         <label className="uauth-label">Password</label>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Anish@25"
-          required
-          className="uauth-input"
-        />
+        <div className="uauth-password-wrapper">
+          <input
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Anish@25"
+            required
+            className="uauth-input uauth-password-input"
+          />
+          <button
+            type="button"
+            className="uauth-password-toggle"
+            onClick={() => setShowPassword(!showPassword)}
+            aria-label={showPassword ? "Hide password" : "Show password"}
+          >
+            {showPassword ? <FiEyeOff /> : <FiEye />}
+          </button>
+        </div>
         {passwordError && <div className="uauth-pass-error">{passwordError}</div>}
         {mode === "signup" && (
           <ul className="uauth-pass-hint">
