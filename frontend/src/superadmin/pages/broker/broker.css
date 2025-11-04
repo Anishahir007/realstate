@@ -65,17 +65,70 @@
 .bm-colmenu-item input { width: 14px; height: 14px; cursor: pointer; }
 
 /* Reuse modal styles from previous implementation */
-.superadminbroker-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
-.superadminbroker-modal { width: 100%; max-width: 520px; background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; padding: 16px; }
-.superadminbroker-formrow { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.superadminbroker-modal-overlay { 
+  position: fixed; 
+  inset: 0; 
+  background: rgba(0,0,0,0.35); 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  padding: 16px; 
+  z-index: 50;
+  overflow-y: auto;
+}
+.superadminbroker-modal { 
+  width: 100%; 
+  max-width: 520px; 
+  max-height: 90vh;
+  background: #fff; 
+  border-radius: 12px; 
+  border: 1px solid #e5e7eb; 
+  padding: 16px;
+  overflow-y: auto;
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+}
+.superadminbroker-modal form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.superadminbroker-modal form > div:not(.superadminbroker-modal-actions) {
+  flex-shrink: 0;
+}
+
+.superadminbroker-formrow { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 6px; 
+  margin-top: 8px; 
+}
 .superadminbroker-formrow label { font-size: 13px; color: #374151; }
 .superadminbroker-formrow input { border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 10px; }
 .superadminbroker-formrow select { border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 10px; background: #fff; }
-.superadminbroker-modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.superadminbroker-modal-header { 
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between; 
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
 .superadminbroker-modal-header h3 { margin: 0; font-size: 18px; }
 .superadminbroker-iconbtn { background: transparent; border: none; font-size: 20px; line-height: 1; cursor: pointer; color: #6b7280; }
 .superadminbroker-iconbtn:hover { color: #111827; }
-.superadminbroker-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+.superadminbroker-modal-actions { 
+  display: flex; 
+  justify-content: flex-end; 
+  gap: 8px; 
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+  flex-shrink: 0;
+  background: #fff;
+}
 .btn-dark { background: #111827; color: #fff; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
 .btn-dark:disabled { opacity: 0.6; cursor: default; }
 .btn-light { background: #f3f4f6; color: #111827; border: 1px solid #e5e7eb; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
