@@ -727,14 +727,15 @@ export async function listAllBrokerPropertiesAdmin(req, res) {
             sub_locality: r.sub_locality,
             subLocality: r.sub_locality,
             address: r.address,
-            image,
-            image_url: imageUrl,
-            primary_image: primaryImage,
-            media,
+            image: image || null,
+            image_url: imageUrl || null,
+            primary_image: primaryImage || null,
+            media: media || [],
             status: r.status || 'active',
             created_at: r.created_at ? new Date(r.created_at).toISOString() : null,
             createdAt: r.created_at ? new Date(r.created_at).toISOString() : null,
           });
+          console.log(`[listAllBrokerPropertiesAdmin] Property ${r.id} - Added to output with image: ${image || 'null'}, media count: ${media.length}`);
         }
       } catch (e) {
         // ignore tenant failures
@@ -746,6 +747,13 @@ export async function listAllBrokerPropertiesAdmin(req, res) {
       return bTime - aTime;
     });
     const sliced = out.slice(0, limit);
+    console.log(`[listAllBrokerPropertiesAdmin] Returning ${sliced.length} properties. Sample property image fields:`, sliced[0] ? {
+      id: sliced[0].id,
+      image: sliced[0].image,
+      image_url: sliced[0].image_url,
+      primary_image: sliced[0].primary_image,
+      media_count: sliced[0].media?.length || 0
+    } : 'No properties');
     return res.json({ data: sliced, meta: { total: out.length, returned: sliced.length } });
   } catch (err) {
     return res.status(500).json({ message: 'Server error' });
