@@ -17,6 +17,9 @@ function mapBrokerRow(row) {
     location: row.location,
     companyName: row.company_name,
     tenantDb: row.tenant_db,
+    documentType: row.document_type,
+    documentFront: row.document_front,
+    documentBack: row.document_back,
     createdByAdminId: row.created_by_admin_id,
     lastLoginAt: row.last_login_at,
     createdAt: row.created_at,
@@ -77,7 +80,7 @@ export async function getMyBrokerProfile(req, res) {
     if (!brokerId) return res.status(401).json({ message: 'Unauthorized' });
 
     const [rows] = await pool.query(
-      'SELECT id, full_name, email, phone, photo, license_no, location, company_name, tenant_db, status, created_by_admin_id, last_login_at, created_at FROM brokers WHERE id = ? LIMIT 1',
+      'SELECT id, full_name, email, phone, photo, license_no, location, company_name, tenant_db, document_type, document_front, document_back, status, created_by_admin_id, last_login_at, created_at FROM brokers WHERE id = ? LIMIT 1',
       [brokerId]
     );
     const row = rows[0];
@@ -95,7 +98,7 @@ export async function getBrokerById(req, res) {
     if (!id) return res.status(400).json({ message: 'Invalid id' });
 
     const [rows] = await pool.query(
-      'SELECT id, full_name, email, phone, photo, license_no, location, company_name, tenant_db, status, created_by_admin_id, last_login_at, created_at FROM brokers WHERE id = ? LIMIT 1',
+      'SELECT id, full_name, email, phone, photo, license_no, location, company_name, tenant_db, document_type, document_front, document_back, status, created_by_admin_id, last_login_at, created_at FROM brokers WHERE id = ? LIMIT 1',
       [id]
     );
     const row = rows[0];
@@ -121,15 +124,40 @@ export async function createBroker(req, res) {
     await createBrokerDatabaseIfNotExists(tenant_db);
 
     const password_hash = await hashPassword(password);
-    const photoPath = req.file ? `/profiles/${req.file.originalname}` : null;
+    
+    // Handle file uploads
+    let photoPath = null;
+    if (req.files) {
+      if (req.files.photo && req.files.photo[0]) {
+        photoPath = `/${req.files.photo[0].destination.replace(/\\/g, '/').replace(/^public\//, '')}/${req.files.photo[0].filename}`;
+      }
+    } else if (req.file) {
+      photoPath = `/profiles/${req.file.originalname}`;
+    }
+
+    let documentFront = null;
+    let documentBack = null;
+    let documentType = null;
+    if (req.files) {
+      if (req.files.document_front && req.files.document_front[0]) {
+        documentFront = `/${req.files.document_front[0].destination.replace(/\\/g, '/').replace(/^public\//, '')}/${req.files.document_front[0].filename}`;
+      }
+      if (req.files.document_back && req.files.document_back[0]) {
+        documentBack = `/${req.files.document_back[0].destination.replace(/\\/g, '/').replace(/^public\//, '')}/${req.files.document_back[0].filename}`;
+      }
+    }
+    if (req.body.document_type && ['aadhaar', 'pan_card', 'driving_license', 'voter_id', 'other'].includes(req.body.document_type)) {
+      documentType = req.body.document_type;
+    }
+
     const normalizedStatus = (status && ['active', 'suspended'].includes(String(status).toLowerCase())) ? String(status).toLowerCase() : undefined;
     const [result] = await pool.query(
-      `INSERT INTO brokers (full_name, email, phone, photo, password_hash, license_no, location, company_name, tenant_db, created_by_admin_id${normalizedStatus ? ', status' : ''}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?${normalizedStatus ? ', ?' : ''})`,
-      [safeName, email, phone || null, photoPath, password_hash, license_no || null, location || null, company_name || null, tenant_db, req.user?.id || null, ...(normalizedStatus ? [normalizedStatus] : [])]
+      `INSERT INTO brokers (full_name, email, phone, photo, password_hash, license_no, location, company_name, tenant_db, document_type, document_front, document_back, created_by_admin_id${normalizedStatus ? ', status' : ''}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?${normalizedStatus ? ', ?' : ''})`,
+      [safeName, email, phone || null, photoPath, password_hash, license_no || null, location || null, company_name || null, tenant_db, documentType, documentFront, documentBack, req.user?.id || null, ...(normalizedStatus ? [normalizedStatus] : [])]
     );
     const id = result.insertId;
     const [rows] = await pool.query(
-      'SELECT id, full_name, email, phone, photo, license_no, location, company_name, tenant_db, status, created_by_admin_id, last_login_at FROM brokers WHERE id = ? LIMIT 1',
+      'SELECT id, full_name, email, phone, photo, license_no, location, company_name, tenant_db, document_type, document_front, document_back, status, created_by_admin_id, last_login_at FROM brokers WHERE id = ? LIMIT 1',
       [id]
     );
     // Notify super admin - broker created
@@ -179,9 +207,34 @@ export async function updateBroker(req, res) {
       params.push(isNonEmptyString(phone) ? phone : null);
     }
     // photo from multipart
-    if (req.file) {
+    if (req.files) {
+      if (req.files.photo && req.files.photo[0]) {
+        updates.push('photo = ?');
+        params.push(`/${req.files.photo[0].destination.replace(/\\/g, '/').replace(/^public\//, '')}/${req.files.photo[0].filename}`);
+      }
+    } else if (req.file) {
       updates.push('photo = ?');
       params.push(`/profiles/${req.file.originalname}`);
+    }
+    // document uploads
+    if (req.files) {
+      if (req.files.document_front && req.files.document_front[0]) {
+        updates.push('document_front = ?');
+        params.push(`/${req.files.document_front[0].destination.replace(/\\/g, '/').replace(/^public\//, '')}/${req.files.document_front[0].filename}`);
+      }
+      if (req.files.document_back && req.files.document_back[0]) {
+        updates.push('document_back = ?');
+        params.push(`/${req.files.document_back[0].destination.replace(/\\/g, '/').replace(/^public\//, '')}/${req.files.document_back[0].filename}`);
+      }
+    }
+    if (req.body.document_type !== undefined) {
+      if (req.body.document_type && ['aadhaar', 'pan_card', 'driving_license', 'voter_id', 'other'].includes(req.body.document_type)) {
+        updates.push('document_type = ?');
+        params.push(req.body.document_type);
+      } else {
+        updates.push('document_type = ?');
+        params.push(null);
+      }
     }
     if (license_no !== undefined) {
       updates.push('license_no = ?');
@@ -221,7 +274,7 @@ export async function updateBroker(req, res) {
     await pool.query(`UPDATE brokers SET ${updates.join(', ')} WHERE id = ?`, params);
 
     const [rows] = await pool.query(
-      'SELECT id, full_name, email, phone, photo, license_no, location, company_name, tenant_db, created_by_admin_id, last_login_at FROM brokers WHERE id = ? LIMIT 1',
+      'SELECT id, full_name, email, phone, photo, license_no, location, company_name, tenant_db, document_type, document_front, document_back, created_by_admin_id, last_login_at FROM brokers WHERE id = ? LIMIT 1',
       [id]
     );
     if (!rows[0]) return res.status(404).json({ message: 'Not found' });

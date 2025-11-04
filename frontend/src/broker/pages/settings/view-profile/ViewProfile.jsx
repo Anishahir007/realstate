@@ -44,9 +44,63 @@ const ViewProfile = () => {
         <div>{broker?.phone}</div>
         <div className="brokerviewprofile-label">License No</div>
         <div>{broker?.licenseNo || '-'}</div>
+        <div className="brokerviewprofile-label">Document Type</div>
+        <div>{broker?.documentType ? broker.documentType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : '-'}</div>
         <div className="brokerviewprofile-label">Last Login</div>
         <div>{broker?.lastLoginAt ? new Date(broker.lastLoginAt).toLocaleString() : ''}</div>
       </div>
+
+      {(broker?.documentFront || broker?.documentBack) && (
+        <div className="brokerviewprofile-documents">
+          <h3 className="brokerviewprofile-documents-title">Documents</h3>
+          <div className="brokerviewprofile-documents-grid">
+            {broker?.documentFront && (
+              <div className="brokerviewprofile-document-item">
+                <div className="brokerviewprofile-document-label">Document Front</div>
+                <div className="brokerviewprofile-document-image">
+                  {(() => {
+                    const doc = broker.documentFront;
+                    const isHttp = doc.startsWith('http://') || doc.startsWith('https://');
+                    const src = isHttp ? doc : `${broker.apiBase}${doc.startsWith('/') ? doc : `/${doc}`}`;
+                    const isPdf = doc.toLowerCase().endsWith('.pdf');
+                    if (isPdf) {
+                      return (
+                        <a href={src} target="_blank" rel="noopener noreferrer" className="brokerviewprofile-document-link">
+                          <div className="brokerviewprofile-document-pdf-icon">📄</div>
+                          <div className="brokerviewprofile-document-pdf-text">View PDF</div>
+                        </a>
+                      );
+                    }
+                    return <img src={src} alt="Document Front" className="brokerviewprofile-document-img" />;
+                  })()}
+                </div>
+              </div>
+            )}
+            {broker?.documentBack && (
+              <div className="brokerviewprofile-document-item">
+                <div className="brokerviewprofile-document-label">Document Back</div>
+                <div className="brokerviewprofile-document-image">
+                  {(() => {
+                    const doc = broker.documentBack;
+                    const isHttp = doc.startsWith('http://') || doc.startsWith('https://');
+                    const src = isHttp ? doc : `${broker.apiBase}${doc.startsWith('/') ? doc : `/${doc}`}`;
+                    const isPdf = doc.toLowerCase().endsWith('.pdf');
+                    if (isPdf) {
+                      return (
+                        <a href={src} target="_blank" rel="noopener noreferrer" className="brokerviewprofile-document-link">
+                          <div className="brokerviewprofile-document-pdf-icon">📄</div>
+                          <div className="brokerviewprofile-document-pdf-text">View PDF</div>
+                        </a>
+                      );
+                    }
+                    return <img src={src} alt="Document Back" className="brokerviewprofile-document-img" />;
+                  })()}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {isEditOpen && <EditProfileModal onClose={() => setIsEditOpen(false)} />}
       {isPhotoOpen && <UpdatePhotoModal onClose={() => setIsPhotoOpen(false)} />}

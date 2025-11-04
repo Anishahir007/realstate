@@ -57,6 +57,9 @@ export default function SuperAdminBroker() {
     company_name: '',
     status: 'active',
     photo: null,
+    document_type: '',
+    document_front: null,
+    document_back: null,
   });
   const [formEdit, setFormEdit] = useState({
     id: null,
@@ -68,6 +71,9 @@ export default function SuperAdminBroker() {
     company_name: '',
     status: 'active',
     photo: null,
+    document_type: '',
+    document_front: null,
+    document_back: null,
   });
   const [submitting, setSubmitting] = useState(false);
   const [columnMenuOpen, setColumnMenuOpen] = useState(false);
@@ -218,6 +224,9 @@ export default function SuperAdminBroker() {
       fd.append('company_name', formAdd.company_name || '');
       fd.append('status', formAdd.status || 'active');
       if (formAdd.photo) fd.append('photo', formAdd.photo);
+      if (formAdd.document_type) fd.append('document_type', formAdd.document_type);
+      if (formAdd.document_front) fd.append('document_front', formAdd.document_front);
+      if (formAdd.document_back) fd.append('document_back', formAdd.document_back);
       await axios.post(`${apiBase}/api/broker/createbroker`, fd, { headers: { ...headers } });
       setShowAdd(false);
       await refreshList();
@@ -258,7 +267,10 @@ export default function SuperAdminBroker() {
           location: b.location || '', 
           company_name: b.companyName || '', 
           status: b.status || 'active', 
-          photo: null 
+          photo: null,
+          document_type: b.documentType || '',
+          document_front: null,
+          document_back: null
         });
         setShowEdit(true);
       }
@@ -281,6 +293,9 @@ export default function SuperAdminBroker() {
       fd.append('company_name', formEdit.company_name || '');
       fd.append('status', formEdit.status || 'active');
       if (formEdit.photo) fd.append('photo', formEdit.photo);
+      if (formEdit.document_type !== undefined) fd.append('document_type', formEdit.document_type || '');
+      if (formEdit.document_front) fd.append('document_front', formEdit.document_front);
+      if (formEdit.document_back) fd.append('document_back', formEdit.document_back);
       await axios.put(`${apiBase}/api/broker/updatebroker/${formEdit.id}`, fd, { headers: { ...headers } });
       setShowEdit(false);
       await refreshList();
@@ -533,6 +548,25 @@ export default function SuperAdminBroker() {
                 <label>Photo</label>
                 <input type="file" accept="image/*" onChange={(e) => setFormAdd({ ...formAdd, photo: e.target.files?.[0] || null })} />
               </div>
+              <div className="superadminbroker-formrow">
+                <label>Document Type</label>
+                <select value={formAdd.document_type} onChange={(e) => setFormAdd({ ...formAdd, document_type: e.target.value })}>
+                  <option value="">Select Document Type</option>
+                  <option value="aadhaar">Aadhaar</option>
+                  <option value="pan_card">PAN Card</option>
+                  <option value="driving_license">Driving License</option>
+                  <option value="voter_id">Voter ID</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div className="superadminbroker-formrow">
+                <label>Document (Front)</label>
+                <input type="file" accept="image/*,.pdf" onChange={(e) => setFormAdd({ ...formAdd, document_front: e.target.files?.[0] || null })} />
+              </div>
+              <div className="superadminbroker-formrow">
+                <label>Document (Back)</label>
+                <input type="file" accept="image/*,.pdf" onChange={(e) => setFormAdd({ ...formAdd, document_back: e.target.files?.[0] || null })} />
+              </div>
               <div className="superadminbroker-modal-actions">
                 <button type="button" className="btn-light" onClick={() => setShowAdd(false)} disabled={submitting}>Cancel</button>
                 <button type="submit" className="btn-dark" disabled={submitting}>{submitting ? 'Saving...' : 'Save'}</button>
@@ -633,6 +667,25 @@ export default function SuperAdminBroker() {
               <div className="superadminbroker-formrow">
                 <label>Photo</label>
                 <input type="file" accept="image/*" onChange={(e) => setFormEdit({ ...formEdit, photo: e.target.files?.[0] || null })} />
+              </div>
+              <div className="superadminbroker-formrow">
+                <label>Document Type</label>
+                <select value={formEdit.document_type} onChange={(e) => setFormEdit({ ...formEdit, document_type: e.target.value })}>
+                  <option value="">Select Document Type</option>
+                  <option value="aadhaar">Aadhaar</option>
+                  <option value="pan_card">PAN Card</option>
+                  <option value="driving_license">Driving License</option>
+                  <option value="voter_id">Voter ID</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div className="superadminbroker-formrow">
+                <label>Document (Front)</label>
+                <input type="file" accept="image/*,.pdf" onChange={(e) => setFormEdit({ ...formEdit, document_front: e.target.files?.[0] || null })} />
+              </div>
+              <div className="superadminbroker-formrow">
+                <label>Document (Back)</label>
+                <input type="file" accept="image/*,.pdf" onChange={(e) => setFormEdit({ ...formEdit, document_back: e.target.files?.[0] || null })} />
               </div>
               <div className="superadminbroker-modal-actions">
                 <button type="button" className="btn-light" onClick={() => setShowEdit(false)} disabled={submitting}>Cancel</button>

@@ -25,9 +25,17 @@ router.put('/super-admin/profile', requireAuth, requireRole('super_admin'), uplo
 // Broker
 router.post('/broker/signup', signupBroker);
 router.post('/broker/login', loginBroker);
-router.post('/broker', requireAuth, requireRole('super_admin'), createBrokerByAdmin);
+router.post('/broker', requireAuth, requireRole('super_admin'), upload.fields([
+  { name: 'photo', folderPath: 'profiles' },
+  { name: 'document_front', folderPath: 'documents' },
+  { name: 'document_back', folderPath: 'documents' }
+]), createBrokerByAdmin);
 // Broker self profile update (JSON or multipart)
-router.put('/broker/profile', requireAuth, requireRole('broker'), upload.single('photo', 'profiles'), updateBrokerProfile);
+router.put('/broker/profile', requireAuth, requireRole('broker'), upload.fields([
+  { name: 'photo', folderPath: 'profiles' },
+  { name: 'document_front', folderPath: 'documents' },
+  { name: 'document_back', folderPath: 'documents' }
+]), updateBrokerProfile);
 
 // User
 router.post('/user/signup', signupUser);

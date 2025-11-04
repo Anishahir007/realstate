@@ -11,6 +11,19 @@
 .brokerviewprofile-name { font-weight: 700; }
 .brokerviewprofile-email { color: #6b7280; font-size: 13px; }
 
-.brokerviewprofile-grid { display: grid; grid-template-columns: 160px 1fr; gap: 10px 16px; background: #fff; border: 1px solid #eef0f2; border-radius: 12px; padding: 14px; }
+.brokerviewprofile-grid { display: grid; grid-template-columns: 160px 1fr; gap: 10px 16px; background: #fff; border: 1px solid #eef0f2; border-radius: 12px; padding: 14px; margin-bottom: 20px; }
 .brokerviewprofile-label { color: #6b7280; }
+
+/* Documents Section */
+.brokerviewprofile-documents { background: #fff; border: 1px solid #eef0f2; border-radius: 12px; padding: 20px; }
+.brokerviewprofile-documents-title { margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: #203048; }
+.brokerviewprofile-documents-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+.brokerviewprofile-document-item { display: flex; flex-direction: column; gap: 10px; }
+.brokerviewprofile-document-label { font-weight: 600; color: #6b7280; font-size: 14px; }
+.brokerviewprofile-document-image { border: 1px solid #eef0f2; border-radius: 8px; overflow: hidden; background: #f9fafb; min-height: 200px; display: flex; align-items: center; justify-content: center; }
+.brokerviewprofile-document-img { width: 100%; height: auto; max-height: 400px; object-fit: contain; display: block; }
+.brokerviewprofile-document-link { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 40px; text-decoration: none; color: #203048; transition: background 0.2s; width: 100%; min-height: 200px; }
+.brokerviewprofile-document-link:hover { background: #f3f4f6; }
+.brokerviewprofile-document-pdf-icon { font-size: 48px; }
+.brokerviewprofile-document-pdf-text { font-weight: 600; font-size: 14px; }
 

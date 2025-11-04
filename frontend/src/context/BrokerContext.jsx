@@ -52,6 +52,9 @@ export function BrokerProvider({ children }) {
             brokerId: p.id,
             licenseNo: p.licenseNo,
             tenantDb: p.tenantDb,
+            documentType: p.documentType,
+            documentFront: p.documentFront,
+            documentBack: p.documentBack,
             lastLoginAt: p.lastLoginAt,
           }));
         }
@@ -148,6 +151,9 @@ export function BrokerProvider({ children }) {
           brokerId: p.id,
           licenseNo: p.licenseNo,
           tenantDb: p.tenantDb,
+          documentType: p.documentType,
+          documentFront: p.documentFront,
+          documentBack: p.documentBack,
           lastLoginAt: p.lastLoginAt,
         };
         setState(updated);
@@ -179,6 +185,9 @@ export function BrokerProvider({ children }) {
         brokerId: p.id,
         licenseNo: p.licenseNo,
         tenantDb: p.tenantDb,
+        documentType: p.documentType,
+        documentFront: p.documentFront,
+        documentBack: p.documentBack,
         lastLoginAt: p.lastLoginAt,
       };
       setState(updated);
