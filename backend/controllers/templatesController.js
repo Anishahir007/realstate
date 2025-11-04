@@ -108,7 +108,7 @@ function buildSiteContext({ broker, properties, page, nav }) {
   };
 }
 
-async function fetchBrokerAndProperties(tenantDb) {
+async function fetchBrokerAndProperties(tenantDb, req = null) {
   try {
     const tenantPool = await getTenantPool(tenantDb);
     const [rows] = await tenantPool.query(
@@ -119,8 +119,58 @@ async function fetchBrokerAndProperties(tenantDb) {
        ORDER BY p.id DESC
        LIMIT 20`
     );
-    return rows;
-  } catch {
+    
+    // Fetch media for each property
+    const baseUrl = process.env.API_BASE_URL || (req ? (req.protocol + '://' + req.get('host')) : 'http://localhost:8000');
+    const propertiesWithMedia = await Promise.all(rows.map(async (r) => {
+      let image = null;
+      let imageUrl = null;
+      let primaryImage = null;
+      let media = [];
+      
+      try {
+        const [mediaRows] = await tenantPool.query(
+          'SELECT id, file_url, is_primary, category, media_type FROM property_media WHERE property_id = ? ORDER BY is_primary DESC, id ASC',
+          [r.id]
+        );
+        
+        if (mediaRows && mediaRows.length > 0) {
+          media = mediaRows.map(m => {
+            const fileUrl = m.file_url || '';
+            const fullUrl = fileUrl.startsWith('http') ? fileUrl : (fileUrl.startsWith('/') ? `${baseUrl}${fileUrl}` : `${baseUrl}/${fileUrl}`);
+            return {
+              id: m.id,
+              file_url: fullUrl,
+              url: fullUrl,
+              is_primary: Boolean(m.is_primary),
+              category: m.category,
+              media_type: m.media_type
+            };
+          });
+          
+          const primary = mediaRows.find(m => m.is_primary) || mediaRows[0];
+          const fileUrl = primary?.file_url || '';
+          const fullImageUrl = fileUrl.startsWith('http') ? fileUrl : (fileUrl.startsWith('/') ? `${baseUrl}${fileUrl}` : `${baseUrl}/${fileUrl}`);
+          image = fileUrl ? fullImageUrl : null;
+          imageUrl = fileUrl ? fullImageUrl : null;
+          primaryImage = fileUrl ? fullImageUrl : null;
+        }
+      } catch (mediaErr) {
+        console.error(`[fetchBrokerAndProperties] Error fetching media for property ${r.id}:`, mediaErr);
+      }
+      
+      return {
+        ...r,
+        image,
+        image_url: imageUrl,
+        primary_image: primaryImage,
+        media
+      };
+    }));
+    
+    return propertiesWithMedia;
+  } catch (err) {
+    console.error('[fetchBrokerAndProperties] Error:', err);
     return [];
   }
 }
@@ -138,7 +188,7 @@ export async function previewTemplate(req, res) {
     if (req.user?.role === 'broker') {
       broker = { id: req.user.id, full_name: req.user.name || req.user.full_name || 'Broker', email: req.user.email, tenant_db: req.user.tenant_db };
     }
-    const properties = tenantDb ? await fetchBrokerAndProperties(tenantDb) : [];
+    const properties = tenantDb ? await fetchBrokerAndProperties(tenantDb, req) : [];
     const nav = { home: '?page=home', properties: '?page=properties', about: '?page=about', contact: '?page=contact' };
     const context = buildSiteContext({ broker, properties, page: view, nav });
     const html = await ejs.renderFile(viewPath, context, { async: true, root: getTemplatesRoot() });
@@ -157,7 +207,7 @@ export async function getPreviewContext(req, res) {
     const tenantDb = user?.tenant_db || '';
     // basic broker object
     const broker = user ? { id: user.id, full_name: user.name || user.full_name || 'Broker', email: user.email, tenant_db: user.tenant_db } : null;
-    const properties = tenantDb ? await fetchBrokerAndProperties(tenantDb) : [];
+    const properties = tenantDb ? await fetchBrokerAndProperties(tenantDb, req) : [];
     return res.json({ site: { title: broker?.full_name ? `${broker.full_name} Real Estate` : 'Real Estate', broker, template }, properties });
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';
@@ -214,7 +264,7 @@ export async function serveSiteBySlug(req, res) {
       if (row) {
         broker = { id: row.id, full_name: row.full_name || broker.full_name, email: row.email, phone: row.phone, photo: row.photo, tenant_db: row.tenant_db };
         if (row.tenant_db) {
-          properties = await fetchBrokerAndProperties(row.tenant_db);
+          properties = await fetchBrokerAndProperties(row.tenant_db, req);
         }
       }
     } catch {}
@@ -242,7 +292,7 @@ export async function getSiteContext(req, res) {
       if (row) {
         broker = { id: row.id, full_name: row.full_name || broker.full_name, email: row.email, phone: row.phone, photo: row.photo, tenant_db: row.tenant_db };
         if (row.tenant_db) {
-          properties = await fetchBrokerAndProperties(row.tenant_db);
+          properties = await fetchBrokerAndProperties(row.tenant_db, req);
         }
       }
     } catch {}
@@ -268,7 +318,7 @@ export async function getDomainSiteContext(req, res) {
       if (row) {
         broker = { id: row.id, full_name: row.full_name || broker.full_name, email: row.email, phone: row.phone, photo: row.photo, tenant_db: row.tenant_db };
         if (row.tenant_db) {
-          properties = await fetchBrokerAndProperties(row.tenant_db);
+          properties = await fetchBrokerAndProperties(row.tenant_db, req);
         }
       }
     } catch {}
