@@ -34,6 +34,43 @@ export async function listProperties(req, res) {
     const status = (req.query.status || '').toString();
     if (status) { where.push('p.status = ?'); params.push(status); }
 
+    // Date range filtering
+    const from = (req.query.from || '').toString().trim();
+    const to = (req.query.to || '').toString().trim();
+    const month = (req.query.month || '').toString().trim();
+    const year = (req.query.year || '').toString().trim();
+    
+    if (from) {
+      where.push('DATE(p.created_at) >= ?');
+      params.push(from);
+    }
+    if (to) {
+      where.push('DATE(p.created_at) <= ?');
+      params.push(to);
+    }
+    if (month && !from && !to) {
+      // Format: YYYY-MM
+      const [yearPart, monthPart] = month.split('-');
+      if (yearPart && monthPart) {
+        const yearNum = parseInt(yearPart, 10);
+        const monthNum = parseInt(monthPart, 10);
+        if (Number.isFinite(yearNum) && Number.isFinite(monthNum) && monthNum >= 1 && monthNum <= 12) {
+          const startDate = `${yearNum}-${String(monthNum).padStart(2, '0')}-01`;
+          // Get last day of month
+          const lastDay = new Date(yearNum, monthNum, 0).getDate();
+          const endDate = `${yearNum}-${String(monthNum).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+          where.push('DATE(p.created_at) >= ? AND DATE(p.created_at) <= ?');
+          params.push(startDate, endDate);
+        }
+      }
+    }
+    if (year && !month && !from && !to) {
+      const startDate = `${year}-01-01`;
+      const endDate = `${year}-12-31`;
+      where.push('DATE(p.created_at) >= ? AND DATE(p.created_at) <= ?');
+      params.push(startDate, endDate);
+    }
+
     const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
     const tenantPool = await getTenantPool(tenantDb);
@@ -769,24 +806,108 @@ export async function getBrokerPropertyStats(req, res) {
     
     const tenantPool = await getTenantPool(tenantDb);
     
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    const oneDayAgo = new Date();
-    oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+    // Date filtering parameters
+    const from = (req.query.from || '').toString().trim();
+    const to = (req.query.to || '').toString().trim();
+    const month = (req.query.month || '').toString().trim();
+    const year = (req.query.year || '').toString().trim();
     
-    const oneWeekAgoStr = oneWeekAgo.toISOString().slice(0, 19).replace('T', ' ');
-    const oneDayAgoStr = oneDayAgo.toISOString().slice(0, 19).replace('T', ' ');
+    // Build date filter conditions
+    const dateWhere = [];
+    const dateParams = [];
     
-    const [[total]] = await tenantPool.query('SELECT COUNT(*) as count FROM properties');
-    const [[published]] = await tenantPool.query('SELECT COUNT(*) as count FROM properties WHERE (status != ? AND status != ?) OR status IS NULL', ['inactive', 'sold']);
-    const [[newWeek]] = await tenantPool.query('SELECT COUNT(*) as count FROM properties WHERE created_at >= ?', [oneWeekAgoStr]);
-    const [[highDemand]] = await tenantPool.query('SELECT COUNT(*) as count FROM properties WHERE updated_at >= ? AND (status = ? OR status IS NULL)', [oneDayAgoStr, 'active']);
+    if (from) {
+      dateWhere.push('DATE(p.created_at) >= ?');
+      dateParams.push(from);
+    }
+    if (to) {
+      dateWhere.push('DATE(p.created_at) <= ?');
+      dateParams.push(to);
+    }
+    if (month && !from && !to) {
+      const [yearPart, monthPart] = month.split('-');
+      if (yearPart && monthPart) {
+        const yearNum = parseInt(yearPart, 10);
+        const monthNum = parseInt(monthPart, 10);
+        if (Number.isFinite(yearNum) && Number.isFinite(monthNum) && monthNum >= 1 && monthNum <= 12) {
+          const startDate = `${yearNum}-${String(monthNum).padStart(2, '0')}-01`;
+          const lastDay = new Date(yearNum, monthNum, 0).getDate();
+          const endDate = `${yearNum}-${String(monthNum).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+          dateWhere.push('DATE(p.created_at) >= ? AND DATE(p.created_at) <= ?');
+          dateParams.push(startDate, endDate);
+        }
+      }
+    }
+    if (year && !month && !from && !to) {
+      const startDate = `${year}-01-01`;
+      const endDate = `${year}-12-31`;
+      dateWhere.push('DATE(p.created_at) >= ? AND DATE(p.created_at) <= ?');
+      dateParams.push(startDate, endDate);
+    }
     
-    // Active leads (updated in last 24 hours)
+    const dateFilterSql = dateWhere.length ? ` AND ${dateWhere.join(' AND ')}` : '';
+    
+    // Calculate date ranges for "New This Week" and "High Demand"
+    // Always use last 7 days and last 24 hours, but filter by date range if provided
+    const newWeekStartDate = new Date();
+    newWeekStartDate.setDate(newWeekStartDate.getDate() - 7);
+    const newWeekStartStr = newWeekStartDate.toISOString().slice(0, 19).replace('T', ' ');
+    
+    const highDemandStartDate = new Date();
+    highDemandStartDate.setDate(highDemandStartDate.getDate() - 1);
+    const highDemandStartStr = highDemandStartDate.toISOString().slice(0, 19).replace('T', ' ');
+    
+    // Build WHERE clauses - fix table alias references
+    const dateWhereFixed = dateWhere.map(w => w.replace(/p\.created_at/g, 'created_at').replace(/p\.updated_at/g, 'updated_at'));
+    
+    // Total properties: filter by date range if provided
+    const totalWhere = dateWhereFixed.length ? `WHERE ${dateWhereFixed.join(' AND ')}` : '';
+    
+    // Published: filter by status AND date range if provided
+    const publishedWhere = dateWhereFixed.length 
+      ? `WHERE ((status != ? AND status != ?) OR status IS NULL) AND ${dateWhereFixed.join(' AND ')}`
+      : `WHERE (status != ? AND status != ?) OR status IS NULL`;
+    const publishedParams = dateWhereFixed.length ? ['inactive', 'sold', ...dateParams] : ['inactive', 'sold'];
+    
+    // New This Week: created in last 7 days AND within date filter if provided
+    // Convert date filter to use created_at instead of generic p.created_at
+    const newWeekDateFilter = dateWhereFixed.length
+      ? dateWhereFixed.map(c => c.replace(/updated_at/g, 'created_at')).join(' AND ')
+      : '';
+    const newWeekWhere = newWeekDateFilter
+      ? `WHERE created_at >= ? AND ${newWeekDateFilter}`
+      : 'WHERE created_at >= ?';
+    const newWeekParams = newWeekDateFilter ? [newWeekStartStr, ...dateParams] : [newWeekStartStr];
+    
+    // High Demand: updated in last 24 hours AND within date filter if provided
+    // Convert date filter to use updated_at
+    const highDemandDateFilter = dateWhereFixed.length
+      ? dateWhereFixed.map(c => c.replace(/created_at/g, 'updated_at')).join(' AND ')
+      : '';
+    const highDemandWhere = highDemandDateFilter
+      ? `WHERE updated_at >= ? AND (status = ? OR status IS NULL) AND ${highDemandDateFilter}`
+      : 'WHERE updated_at >= ? AND (status = ? OR status IS NULL)';
+    const highDemandParams = highDemandDateFilter ? [highDemandStartStr, 'active', ...dateParams] : [highDemandStartStr, 'active'];
+    
+    // Active Leads: updated in last 24 hours AND within date filter if provided
+    const leadsDateFilter = dateWhereFixed.length
+      ? dateWhereFixed.map(c => c.replace(/created_at/g, 'updated_at')).join(' AND ')
+      : '';
+    const leadsWhere = leadsDateFilter
+      ? `WHERE updated_at >= ? AND ${leadsDateFilter}`
+      : 'WHERE updated_at >= ?';
+    const leadsParams = leadsDateFilter ? [highDemandStartStr, ...dateParams] : [highDemandStartStr];
+    
+    const [[total]] = await tenantPool.query(`SELECT COUNT(*) as count FROM properties ${totalWhere}`, dateParams);
+    const [[published]] = await tenantPool.query(`SELECT COUNT(*) as count FROM properties ${publishedWhere}`, publishedParams);
+    const [[newWeek]] = await tenantPool.query(`SELECT COUNT(*) as count FROM properties ${newWeekWhere}`, newWeekParams);
+    const [[highDemand]] = await tenantPool.query(`SELECT COUNT(*) as count FROM properties ${highDemandWhere}`, highDemandParams);
+    
+    // Active leads (updated in last 24 hours or within filter range)
     let activeLeads = 0;
     try {
       await ensureTenantLeadsTableExists(tenantPool);
-      const [[leads]] = await tenantPool.query('SELECT COUNT(*) as count FROM leads WHERE updated_at >= ?', [oneDayAgoStr]);
+      const [[leads]] = await tenantPool.query(`SELECT COUNT(*) as count FROM leads ${leadsWhere}`, leadsParams);
       activeLeads = Number(leads?.count || 0);
     } catch (e) {
       // If leads table doesn't exist, return 0
