@@ -75,7 +75,7 @@ const propertyFieldConfig = {
     showAge: true,
     showAdditionalRooms: true,
     showPropertyTags: true,
-    mandatory: ['built_up_area', 'expected_price', 'num_bedrooms', 'sale_type', 'no_of_floors', 'availability', 'property_on_floor', 'rera_status'],
+    mandatory: ['built_up_area', 'expected_price', 'sale_type', 'no_of_floors', 'availability', 'property_on_floor', 'rera_status'],
     conditionalMandatory: {
       possession_by: (f) => f.availability !== 'ready_to_move',
       rera_number: (f) => f.rera_status === 'registered',
@@ -95,7 +95,7 @@ const propertyFieldConfig = {
     showAge: true,
     showAdditionalRooms: true,
     showPropertyTags: true,
-    mandatory: ['built_up_area', 'expected_price', 'num_bedrooms', 'sale_type', 'no_of_floors', 'availability', 'property_on_floor', 'rera_status'],
+    mandatory: ['built_up_area', 'expected_price', 'sale_type', 'no_of_floors', 'availability', 'property_on_floor', 'rera_status'],
     conditionalMandatory: {
       possession_by: (f) => f.availability !== 'ready_to_move',
       rera_number: (f) => f.rera_status === 'registered',
@@ -115,7 +115,7 @@ const propertyFieldConfig = {
     showAge: true,
     showAdditionalRooms: true,
     showPropertyTags: true,
-    mandatory: ['built_up_area', 'expected_price', 'num_bedrooms', 'sale_type', 'no_of_floors', 'availability', 'property_on_floor', 'rera_status'],
+    mandatory: ['built_up_area', 'expected_price', 'sale_type', 'no_of_floors', 'availability', 'property_on_floor', 'rera_status'],
     conditionalMandatory: {
       possession_by: (f) => f.availability !== 'ready_to_move',
       rera_number: (f) => f.rera_status === 'registered',
@@ -135,7 +135,7 @@ const propertyFieldConfig = {
     showAge: true,
     showAdditionalRooms: true,
     showPropertyTags: true,
-    mandatory: ['built_up_area', 'expected_price', 'num_bedrooms', 'sale_type', 'no_of_floors', 'availability', 'property_on_floor', 'rera_status'],
+    mandatory: ['built_up_area', 'expected_price', 'sale_type', 'no_of_floors', 'availability', 'property_on_floor', 'rera_status'],
     conditionalMandatory: {
       possession_by: (f) => f.availability !== 'ready_to_move',
       rera_number: (f) => f.rera_status === 'registered',
@@ -155,7 +155,7 @@ const propertyFieldConfig = {
     showAge: true,
     showAdditionalRooms: true,
     showPropertyTags: true,
-    mandatory: ['built_up_area', 'expected_price', 'num_bedrooms', 'sale_type', 'no_of_floors', 'availability', 'property_on_floor', 'rera_status'],
+    mandatory: ['built_up_area', 'expected_price', 'sale_type', 'no_of_floors', 'availability', 'property_on_floor', 'rera_status'],
     conditionalMandatory: {
       possession_by: (f) => f.availability !== 'ready_to_move',
       rera_number: (f) => f.rera_status === 'registered',
@@ -175,7 +175,7 @@ const propertyFieldConfig = {
     showAge: true,
     showAdditionalRooms: true,
     showPropertyTags: true,
-    mandatory: ['built_up_area', 'expected_price', 'num_bedrooms', 'sale_type', 'no_of_floors', 'availability', 'property_on_floor', 'rera_status'],
+    mandatory: ['built_up_area', 'expected_price', 'sale_type', 'no_of_floors', 'availability', 'property_on_floor', 'rera_status'],
     conditionalMandatory: {
       possession_by: (f) => f.availability !== 'ready_to_move',
       rera_number: (f) => f.rera_status === 'registered',
@@ -195,7 +195,7 @@ const propertyFieldConfig = {
     showAge: true,
     showAdditionalRooms: true,
     showPropertyTags: true,
-    mandatory: ['built_up_area', 'expected_price', 'num_bedrooms', 'sale_type', 'no_of_floors', 'availability', 'property_on_floor', 'rera_status'],
+    mandatory: ['built_up_area', 'expected_price', 'sale_type', 'no_of_floors', 'availability', 'property_on_floor', 'rera_status'],
     conditionalMandatory: {
       possession_by: (f) => f.availability !== 'ready_to_move',
       rera_number: (f) => f.rera_status === 'registered',
@@ -289,7 +289,7 @@ const propertyFieldConfig = {
     showAge: true,
     showAdditionalRooms: true,
     showPropertyTags: true,
-    mandatory: ['built_up_area', 'expected_price', 'num_bedrooms', 'sale_type', 'no_of_floors', 'availability', 'property_on_floor', 'rera_status'],
+    mandatory: ['built_up_area', 'expected_price', 'sale_type', 'no_of_floors', 'availability', 'property_on_floor', 'rera_status'],
     conditionalMandatory: {
       possession_by: (f) => f.availability !== 'ready_to_move',
       rera_number: (f) => f.rera_status === 'registered',
@@ -309,7 +309,7 @@ const propertyFieldConfig = {
     showAge: true,
     showAdditionalRooms: true,
     showPropertyTags: true,
-    mandatory: ['built_up_area', 'expected_price', 'num_bedrooms', 'sale_type', 'no_of_floors', 'availability', 'property_on_floor', 'rera_status'],
+    mandatory: ['built_up_area', 'expected_price', 'sale_type', 'no_of_floors', 'availability', 'property_on_floor', 'rera_status'],
     conditionalMandatory: {
       possession_by: (f) => f.availability !== 'ready_to_move',
       rera_number: (f) => f.rera_status === 'registered',
@@ -838,8 +838,23 @@ export default function NewProperty() {
     
     let propertyId = null;
     try {
+      // Clean features - convert empty strings to null for optional fields
+      const cleanedFeatures = { ...features };
+      // Optional fields that can be empty
+      const optionalFields = ['carpet_area', 'carpet_area_unit', 'super_area', 'super_area_unit', 
+                              'num_bedrooms', 'num_bathrooms', 'num_balconies', 
+                              'booking_amount', 'maintenance_charges', 'possession_by', 
+                              'property_on_floor', 'furnishing_status', 'facing', 'flooring_type',
+                              'age_years', 'rera_number', 'additional_rooms', 'property_tags'];
+      
+      for (const field of optionalFields) {
+        if (cleanedFeatures[field] === '' || cleanedFeatures[field] === undefined) {
+          cleanedFeatures[field] = null;
+        }
+      }
+      
       // Single API to create property and all related data
-      const payload = { basic, features, highlights, amenities, nearby_landmarks: nearby };
+      const payload = { basic, features: cleanedFeatures, highlights, amenities, nearby_landmarks: nearby };
       const { data: created } = await axios.post(`${apiBase}/api/properties/createproperty/full`, payload, {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
       });
