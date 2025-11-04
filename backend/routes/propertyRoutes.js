@@ -18,6 +18,8 @@ import {
   setPrimaryPropertyMedia,
   listAllBrokerPropertiesAdmin,
   getBrokerPropertyAdmin,
+  getSuperAdminPropertyStats,
+  getBrokerPropertyStats,
 } from '../controllers/propertyController.js';
 
 const router = Router();
@@ -47,6 +49,10 @@ router.post('/:id/media/:mediaId/primary', requireAuth, requireRole('broker'), s
 // Super admin cross-tenant
 router.get('/admin/all', requireAuth, requireRole('super_admin'), listAllBrokerPropertiesAdmin);
 router.get('/admin/:brokerId/:id', requireAuth, requireRole('super_admin'), getBrokerPropertyAdmin);
+router.get('/admin/stats', requireAuth, requireRole('super_admin'), getSuperAdminPropertyStats);
+
+// Broker stats
+router.get('/broker/stats', requireAuth, requireRole('broker'), getBrokerPropertyStats);
 
 export default router;
 

@@ -72,6 +72,13 @@ export default function SuperAdminProperties() {
   const [columnFilters, setColumnFilters] = useState({});
   const [openFilterMenu, setOpenFilterMenu] = useState(null);
   const [displayLimit, setDisplayLimit] = useState(10);
+  const [stats, setStats] = useState({
+    totalProperties: 0,
+    publishedProperties: 0,
+    highDemandProperties: 0,
+    newThisWeek: 0,
+    activeLeads: 0,
+  });
   const headers = useMemo(() => ({ Authorization: token ? `Bearer ${token}` : '' }), [token]);
   const columnButtonRef = useRef(null);
   const columnMenuRef = useRef(null);
@@ -96,6 +103,23 @@ export default function SuperAdminProperties() {
       }
     }
     load();
+    return () => { cancelled = true; };
+  }, [apiBase, headers, token]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadStats() {
+      if (!token) return;
+      try {
+        const { data } = await axios.get(`${apiBase}/api/properties/admin/stats`, { headers });
+        if (!cancelled && data?.data) {
+          setStats(data.data);
+        }
+      } catch (e) {
+        // Ignore stats errors
+      }
+    }
+    loadStats();
     return () => { cancelled = true; };
   }, [apiBase, headers, token]);
 
@@ -336,6 +360,60 @@ export default function SuperAdminProperties() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="superadminbrokerproperties-stats">
+        <div className="superadminbrokerproperties-stat-card">
+          <div className="superadminbrokerproperties-stat-content">
+            <div className="superadminbrokerproperties-stat-title">Total Properties</div>
+            <div className="superadminbrokerproperties-stat-value">{stats.totalProperties}</div>
+            <div className="superadminbrokerproperties-stat-subtitle">+{stats.newThisWeek} new this week</div>
+          </div>
+          <div className="superadminbrokerproperties-stat-icon" style={{ background: '#fef3c7', color: '#f59e0b' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              <polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
+          </div>
+        </div>
+        <div className="superadminbrokerproperties-stat-card">
+          <div className="superadminbrokerproperties-stat-content">
+            <div className="superadminbrokerproperties-stat-title">High Demand property</div>
+            <div className="superadminbrokerproperties-stat-value">{stats.highDemandProperties}</div>
+            <div className="superadminbrokerproperties-stat-subtitle">Most viewed within 24 hours</div>
+          </div>
+          <div className="superadminbrokerproperties-stat-icon" style={{ background: '#d1fae5', color: '#10b981' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+              <polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
+          </div>
+        </div>
+        <div className="superadminbrokerproperties-stat-card">
+          <div className="superadminbrokerproperties-stat-content">
+            <div className="superadminbrokerproperties-stat-title">Published</div>
+            <div className="superadminbrokerproperties-stat-value">{stats.publishedProperties}</div>
+            <div className="superadminbrokerproperties-stat-subtitle">All active and published properties</div>
+          </div>
+          <div className="superadminbrokerproperties-stat-icon" style={{ background: '#dbeafe', color: '#3b82f6' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+            </svg>
+          </div>
+        </div>
+        <div className="superadminbrokerproperties-stat-card">
+          <div className="superadminbrokerproperties-stat-content">
+            <div className="superadminbrokerproperties-stat-title">Active Leads</div>
+            <div className="superadminbrokerproperties-stat-value">{stats.activeLeads}</div>
+            <div className="superadminbrokerproperties-stat-subtitle">Leads from last 24 hours</div>
+          </div>
+          <div className="superadminbrokerproperties-stat-icon" style={{ background: '#e9d5ff', color: '#8b5cf6' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+            </svg>
           </div>
         </div>
       </div>

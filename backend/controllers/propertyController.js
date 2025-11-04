@@ -1,5 +1,5 @@
 import pool from '../config/database.js';
-import { getTenantPool } from '../utils/tenant.js';
+import { getTenantPool, ensureTenantLeadsTableExists } from '../utils/tenant.js';
 import { notifySuperAdmin, notifyBroker } from '../utils/notifications.js';
 
 function getTenantDb(req) {
@@ -684,6 +684,121 @@ export async function getBrokerPropertyAdmin(req, res) {
         amenities: amenities?.[0]?.amenities || [],
         nearby_landmarks: landmarks?.[0]?.nearby_landmarks || [],
         brokerName: br.full_name,
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ message: 'Server error' });
+  }
+}
+
+// Super Admin: Property statistics
+export async function getSuperAdminPropertyStats(req, res) {
+  try {
+    const [brokers] = await pool.query('SELECT id, tenant_db FROM brokers WHERE tenant_db IS NOT NULL');
+    let totalProperties = 0;
+    let publishedProperties = 0;
+    let highDemandProperties = 0;
+    let newThisWeek = 0;
+    let activeLeads = 0;
+    
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const oneDayAgo = new Date();
+    oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+    
+    const oneWeekAgoStr = oneWeekAgo.toISOString().slice(0, 19).replace('T', ' ');
+    const oneDayAgoStr = oneDayAgo.toISOString().slice(0, 19).replace('T', ' ');
+    
+    // Main leads (updated in last 24 hours)
+    try {
+      const [[mainLeads]] = await pool.query('SELECT COUNT(*) as count FROM leads WHERE updated_at >= ?', [oneDayAgoStr]);
+      activeLeads += Number(mainLeads?.count || 0);
+    } catch (e) {
+      // Ignore if leads table doesn't exist
+    }
+    
+    for (const broker of brokers) {
+      if (!broker.tenant_db) continue;
+      try {
+        const tenantPool = await getTenantPool(broker.tenant_db);
+        const [[total]] = await tenantPool.query('SELECT COUNT(*) as count FROM properties');
+        totalProperties += Number(total?.count || 0);
+        
+        const [[published]] = await tenantPool.query('SELECT COUNT(*) as count FROM properties WHERE (status != ? AND status != ?) OR status IS NULL', ['inactive', 'sold']);
+        publishedProperties += Number(published?.count || 0);
+        
+        const [[newWeek]] = await tenantPool.query('SELECT COUNT(*) as count FROM properties WHERE created_at >= ?', [oneWeekAgoStr]);
+        newThisWeek += Number(newWeek?.count || 0);
+        
+        // High demand: properties updated in last 24 hours (most active)
+        const [[highDemand]] = await tenantPool.query('SELECT COUNT(*) as count FROM properties WHERE updated_at >= ? AND (status = ? OR status IS NULL)', [oneDayAgoStr, 'active']);
+        highDemandProperties += Number(highDemand?.count || 0);
+        
+        // Broker tenant leads (updated in last 24 hours)
+        try {
+          await ensureTenantLeadsTableExists(tenantPool);
+          const [[leads]] = await tenantPool.query('SELECT COUNT(*) as count FROM leads WHERE updated_at >= ?', [oneDayAgoStr]);
+          activeLeads += Number(leads?.count || 0);
+        } catch (e) {
+          // Ignore if leads table doesn't exist
+        }
+      } catch (e) {
+        // Ignore tenant errors
+      }
+    }
+    
+    return res.json({
+      data: {
+        totalProperties,
+        publishedProperties,
+        highDemandProperties,
+        newThisWeek,
+        activeLeads,
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ message: 'Server error' });
+  }
+}
+
+// Broker: Property statistics
+export async function getBrokerPropertyStats(req, res) {
+  try {
+    const tenantDb = req.user?.tenant_db;
+    if (!tenantDb) return res.status(400).json({ message: 'Missing tenant' });
+    
+    const tenantPool = await getTenantPool(tenantDb);
+    
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const oneDayAgo = new Date();
+    oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+    
+    const oneWeekAgoStr = oneWeekAgo.toISOString().slice(0, 19).replace('T', ' ');
+    const oneDayAgoStr = oneDayAgo.toISOString().slice(0, 19).replace('T', ' ');
+    
+    const [[total]] = await tenantPool.query('SELECT COUNT(*) as count FROM properties');
+    const [[published]] = await tenantPool.query('SELECT COUNT(*) as count FROM properties WHERE (status != ? AND status != ?) OR status IS NULL', ['inactive', 'sold']);
+    const [[newWeek]] = await tenantPool.query('SELECT COUNT(*) as count FROM properties WHERE created_at >= ?', [oneWeekAgoStr]);
+    const [[highDemand]] = await tenantPool.query('SELECT COUNT(*) as count FROM properties WHERE updated_at >= ? AND (status = ? OR status IS NULL)', [oneDayAgoStr, 'active']);
+    
+    // Active leads (updated in last 24 hours)
+    let activeLeads = 0;
+    try {
+      await ensureTenantLeadsTableExists(tenantPool);
+      const [[leads]] = await tenantPool.query('SELECT COUNT(*) as count FROM leads WHERE updated_at >= ?', [oneDayAgoStr]);
+      activeLeads = Number(leads?.count || 0);
+    } catch (e) {
+      // If leads table doesn't exist, return 0
+    }
+    
+    return res.json({
+      data: {
+        totalProperties: Number(total?.count || 0),
+        publishedProperties: Number(published?.count || 0),
+        highDemandProperties: Number(highDemand?.count || 0),
+        newThisWeek: Number(newWeek?.count || 0),
+        activeLeads,
       }
     });
   } catch (err) {
