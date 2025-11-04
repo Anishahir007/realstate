@@ -1,7 +1,7 @@
 import pool from '../config/database.js';
 import { getTenantPool, ensureTenantLeadsTableExists } from '../utils/tenant.js';
 import { isNonEmptyString, validateEmail } from '../utils/validation.js';
-import { notifySuperAdmin } from '../utils/notifications.js';
+import { notifySuperAdmin, notifyBroker } from '../utils/notifications.js';
 
 async function getTenantLeadColumns(tenantPool, dbName) {
   const [rows] = await tenantPool.query(
@@ -193,6 +193,19 @@ export async function createBrokerLead(req, res) {
       actorBrokerId: req.user?.id || null,
       actorBrokerEmail: req.user?.email || null,
     });
+    
+    // Notify broker
+    try {
+      await notifyBroker({
+        tenantDb,
+        type: 'lead_created',
+        title: 'New Lead Created',
+        message: `New lead "${full_name}" (${email}) has been added to your CRM`,
+      });
+    } catch (notifyErr) {
+      // Non-blocking
+    }
+    
     return res.status(201).json({ id: result.insertId });
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -258,6 +271,19 @@ export async function updateBrokerLead(req, res) {
       actorBrokerId: req.user?.id || null,
       actorBrokerEmail: req.user?.email || null,
     });
+    
+    // Notify broker
+    try {
+      await notifyBroker({
+        tenantDb,
+        type: 'lead_updated',
+        title: 'Lead Updated',
+        message: `Lead #${id} has been updated successfully`,
+      });
+    } catch (notifyErr) {
+      // Non-blocking
+    }
+    
     return res.json({ ok: true });
   } catch (err) {
     // eslint-disable-next-line no-console

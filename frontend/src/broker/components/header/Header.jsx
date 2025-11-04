@@ -4,6 +4,7 @@ import './header.css';
 import { useBroker } from '../../../context/BrokerContext.jsx';
 import { useNavigate } from 'react-router-dom';
 import { FiSearch, FiChevronDown, FiX, FiHome, FiBriefcase } from 'react-icons/fi';
+import Notification from '../notification/Notification.jsx';
 
 const BrokerPanelHeader = () => {
   const broker = useBroker();
@@ -199,6 +200,8 @@ const BrokerPanelHeader = () => {
         </div>
       </div>
       <div className="brokerpanelheader-right">
+        <Notification />
+
         <div className="brokerpanelheader-profile" onClick={toggleMenu} ref={menuRef}>
           {(() => {
             const p = broker?.photo;

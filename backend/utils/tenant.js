@@ -191,6 +191,20 @@ export async function createBrokerDatabaseIfNotExists(dbName) {
           KEY idx_prop_inquiries_property (property_id),
           KEY idx_prop_inquiries_created (created_at),
           CONSTRAINT fk_prop_inquiries_property FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+        // Broker notifications
+        `CREATE TABLE IF NOT EXISTS \`broker_notifications\` (
+          id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+          type VARCHAR(100) NOT NULL,
+          title VARCHAR(255) NOT NULL,
+          message TEXT NULL,
+          is_read TINYINT(1) NOT NULL DEFAULT 0,
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          read_at TIMESTAMP NULL,
+          PRIMARY KEY (id),
+          KEY idx_broker_notifications_is_read (is_read),
+          KEY idx_broker_notifications_created_at (created_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
       ];
 

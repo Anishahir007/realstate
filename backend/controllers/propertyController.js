@@ -1,6 +1,6 @@
 import pool from '../config/database.js';
 import { getTenantPool } from '../utils/tenant.js';
-import { notifySuperAdmin } from '../utils/notifications.js';
+import { notifySuperAdmin, notifyBroker } from '../utils/notifications.js';
 
 function getTenantDb(req) {
   const fromUser = req.user && req.user.tenant_db ? req.user.tenant_db : null;
@@ -144,6 +144,18 @@ export async function createProperty(req, res) {
       } catch (notifyErr) {
         // Non-blocking
       }
+      
+      // Notify broker
+      try {
+        await notifyBroker({
+          tenantDb,
+          type: 'property_created',
+          title: 'Property Created Successfully',
+          message: `Your property "${body.title || 'Untitled Property'}" has been created successfully in ${body.city || ''}, ${body.state || ''}`,
+        });
+      } catch (notifyErr) {
+        // Non-blocking
+      }
       return res.status(201).json({ id: newId });
     } catch (txErr) {
       await conn.rollback();
@@ -197,6 +209,20 @@ export async function updateProperty(req, res) {
         actorBrokerId: brokerId,
         actorBrokerName: brokerName,
         actorBrokerEmail: brokerEmail,
+      });
+    } catch (notifyErr) {
+      // Non-blocking
+    }
+    
+    // Notify broker
+    try {
+      const [propRows] = await tenantPool.query('SELECT title, city, state FROM properties WHERE id = ? LIMIT 1', [id]);
+      const prop = propRows?.[0];
+      await notifyBroker({
+        tenantDb,
+        type: 'property_updated',
+        title: 'Property Updated',
+        message: `Property "${prop?.title || `#${id}`}" has been updated successfully`,
       });
     } catch (notifyErr) {
       // Non-blocking
@@ -515,6 +541,18 @@ export async function deleteProperty(req, res) {
         actorBrokerId: brokerId,
         actorBrokerName: brokerName,
         actorBrokerEmail: brokerEmail,
+      });
+    } catch (notifyErr) {
+      // Non-blocking
+    }
+    
+    // Notify broker
+    try {
+      await notifyBroker({
+        tenantDb,
+        type: 'property_deleted',
+        title: 'Property Deactivated',
+        message: `Property "${propTitle}" has been deactivated`,
       });
     } catch (notifyErr) {
       // Non-blocking
