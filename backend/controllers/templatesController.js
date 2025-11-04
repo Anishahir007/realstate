@@ -112,8 +112,13 @@ async function fetchBrokerAndProperties(tenantDb, req = null) {
   try {
     const tenantPool = await getTenantPool(tenantDb);
     const [rows] = await tenantPool.query(
-      `SELECT p.id, p.title, p.city, p.state, p.locality, p.address, p.property_type, p.building_type,
-              pf.expected_price, pf.built_up_area, pf.area_unit, p.created_at
+      `SELECT p.id, p.title, p.city, p.state, p.locality, p.sub_locality, p.address, p.property_type, p.building_type, p.property_for, p.status,
+              p.description, p.created_at,
+              pf.expected_price, pf.built_up_area, pf.area_unit, pf.carpet_area, pf.carpet_area_unit,
+              pf.super_area, pf.super_area_unit, pf.num_bedrooms, pf.num_bathrooms,
+              pf.sale_type, pf.availability, pf.approving_authority, pf.ownership, pf.rera_status, pf.rera_number,
+              pf.no_of_floors, pf.property_on_floor, pf.furnishing_status, pf.facing, pf.flooring_type, pf.age_years,
+              pf.booking_amount, pf.maintenance_charges, pf.possession_by
        FROM properties p
        LEFT JOIN property_features pf ON pf.property_id = p.id
        ORDER BY p.id DESC
@@ -159,12 +164,174 @@ async function fetchBrokerAndProperties(tenantDb, req = null) {
         console.error(`[fetchBrokerAndProperties] Error fetching media for property ${r.id}:`, mediaErr);
       }
       
+      // Fetch amenities, highlights, and nearby landmarks
+      let amenities = [];
+      let highlights = [];
+      let nearby_landmarks = [];
+      let additional_rooms = null;
+      
+      try {
+        const [highlightsRows] = await tenantPool.query('SELECT highlights FROM property_highlights WHERE property_id = ? LIMIT 1', [r.id]);
+        if (highlightsRows && highlightsRows[0] && highlightsRows[0].highlights) {
+          try {
+            highlights = Array.isArray(highlightsRows[0].highlights) 
+              ? highlightsRows[0].highlights 
+              : JSON.parse(highlightsRows[0].highlights);
+          } catch {
+            highlights = [];
+          }
+        }
+      } catch (err) {
+        console.error(`[fetchBrokerAndProperties] Error fetching highlights for property ${r.id}:`, err);
+      }
+      
+      try {
+        const [amenitiesRows] = await tenantPool.query('SELECT amenities FROM property_amenities WHERE property_id = ? LIMIT 1', [r.id]);
+        if (amenitiesRows && amenitiesRows[0] && amenitiesRows[0].amenities) {
+          try {
+            amenities = Array.isArray(amenitiesRows[0].amenities) 
+              ? amenitiesRows[0].amenities 
+              : JSON.parse(amenitiesRows[0].amenities);
+          } catch {
+            amenities = [];
+          }
+        }
+      } catch (err) {
+        console.error(`[fetchBrokerAndProperties] Error fetching amenities for property ${r.id}:`, err);
+      }
+      
+      try {
+        const [landmarksRows] = await tenantPool.query('SELECT nearby_landmarks FROM property_landmarks WHERE property_id = ? LIMIT 1', [r.id]);
+        if (landmarksRows && landmarksRows[0] && landmarksRows[0].nearby_landmarks) {
+          try {
+            nearby_landmarks = Array.isArray(landmarksRows[0].nearby_landmarks) 
+              ? landmarksRows[0].nearby_landmarks 
+              : JSON.parse(landmarksRows[0].nearby_landmarks);
+          } catch {
+            nearby_landmarks = [];
+          }
+        }
+      } catch (err) {
+        console.error(`[fetchBrokerAndProperties] Error fetching landmarks for property ${r.id}:`, err);
+      }
+
+      // Parse additional_rooms from features if it exists
+      try {
+        const [featuresRows] = await tenantPool.query('SELECT additional_rooms FROM property_features WHERE property_id = ? LIMIT 1', [r.id]);
+        if (featuresRows && featuresRows[0] && featuresRows[0].additional_rooms) {
+          try {
+            additional_rooms = Array.isArray(featuresRows[0].additional_rooms) 
+              ? featuresRows[0].additional_rooms 
+              : JSON.parse(featuresRows[0].additional_rooms);
+          } catch {
+            additional_rooms = null;
+          }
+        }
+      } catch (err) {
+        console.error(`[fetchBrokerAndProperties] Error fetching additional_rooms for property ${r.id}:`, err);
+      }
+
+      // Build features object similar to listAllBrokerPropertiesAdmin
+      const features = {
+        expected_price: r.expected_price,
+        built_up_area: r.built_up_area,
+        area_unit: r.area_unit,
+        carpet_area: r.carpet_area,
+        carpet_area_unit: r.carpet_area_unit,
+        super_area: r.super_area,
+        super_area_unit: r.super_area_unit,
+        num_bedrooms: r.num_bedrooms,
+        num_bathrooms: r.num_bathrooms,
+        sale_type: r.sale_type,
+        availability: r.availability,
+        approving_authority: r.approving_authority,
+        ownership: r.ownership,
+        rera_status: r.rera_status,
+        rera_number: r.rera_number,
+        no_of_floors: r.no_of_floors,
+        property_on_floor: r.property_on_floor,
+        furnishing_status: r.furnishing_status,
+        facing: r.facing,
+        flooring_type: r.flooring_type,
+        age_years: r.age_years,
+        booking_amount: r.booking_amount,
+        maintenance_charges: r.maintenance_charges,
+        possession_by: r.possession_by,
+        additional_rooms: additional_rooms,
+      };
+
       return {
-        ...r,
-        image,
-        image_url: imageUrl,
-        primary_image: primaryImage,
-        media
+        id: r.id,
+        title: r.title,
+        property_type: r.property_type,
+        type: r.property_type,
+        building_type: r.building_type,
+        buildingType: r.building_type,
+        property_for: r.property_for,
+        propertyFor: r.property_for,
+        sale_type: r.sale_type,
+        saleType: r.sale_type,
+        availability: r.availability,
+        approvingAuthority: r.approving_authority,
+        ownership: r.ownership,
+        rera_status: r.rera_status,
+        reraStatus: r.rera_status,
+        rera_number: r.rera_number,
+        reraNumber: r.rera_number,
+        floors: r.no_of_floors,
+        no_of_floors: r.no_of_floors,
+        property_on_floor: r.property_on_floor,
+        propertyOnFloor: r.property_on_floor,
+        furnishing_status: r.furnishing_status,
+        furnishingStatus: r.furnishing_status,
+        facing: r.facing,
+        flooring_type: r.flooring_type,
+        flooringType: r.flooring_type,
+        age_years: r.age_years,
+        ageYears: r.age_years,
+        expected_price: r.expected_price,
+        price: r.expected_price,
+        built_up_area: r.built_up_area,
+        area: r.built_up_area,
+        area_unit: r.area_unit,
+        areaUnit: r.area_unit,
+        carpet_area: r.carpet_area,
+        carpetArea: r.carpet_area,
+        carpet_area_unit: r.carpet_area_unit,
+        carpetAreaUnit: r.carpet_area_unit,
+        super_area: r.super_area,
+        superArea: r.super_area,
+        super_area_unit: r.super_area_unit,
+        superAreaUnit: r.super_area_unit,
+        num_bedrooms: r.num_bedrooms,
+        bedrooms: r.num_bedrooms,
+        num_bathrooms: r.num_bathrooms,
+        bathrooms: r.num_bathrooms,
+        booking_amount: r.booking_amount,
+        bookingAmount: r.booking_amount,
+        maintenance_charges: r.maintenance_charges,
+        maintenanceCharges: r.maintenance_charges,
+        possession_by: r.possession_by,
+        possessionBy: r.possession_by,
+        description: r.description,
+        city: r.city,
+        state: r.state,
+        locality: r.locality,
+        sub_locality: r.sub_locality,
+        subLocality: r.sub_locality,
+        address: r.address,
+        image: image || null,
+        image_url: imageUrl || null,
+        primary_image: primaryImage || null,
+        media: media || [],
+        status: r.status || 'active',
+        created_at: r.created_at ? new Date(r.created_at).toISOString() : null,
+        createdAt: r.created_at ? new Date(r.created_at).toISOString() : null,
+        features: features,
+        amenities: amenities,
+        highlights: highlights,
+        nearby_landmarks: nearby_landmarks,
+        additional_rooms: additional_rooms
       };
     }));
     
