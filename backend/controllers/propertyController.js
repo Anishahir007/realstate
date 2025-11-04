@@ -624,53 +624,101 @@ export async function listAllBrokerPropertiesAdmin(req, res) {
            ORDER BY p.id DESC`
         );
         for (const r of rows) {
-          // fetch first/primary image
+          // fetch first/primary image and all media
           let image = null;
+          let imageUrl = null;
+          let primaryImage = null;
+          let media = [];
           try {
-            const [m] = await tenantPool.query('SELECT file_url FROM property_media WHERE property_id = ? ORDER BY is_primary DESC, id ASC LIMIT 1', [r.id]);
-            image = m?.[0]?.file_url || null;
+            const [mediaRows] = await tenantPool.query(
+              'SELECT id, file_url, is_primary, category, media_type FROM property_media WHERE property_id = ? ORDER BY is_primary DESC, id ASC',
+              [r.id]
+            );
+            if (mediaRows && mediaRows.length > 0) {
+              media = mediaRows.map(m => ({
+                id: m.id,
+                file_url: m.file_url,
+                url: m.file_url,
+                is_primary: Boolean(m.is_primary),
+                category: m.category,
+                media_type: m.media_type
+              }));
+              const primary = mediaRows.find(m => m.is_primary) || mediaRows[0];
+              image = primary?.file_url || null;
+              imageUrl = primary?.file_url || null;
+              primaryImage = primary?.file_url || null;
+            }
           } catch {}
+          
           out.push({
             id: r.id,
             tenantDb: br.tenant_db,
             brokerId: br.id,
             brokerName: br.full_name,
             title: r.title,
+            property_type: r.property_type,
             type: r.property_type,
+            building_type: r.building_type,
             buildingType: r.building_type,
+            property_for: r.property_for,
             propertyFor: r.property_for,
+            sale_type: r.sale_type,
             saleType: r.sale_type,
             availability: r.availability,
             approvingAuthority: r.approving_authority,
             ownership: r.ownership,
+            rera_status: r.rera_status,
             reraStatus: r.rera_status,
+            rera_number: r.rera_number,
             reraNumber: r.rera_number,
             floors: r.no_of_floors,
+            no_of_floors: r.no_of_floors,
+            property_on_floor: r.property_on_floor,
             propertyOnFloor: r.property_on_floor,
+            furnishing_status: r.furnishing_status,
             furnishingStatus: r.furnishing_status,
             facing: r.facing,
+            flooring_type: r.flooring_type,
             flooringType: r.flooring_type,
+            age_years: r.age_years,
             ageYears: r.age_years,
+            expected_price: r.expected_price,
             price: r.expected_price,
+            built_up_area: r.built_up_area,
             area: r.built_up_area,
+            area_unit: r.area_unit,
             areaUnit: r.area_unit,
+            carpet_area: r.carpet_area,
             carpetArea: r.carpet_area,
+            carpet_area_unit: r.carpet_area_unit,
             carpetAreaUnit: r.carpet_area_unit,
+            super_area: r.super_area,
             superArea: r.super_area,
+            super_area_unit: r.super_area_unit,
             superAreaUnit: r.super_area_unit,
+            num_bedrooms: r.num_bedrooms,
             bedrooms: r.num_bedrooms,
+            num_bathrooms: r.num_bathrooms,
             bathrooms: r.num_bathrooms,
+            booking_amount: r.booking_amount,
             bookingAmount: r.booking_amount,
+            maintenance_charges: r.maintenance_charges,
             maintenanceCharges: r.maintenance_charges,
+            possession_by: r.possession_by,
             possessionBy: r.possession_by,
             description: r.description,
             city: r.city,
             state: r.state,
             locality: r.locality,
+            sub_locality: r.sub_locality,
             subLocality: r.sub_locality,
             address: r.address,
             image,
+            image_url: imageUrl,
+            primary_image: primaryImage,
+            media,
             status: r.status || 'active',
+            created_at: r.created_at ? new Date(r.created_at).toISOString() : null,
             createdAt: r.created_at ? new Date(r.created_at).toISOString() : null,
           });
         }
