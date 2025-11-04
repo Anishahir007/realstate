@@ -13,6 +13,17 @@ function formatPriceINR(num) {
 
 export default function PropertyCard({ property }) {
   const { slug } = useParams();
+  
+  // Console log property data for debugging
+  console.log('PropertyCard - Full property data:', property);
+  console.log('PropertyCard - Image fields:', {
+    image_url: property.image_url,
+    primary_image: property.primary_image,
+    image: property.image,
+    media: property.media,
+    media_length: property.media?.length || 0
+  });
+  
   const to = `property/${property.id}`; // relative path works for both domain root and /site/:slug
   
   // Get image from multiple possible fields
@@ -40,6 +51,14 @@ export default function PropertyCard({ property }) {
   // Use property_type or type field
   const type = property.property_type || property.type || 'Property';
   const city = [property.locality, property.city, property.state].filter(Boolean).join(', ');
+  
+  console.log('PropertyCard - Final values:', {
+    img,
+    price: priceValue,
+    size,
+    type,
+    city
+  });
 
   return (
     <div className="pc-prop-card">
