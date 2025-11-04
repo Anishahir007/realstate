@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { getApiBase } from '../../../../utils/apiBase.js';
 import './property.css';
 
 function formatPriceINR(num) {
@@ -26,16 +27,32 @@ export default function PropertyCard({ property }) {
   
   const to = `property/${property.id}`; // relative path works for both domain root and /site/:slug
   
+  // Get API base URL (for constructing full image URLs)
+  const apiBase = getApiBase() || window.location.origin;
+  
   // Get image from multiple possible fields
   let img = undefined;
-  if (property.image_url) img = property.image_url;
-  else if (property.primary_image) img = property.primary_image;
-  else if (property.image) img = property.image;
+  let imgPath = undefined;
+  
+  if (property.image_url) imgPath = property.image_url;
+  else if (property.primary_image) imgPath = property.primary_image;
+  else if (property.image) imgPath = property.image;
   else if (property.media && Array.isArray(property.media) && property.media.length > 0) {
     // Try to get primary image or first image from media array
     const primary = property.media.find(m => m.is_primary) || property.media[0];
     if (primary) {
-      img = primary.file_url || primary.url;
+      imgPath = primary.file_url || primary.url;
+    }
+  }
+  
+  // Construct full URL if we have an image path
+  if (imgPath) {
+    // If already a full URL (starts with http/https), use as-is
+    if (imgPath.startsWith('http://') || imgPath.startsWith('https://')) {
+      img = imgPath;
+    } else {
+      // If relative path, prepend apiBase
+      img = imgPath.startsWith('/') ? `${apiBase}${imgPath}` : `${apiBase}/${imgPath}`;
     }
   }
   
@@ -63,7 +80,16 @@ export default function PropertyCard({ property }) {
   return (
     <div className="pc-prop-card">
       <div className="pc-prop-media">
-        {img ? <img src={img} alt={property.title || 'Property'} /> : null}
+        {img ? (
+          <img src={img} alt={property.title || 'Property'} onError={(e) => {
+            console.log('PropertyCard - Image load error for:', img);
+            e.target.src = '/templates/proclassic/public/img/noimg.png';
+          }} />
+        ) : (
+          <div style={{ width: '100%', height: '200px', background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af' }}>
+            No Image
+          </div>
+        )}
         <div className="pc-prop-price">{price}</div>
       </div>
       <div className="pc-prop-body">
