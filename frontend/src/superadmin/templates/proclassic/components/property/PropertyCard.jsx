@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { getApiBase } from '../../../../utils/apiBase.js';
+import { getApiBase } from '../../../../../utils/apiBase.js';
 import './property.css';
 
 function formatPriceINR(num) {
