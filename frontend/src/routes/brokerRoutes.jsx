@@ -10,6 +10,7 @@ import BrokerViewProfile from '../broker/pages/settings/view-profile/ViewProfile
 import PropertiesList from '../broker/pages/properties/PropertiesList.jsx';
 import NewProperty from '../broker/pages/properties/NewProperty.jsx';
 import Templates from '../broker/pages/templates/Templates.jsx';
+import BrokerSearchResults from '../broker/pages/search/SearchResults.jsx';
 import { BrokerProvider } from '../context/BrokerContext.jsx';
 
 export function BrokerRoutes() {
@@ -35,6 +36,7 @@ export function BrokerRoutes() {
         <Route path="properties/new" element={<NewProperty />} />
         <Route path="settings/view-profile" element={<BrokerViewProfile />} />
         <Route path="templates" element={<Templates />} />
+        <Route path="search" element={<BrokerSearchResults />} />
       </Route>
       <Route
         path="/broker/*"

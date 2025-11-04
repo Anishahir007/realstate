@@ -1,9 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import axios from 'axios';
 import './header.css';
 import { useSuperAdmin } from '../../../context/SuperAdminContext.jsx';
 import { useNavigate } from 'react-router-dom';
-import { FiSearch, FiChevronDown } from 'react-icons/fi';
+import { FiSearch, FiChevronDown, FiX, FiUser, FiHome, FiBriefcase } from 'react-icons/fi';
 import Notification from '../notification/Notification.jsx';
 import EditProfileModal from '../../profile/EditProfileModal.jsx';
 import UpdatePhotoModal from '../../profile/UpdatePhotoModal.jsx';
@@ -19,7 +19,14 @@ export default function Header() {
   const [notifications, setNotifications] = useState([]);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isPhotoOpen, setIsPhotoOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearchLoading, setIsSearchLoading] = useState(false);
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const menuRef = useRef(null);
+  const searchInputRef = useRef(null);
+  const searchDropdownRef = useRef(null);
+  const searchTimeoutRef = useRef(null);
 
   function toggleMenu() { setIsMenuOpen((v) => !v); }
   async function loadNotifications() {
@@ -32,21 +39,189 @@ export default function Header() {
     } catch {}
   }
 
+  const performSearch = useCallback(async (query) => {
+    if (!query || query.length < 2) {
+      setSearchResults([]);
+      setShowSearchDropdown(false);
+      return;
+    }
+
+    try {
+      setIsSearchLoading(true);
+      const { data } = await axios.get(`${superAdmin.apiBase}/api/search/superadmin`, {
+        params: { q: query },
+        headers: { Authorization: `Bearer ${superAdmin.token}` },
+      });
+
+      const allResults = [
+        ...(data.data?.brokers || []).slice(0, 5).map(b => ({ ...b, type: 'broker' })),
+        ...(data.data?.properties || []).slice(0, 5).map(p => ({ ...p, type: 'property' })),
+        ...(data.data?.leads || []).slice(0, 5).map(l => ({ ...l, type: 'lead' })),
+      ].slice(0, 5);
+
+      setSearchResults(allResults);
+      setShowSearchDropdown(allResults.length > 0);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Search error:', err);
+      setSearchResults([]);
+      setShowSearchDropdown(false);
+    } finally {
+      setIsSearchLoading(false);
+    }
+  }, [superAdmin]);
+
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
+      performSearch(value.trim());
+    }, 300);
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    const trimmedQuery = searchQuery.trim();
+    if (trimmedQuery.length >= 2) {
+      navigate(`/superadmin/search?q=${encodeURIComponent(trimmedQuery)}`);
+      setSearchQuery('');
+      setShowSearchDropdown(false);
+      setSearchResults([]);
+    }
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      handleSearchSubmit(e);
+    } else if (e.key === 'Escape') {
+      setShowSearchDropdown(false);
+      setSearchQuery('');
+    }
+  };
+
+  const handleResultClick = (result) => {
+    if (result.type === 'broker') {
+      navigate(`/superadmin/brokers?highlight=${result.id}`);
+    } else if (result.type === 'property') {
+      navigate(`/superadmin/properties?highlight=${result.id}&brokerId=${result.brokerId}&tenantDb=${result.tenantDb}`);
+    } else if (result.type === 'lead') {
+      if (result.source === 'main') {
+        navigate(`/superadmin/crm/lead/${result.id}/main`);
+      } else {
+        navigate(`/superadmin/crm/lead/${result.id}/broker`);
+      }
+    }
+    setShowSearchDropdown(false);
+    setSearchQuery('');
+    setSearchResults([]);
+  };
+
+  const clearSearch = () => {
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowSearchDropdown(false);
+  };
+
   useEffect(() => {
     function onDocClick(e) {
       if (!menuRef.current) return;
       if (!menuRef.current.contains(e.target)) setIsMenuOpen(false);
+      
+      if (searchDropdownRef.current && !searchDropdownRef.current.contains(e.target) && 
+          searchInputRef.current && !searchInputRef.current.contains(e.target)) {
+        setShowSearchDropdown(false);
+      }
     }
     document.addEventListener('click', onDocClick);
-    return () => document.removeEventListener('click', onDocClick);
+    return () => {
+      document.removeEventListener('click', onDocClick);
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
   }, []);
 
   return (
     <header className="superadminheader-header">
       <div className="superadminheader-left">
-        <div className="superadminheader-search" role="search">
-          <FiSearch className="superadminheader-search-icon" />
-          <input className="superadminheader-search-input" placeholder="Search..." />
+        <div className="superadminheader-search-wrapper">
+          <form className="superadminheader-search" role="search" onSubmit={handleSearchSubmit}>
+            <FiSearch className="superadminheader-search-icon" />
+            <input
+              ref={searchInputRef}
+              className="superadminheader-search-input"
+              placeholder="Search brokers, properties, leads..."
+              value={searchQuery}
+              onChange={handleSearchChange}
+              onKeyDown={handleSearchKeyDown}
+              onFocus={() => {
+                if (searchResults.length > 0) {
+                  setShowSearchDropdown(true);
+                }
+              }}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                className="superadminheader-search-clear"
+                onClick={clearSearch}
+                aria-label="Clear search"
+              >
+                <FiX />
+              </button>
+            )}
+          </form>
+          {showSearchDropdown && (
+            <div className="superadminheader-search-dropdown" ref={searchDropdownRef}>
+              {isSearchLoading ? (
+                <div className="superadminheader-search-loading">Searching...</div>
+              ) : searchResults.length > 0 ? (
+                <div className="superadminheader-search-results">
+                  {searchResults.map((result, idx) => (
+                    <div
+                      key={`${result.type}-${result.id}-${idx}`}
+                      className="superadminheader-search-result-item"
+                      onClick={() => handleResultClick(result)}
+                    >
+                      <div className="superadminheader-search-result-icon">
+                        {result.type === 'broker' && <FiUser />}
+                        {result.type === 'property' && <FiHome />}
+                        {result.type === 'lead' && <FiBriefcase />}
+                      </div>
+                      <div className="superadminheader-search-result-content">
+                        <div className="superadminheader-search-result-title">
+                          {result.type === 'broker' && result.name}
+                          {result.type === 'property' && result.title}
+                          {result.type === 'lead' && result.fullName}
+                        </div>
+                        <div className="superadminheader-search-result-subtitle">
+                          {result.type === 'broker' && result.email}
+                          {result.type === 'property' && `${result.city || ''}${result.city && result.state ? ', ' : ''}${result.state || ''}`.trim()}
+                          {result.type === 'lead' && result.email}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="superadminheader-search-footer">
+                    <button
+                      type="button"
+                      className="superadminheader-search-view-all"
+                      onClick={handleSearchSubmit}
+                    >
+                      View all results for "{searchQuery}"
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="superadminheader-search-empty">No results found</div>
+              )}
+            </div>
+          )}
         </div>
       </div>
       <div className="superadminheader-right">

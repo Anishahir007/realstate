@@ -17,6 +17,7 @@ import systemRoutes from './routes/systemRoutes.js';
 import templatesRoutes from './routes/templatesRoutes.js';
 import templateManagementRoutes from './routes/templateManagementRoutes.js';
 import reportsRoutes from './routes/reportsRoutes.js';
+import searchRoutes from './routes/searchRoutes.js';
 import { recordResponseMs } from './utils/metrics.js';
 
 dotenv.config();
@@ -70,6 +71,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api/leads', leadsRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/search', searchRoutes);
 // Serve template assets FIRST so it doesn't get swallowed by /api/templates router
 app.use('/api/templates/assets', express.static(path.join(__dirname, 'templates')));
 app.use('/api/templates', templatesRoutes);
