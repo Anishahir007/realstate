@@ -1,0 +1,207 @@
+/* Footer Base Styles */
+footer {
+  box-sizing: border-box;
+  background-color: #d10000;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+  padding-top: 20px;
+  padding-bottom: 20px;
+}
+
+.footer-decorative-illustrations {
+  box-sizing: border-box;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  opacity: 0.3;
+}
+
+.footer-svg-decoration {
+  position: absolute;
+  height: auto;
+}
+
+.footer-svg-mountains {
+  left: 5%;
+  bottom: 25%;
+  width: clamp(200px, 20vw, 300px);
+}
+
+.footer-svg-cloud-1 {
+  left: 8%;
+  top: 15%;
+  width: clamp(60px, 6vw, 100px);
+}
+
+.footer-svg-cloud-2 {
+  left: 18%;
+  top: 12%;
+  width: clamp(50px, 5vw, 80px);
+}
+
+.footer-svg-circle-arrow {
+  right: 8%;
+  top: 25%;
+  width: clamp(120px, 12vw, 180px);
+}
+
+.footer-svg-cloud-3 {
+  right: 12%;
+  top: 18%;
+  width: clamp(55px, 5.5vw, 85px);
+}
+
+.footer-container {
+  box-sizing: border-box;
+  margin: auto;
+  max-width: calc(clamp(940px, 61.48vw, 1170px) + 30px);
+  padding-left: calc(30px / 2);
+  padding-right: calc(30px / 2);
+  position: relative;
+  z-index: 1;
+}
+
+.footer-cta-section {
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.footer-heading {
+  box-sizing: border-box;
+  font-size: clamp(22px, 3.5vw, 30px);
+  font-weight: 700;
+  margin-bottom: 20px;
+  margin-top: 20px;
+  color: #fff;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.footer-cta-button {
+  box-sizing: border-box;
+  display: inline-block;
+  padding: clamp(14px, 2vw, 18px) clamp(35px, 5vw, 55px);
+  background-color: #fff;
+  color: #d10000;
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: clamp(16px, 2vw, 20px);
+  transition: all 0.3s;
+}
+
+.footer-cta-button:hover {
+  background-color: #f0f0f0;
+  transform: translateY(-2px);
+}
+
+.footer-cityscape-container {
+  box-sizing: border-box;
+  position: relative;
+  margin-bottom: 20px;
+  height: clamp(100px, 12vw, 150px);
+  overflow: hidden;
+}
+
+.footer-cityscape-svg {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.footer-copyright-section {
+  box-sizing: border-box;
+  text-align: center;
+  padding-top: 10px;
+}
+
+.footer-copyright {
+  box-sizing: border-box;
+  font-size: clamp(12px, 1.5vw, 18px);
+  color: #fff;
+  margin: 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Footer Responsive Font Sizes */
+
+/* Large Desktop (1400px+) */
+@media (min-width: 1400px) {
+  .footer-heading {
+    font-size: clamp(28px, 2.8vw, 30px) !important;
+  }
+  
+  .footer-copyright {
+    font-size: clamp(16px, 1.2vw, 18px) !important;
+  }
+}
+
+/* Desktop (1200px - 1399px) */
+@media (min-width: 1200px) and (max-width: 1399px) {
+  .footer-heading {
+    font-size: clamp(26px, 2.6vw, 28px) !important;
+  }
+  
+  .footer-copyright {
+    font-size: clamp(15px, 1.15vw, 17px) !important;
+  }
+}
+
+/* Tablet (768px - 1199px) */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .footer-heading {
+    font-size: clamp(24px, 3.5vw, 28px) !important;
+    line-height: 1.3 !important;
+  }
+  
+  .footer-copyright {
+    font-size: clamp(14px, 1.4vw, 16px) !important;
+    line-height: 1.5 !important;
+  }
+}
+
+/* Mobile Landscape (576px - 767px) */
+@media (max-width: 767px) {
+  .footer-heading {
+    font-size: clamp(22px, 4.5vw, 26px) !important;
+    line-height: 1.35 !important;
+  }
+  
+  .footer-copyright {
+    font-size: clamp(13px, 1.6vw, 15px) !important;
+    line-height: 1.6 !important;
+  }
+}
+
+/* Mobile Portrait (480px - 575px) */
+@media (max-width: 575px) {
+  .footer-heading {
+    font-size: clamp(20px, 5vw, 24px) !important;
+  }
+  
+  .footer-copyright {
+    font-size: clamp(12px, 1.8vw, 14px) !important;
+  }
+}
+
+/* Small Mobile (320px - 479px) */
+@media (max-width: 479px) {
+  .footer-heading {
+    font-size: clamp(18px, 5.5vw, 22px) !important;
+    line-height: 1.4 !important;
+  }
+  
+  .footer-copyright {
+    font-size: clamp(11px, 2vw, 13px) !important;
+    line-height: 1.65 !important;
+  }
+}
+

@@ -1,0 +1,384 @@
+/* CRMPricing Section Responsive Font Sizes */
+
+/* Base Container */
+.pricing-container {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Desktop/Tablet Grid Layout */
+.pricing-desktop-grid {
+  display: none !important;
+}
+
+.pricing-grid-container {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.pricing-plan-card {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Mobile Carousel Container */
+.pricing-carousel-mobile {
+  display: block !important;
+}
+
+/* Show Desktop Grid on tablets and above, hide carousel */
+@media (min-width: 768px) {
+  .pricing-desktop-grid {
+    display: block !important;
+  }
+
+  .pricing-carousel-mobile {
+    display: none !important;
+  }
+}
+
+/* Medium Tablet and above - 3 columns */
+@media (min-width: 768px) {
+  .pricing-grid-container {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+
+/* Small Tablet - 2 columns if needed */
+@media (min-width: 768px) and (max-width: 899px) {
+  .pricing-grid-container {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* Large Tablet and Desktop - 3 columns */
+@media (min-width: 900px) {
+  .pricing-grid-container {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+
+/* Show Carousel on mobile only */
+@media (max-width: 767px) {
+  .pricing-desktop-grid {
+    display: none !important;
+  }
+
+  .pricing-carousel-mobile {
+    display: block !important;
+  }
+}
+
+.pricing-carousel-container {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+.pricing-carousel-track {
+  display: flex;
+  transition: transform 0.4s ease-in-out;
+  will-change: transform;
+}
+
+.pricing-carousel-slide {
+  min-width: 100%;
+  flex-shrink: 0;
+}
+
+/* Carousel Navigation */
+.pricing-carousel-nav {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.pricing-carousel-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid #d10000;
+  background-color: #fff;
+  color: #d10000;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  transition: all 0.3s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pricing-carousel-btn:hover,
+.pricing-carousel-btn:focus {
+  background-color: #d10000;
+  color: #fff;
+  outline: none;
+}
+
+.pricing-carousel-btn:active {
+  transform: scale(0.95);
+}
+
+.pricing-carousel-dots {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.pricing-carousel-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: none;
+  background-color: #ccc;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pricing-carousel-dot:hover,
+.pricing-carousel-dot:focus {
+  background-color: #999;
+  outline: none;
+}
+
+/* Touch swipe support */
+@media (max-width: 767px) {
+  .pricing-carousel-container {
+    touch-action: pan-y pinch-zoom;
+  }
+  
+  .pricing-carousel-track {
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+}
+
+/* Large Desktop (1400px+) */
+@media (min-width: 1400px) {
+  .pricing-special-offer-heading {
+    font-size: clamp(34px, 3vw, 36px) !important;
+  }
+  
+  .pricing-discount-heading {
+    font-size: clamp(40px, 3.5vw, 42px) !important;
+  }
+  
+  .pricing-old-price {
+    font-size: clamp(26px, 2.5vw, 28px) !important;
+  }
+  
+  .pricing-new-price {
+    font-size: clamp(46px, 4vw, 48px) !important;
+  }
+  
+  .pricing-feature-heading {
+    font-size: clamp(22px, 2vw, 24px) !important;
+  }
+  
+  .pricing-feature-text {
+    font-size: clamp(16px, 1.2vw, 18px) !important;
+  }
+  
+  .pricing-note-text {
+    font-size: clamp(16px, 1.2vw, 18px) !important;
+  }
+  
+  .pricing-cta-button {
+    font-size: clamp(18px, 2vw, 20px) !important;
+  }
+}
+
+/* Desktop (1200px - 1399px) */
+@media (min-width: 1200px) and (max-width: 1399px) {
+  .pricing-special-offer-heading {
+    font-size: clamp(32px, 2.8vw, 34px) !important;
+  }
+  
+  .pricing-discount-heading {
+    font-size: clamp(38px, 3.2vw, 40px) !important;
+  }
+  
+  .pricing-old-price {
+    font-size: clamp(24px, 2.3vw, 26px) !important;
+  }
+  
+  .pricing-new-price {
+    font-size: clamp(44px, 3.8vw, 46px) !important;
+  }
+  
+  .pricing-feature-heading {
+    font-size: clamp(20px, 1.9vw, 22px) !important;
+  }
+  
+  .pricing-feature-text {
+    font-size: clamp(15px, 1.15vw, 17px) !important;
+  }
+  
+  .pricing-note-text {
+    font-size: clamp(15px, 1.15vw, 17px) !important;
+  }
+  
+  .pricing-cta-button {
+    font-size: clamp(17px, 1.9vw, 19px) !important;
+  }
+}
+
+/* Tablet (768px - 1199px) */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .pricing-special-offer-heading {
+    font-size: clamp(28px, 3.5vw, 32px) !important;
+  }
+  
+  .pricing-discount-heading {
+    font-size: clamp(34px, 4vw, 38px) !important;
+  }
+  
+  .pricing-old-price {
+    font-size: clamp(22px, 2.8vw, 24px) !important;
+  }
+  
+  .pricing-new-price {
+    font-size: clamp(40px, 4.5vw, 44px) !important;
+  }
+  
+  .pricing-feature-heading {
+    font-size: clamp(18px, 2.3vw, 20px) !important;
+  }
+  
+  .pricing-feature-text {
+    font-size: clamp(14px, 1.4vw, 16px) !important;
+    line-height: 1.65 !important;
+  }
+  
+  .pricing-note-text {
+    font-size: clamp(14px, 1.4vw, 16px) !important;
+  }
+  
+  .pricing-cta-button {
+    font-size: clamp(16px, 2.2vw, 18px) !important;
+  }
+}
+
+/* Mobile Landscape (576px - 767px) */
+@media (max-width: 767px) {
+  .pricing-special-offer-heading {
+    font-size: clamp(24px, 4vw, 28px) !important;
+    line-height: 1.35 !important;
+  }
+  
+  .pricing-discount-heading {
+    font-size: clamp(30px, 4.5vw, 34px) !important;
+    line-height: 1.3 !important;
+  }
+  
+  .pricing-old-price {
+    font-size: clamp(20px, 3.2vw, 22px) !important;
+  }
+  
+  .pricing-new-price {
+    font-size: clamp(36px, 5vw, 40px) !important;
+    line-height: 1.2 !important;
+  }
+  
+  .pricing-feature-heading {
+    font-size: clamp(16px, 2.5vw, 18px) !important;
+    line-height: 1.4 !important;
+  }
+  
+  .pricing-feature-text {
+    font-size: clamp(13px, 1.5vw, 15px) !important;
+    line-height: 1.7 !important;
+  }
+  
+  .pricing-note-text {
+    font-size: clamp(13px, 1.5vw, 15px) !important;
+    line-height: 1.6 !important;
+  }
+  
+  .pricing-cta-button {
+    font-size: clamp(14px, 2.3vw, 16px) !important;
+  }
+}
+
+/* Mobile Portrait (480px - 575px) */
+@media (max-width: 575px) {
+  .pricing-special-offer-heading {
+    font-size: clamp(22px, 4.5vw, 24px) !important;
+  }
+  
+  .pricing-discount-heading {
+    font-size: clamp(28px, 5vw, 30px) !important;
+  }
+  
+  .pricing-old-price {
+    font-size: clamp(18px, 3.5vw, 20px) !important;
+  }
+  
+  .pricing-new-price {
+    font-size: clamp(32px, 5.5vw, 36px) !important;
+  }
+  
+  .pricing-feature-heading {
+    font-size: clamp(15px, 2.8vw, 16px) !important;
+  }
+  
+  .pricing-feature-text {
+    font-size: clamp(12px, 1.6vw, 14px) !important;
+  }
+  
+  .pricing-note-text {
+    font-size: clamp(12px, 1.6vw, 14px) !important;
+  }
+  
+  .pricing-cta-button {
+    font-size: clamp(13px, 2.5vw, 14px) !important;
+  }
+}
+
+/* Small Mobile (320px - 479px) */
+@media (max-width: 479px) {
+  .pricing-special-offer-heading {
+    font-size: clamp(20px, 5vw, 22px) !important;
+    line-height: 1.4 !important;
+  }
+  
+  .pricing-discount-heading {
+    font-size: clamp(26px, 5.5vw, 28px) !important;
+    line-height: 1.35 !important;
+  }
+  
+  .pricing-old-price {
+    font-size: clamp(16px, 3.8vw, 18px) !important;
+  }
+  
+  .pricing-new-price {
+    font-size: clamp(30px, 6vw, 32px) !important;
+    line-height: 1.25 !important;
+  }
+  
+  .pricing-feature-heading {
+    font-size: clamp(14px, 3vw, 15px) !important;
+    line-height: 1.45 !important;
+  }
+  
+  .pricing-feature-text {
+    font-size: clamp(11px, 1.7vw, 13px) !important;
+    line-height: 1.75 !important;
+  }
+  
+  .pricing-note-text {
+    font-size: clamp(11px, 1.7vw, 13px) !important;
+    line-height: 1.65 !important;
+  }
+  
+  .pricing-cta-button {
+    font-size: clamp(12px, 2.7vw, 13px) !important;
+  }
+}
+

@@ -6,6 +6,7 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 import pool from './config/database.js';
 import authRoutes from './routes/authRoutes.js';
 import brokerRoutes from './routes/brokerRoutes.js';
@@ -86,6 +87,32 @@ app.use('/api/properties', express.static('public/properties'));
 app.use('/api/templates/banners', express.static('public/templates/banners'));
 // Serve any other files under /public at root (e.g., /public/* and relative links)
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Serve React app static files (if frontend is built and in dist folder)
+const frontendDistPath = path.join(__dirname, '../frontend/dist');
+try {
+  if (fs.existsSync(frontendDistPath)) {
+    app.use(express.static(frontendDistPath));
+    
+    // Catch-all handler: serve React app's index.html for all non-API routes
+    // This enables client-side routing (React Router)
+    app.get('*', (req, res, next) => {
+      // Skip API routes and static file routes
+      if (req.path.startsWith('/api') || 
+          req.path.startsWith('/profiles') || 
+          req.path.startsWith('/properties') ||
+          req.path.startsWith('/templates/banners') ||
+          req.path.startsWith('/health')) {
+        return next();
+      }
+      
+      // Serve React app's index.html for all other routes
+      res.sendFile(path.join(frontendDistPath, 'index.html'));
+    });
+  }
+} catch (err) {
+  console.warn('Frontend dist folder not found, skipping React app serving:', err.message);
+}
 
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => {

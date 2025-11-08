@@ -1,0 +1,74 @@
+/* WhatsAppSection Responsive Font Sizes - Same as LeadManagementSection */
+
+/* Large Desktop (1400px+) */
+@media (min-width: 1400px) {
+  .whatsapp-heading {
+    font-size: clamp(44px, 3.5vw, 48px) !important;
+  }
+  
+  .whatsapp-item {
+    font-size: clamp(16px, 1.2vw, 18px) !important;
+  }
+}
+
+/* Desktop (1200px - 1399px) */
+@media (min-width: 1200px) and (max-width: 1399px) {
+  .whatsapp-heading {
+    font-size: clamp(40px, 3.2vw, 44px) !important;
+  }
+  
+  .whatsapp-item {
+    font-size: clamp(15px, 1.15vw, 17px) !important;
+  }
+}
+
+/* Tablet (768px - 1199px) */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .whatsapp-heading {
+    font-size: clamp(36px, 4vw, 40px) !important;
+    line-height: 1.3 !important;
+  }
+  
+  .whatsapp-item {
+    font-size: clamp(14px, 1.4vw, 16px) !important;
+    line-height: 1.65 !important;
+  }
+}
+
+/* Mobile Landscape (576px - 767px) */
+@media (max-width: 767px) {
+  .whatsapp-heading {
+    font-size: clamp(28px, 4.5vw, 36px) !important;
+    line-height: 1.35 !important;
+  }
+  
+  .whatsapp-item {
+    font-size: clamp(13px, 1.6vw, 15px) !important;
+    line-height: 1.7 !important;
+  }
+}
+
+/* Mobile Portrait (480px - 575px) */
+@media (max-width: 575px) {
+  .whatsapp-heading {
+    font-size: clamp(26px, 5vw, 30px) !important;
+  }
+  
+  .whatsapp-item {
+    font-size: clamp(12px, 1.8vw, 14px) !important;
+  }
+}
+
+/* Small Mobile (320px - 479px) */
+@media (max-width: 479px) {
+  .whatsapp-heading {
+    font-size: clamp(24px, 5.5vw, 26px) !important;
+    line-height: 1.4 !important;
+  }
+  
+  .whatsapp-item {
+    font-size: clamp(11px, 2vw, 13px) !important;
+    line-height: 1.75 !important;
+  }
+}
+
