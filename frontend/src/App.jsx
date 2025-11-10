@@ -53,7 +53,7 @@ export default function App() {
         
         {BrokerRoutes()}
         {UserRoutes()}
-        <Route path="/broker/auth" element={<UnifiedAuth />} />
+        <Route path="/brokers/auth" element={<UnifiedAuth />} />
         <Route path="*" element={<div style={{ padding: 24 }}>Not Found</div>} />
       </Routes>
       </Suspense>
