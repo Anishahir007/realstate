@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import './broker.css';
 import { useSuperAdmin } from '../../../context/SuperAdminContext.jsx';
-import { FiEye, FiEyeOff } from 'react-icons/fi';
+import { FiEye, FiEyeOff, FiEdit2 } from 'react-icons/fi';
 
 const COLUMN_OPTIONS = [
   { id: 'broker', label: 'Broker' },
@@ -481,8 +481,12 @@ export default function SuperAdminBroker() {
                 case 'actions':
                   return (
                     <div className="bm-actions-col">
-                      <button className="bm-link" onClick={() => openView(b.id)} title="View" aria-label="View">👁️</button>
-                      <button className="bm-link" onClick={() => openEdit(b.id)} title="Edit" aria-label="Edit">✏️</button>
+                      <button className="bm-link" onClick={() => openView(b.id)} title="View" aria-label="View">
+                        <FiEye />
+                      </button>
+                      <button className="bm-link" onClick={() => openEdit(b.id)} title="Edit" aria-label="Edit">
+                        <FiEdit2 />
+                      </button>
                     </div>
                   );
                 default:

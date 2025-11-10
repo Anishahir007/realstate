@@ -54,7 +54,24 @@
 
 .bm-col-center { display: flex; align-items: center; gap: 6px; color: #111827; }
 .bm-actions-col { display: flex; gap: 8px; }
-.bm-link { background: transparent; border: none; cursor: pointer; font-size: 16px; }
+.bm-link { 
+  background: transparent; 
+  border: none; 
+  cursor: pointer; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  padding: 4px;
+  transition: color 0.2s;
+}
+.bm-link:hover {
+  color: #0f172a;
+}
+.bm-link svg {
+  width: 18px;
+  height: 18px;
+}
 
 .bm-tableactions { position: relative; }
 .bm-columns-btn { display: flex; align-items: center; gap: 6px; padding: 8px 12px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer; font-size: 14px; }
