@@ -228,6 +228,13 @@ function formatPrice(value) {
   return `₹${abs.toLocaleString('en-IN')}`;
 }
 
+const truncateTitle = (title, maxWords = 20) => {
+  if (!title) return 'Untitled property';
+  const words = title.trim().split(/\s+/);
+  if (words.length <= maxWords) return title;
+  return words.slice(0, maxWords).join(' ') + '...';
+};
+
 function formatArea(value, unit) {
   const num = Number(value);
   if (!Number.isFinite(num) || num <= 0) return null;
@@ -1136,7 +1143,7 @@ export default function Dashboard() {
                               <img src={imageSrc} alt="" />
                             </div>
                             <div className="property-meta">
-                              <div className="property-title">{row.title || 'Untitled property'}</div>
+                              <div className="property-title">{truncateTitle(row.title)}</div>
                               {areaText ? <div className="property-sub">{areaText}</div> : null}
                               {propertyMeta ? <div className="property-sub alt">{propertyMeta}</div> : null}
                             </div>

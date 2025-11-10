@@ -38,6 +38,13 @@ const COLUMN_OPTIONS = [
 
 const DEFAULT_COLUMN_IDS = ['type', 'price', 'location', 'broker', 'status', 'date', 'actions'];
 
+const truncateTitle = (title, maxWords = 20) => {
+  if (!title) return 'Untitled property';
+  const words = title.trim().split(/\s+/);
+  if (words.length <= maxWords) return title;
+  return words.slice(0, maxWords).join(' ') + '...';
+};
+
 const formatCurrency = (value) => {
   const num = Number(value);
   if (!Number.isFinite(num)) return '₹—';
@@ -284,7 +291,7 @@ export default function SuperAdminProperties() {
         const area = p.builtArea ? formatArea(p.builtArea, p.areaUnit) : '—';
         const date = p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '—';
         return [
-          p.title || '—',
+          truncateTitle(p.title),
           p.type || '—',
           p.buildingType || '—',
           p.propertyFor || '—',
@@ -625,7 +632,7 @@ export default function SuperAdminProperties() {
                             </div>
                           </div>
                           <div className="property-meta">
-                            <div className="property-title">{p.title || 'Untitled property'}</div>
+                            <div className="property-title">{truncateTitle(p.title)}</div>
                             <div className="property-sub">{formatArea(p.builtArea || p.area, p.areaUnit || p.builtAreaUnit)}</div>
                           </div>
                         </div>
