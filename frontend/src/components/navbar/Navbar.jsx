@@ -51,7 +51,7 @@ const Navbar = () => {
         </nav>
 
         <div className="nav-right">
-          <Link to="/broker" className="login-btn">Login</Link>
+          <Link to="/brokers" className="login-btn">Login</Link>
           <button
             className="menu-toggle"
             aria-label="Open menu"
@@ -92,7 +92,7 @@ const Navbar = () => {
             <Link to="/superadmin/login" className="mobile-link" onClick={closeMobile}>Super Admin</Link>
           </li>
           <li className="mobile-item">
-            <Link to="/broker" className="mobile-link" onClick={closeMobile}>Login</Link>
+            <Link to="/brokers" className="mobile-link" onClick={closeMobile}>Login</Link>
           </li>
         </ul>
       </div>

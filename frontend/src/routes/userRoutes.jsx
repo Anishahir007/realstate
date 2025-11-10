@@ -10,7 +10,7 @@ export function UserRoutes() {
     <>
     <Route path="/" element={<Home />} />
     <Route path="/about-us" element={<About />} />
-    <Route path="/broker" element={<Login />} />
+    <Route path="/brokers" element={<Login />} />
     </>
   );
 }
