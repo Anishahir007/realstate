@@ -232,7 +232,7 @@ const BrokerPanelHeader = () => {
                 onClick={() => {
                   try { broker?.logout?.(); } catch {}
                   setIsMenuOpen(false);
-                  navigate('/auth', { replace: true });
+                  navigate('/brokers/auth', { replace: true });
                 }}
               >
                 Logout
