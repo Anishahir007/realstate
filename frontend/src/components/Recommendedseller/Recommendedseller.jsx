@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import  React, { useMemo, useRef } from "react";
 import "./Recommendedseller.css";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Autoplay, A11y } from "swiper/modules";

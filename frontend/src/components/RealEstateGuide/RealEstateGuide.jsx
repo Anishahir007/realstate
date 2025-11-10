@@ -1,3 +1,4 @@
+import React from "react";
 import "./RealEstateGuide.css";
 
 const INSIGHTS = [

@@ -1,3 +1,4 @@
+import React from "react";
 import "./Sellproperty.css";
 
 const DEFAULT_BANNER =
