@@ -8,7 +8,6 @@ export function UserRoutes() {
   return (
     <>
     <Route path="/" element={<Home />} />
-    <Route path="/login" element={<Home />} />
     <Route path="/about-us" element={<About />} />
     </>
   );
