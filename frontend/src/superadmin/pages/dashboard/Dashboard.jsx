@@ -18,7 +18,7 @@ import {
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ChartTitle, Tooltip, ChartLegend, Filler);
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const DATE_DISPLAY = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+const DATE_DISPLAY = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 const INITIAL_COUNTS = {
   totalBrokers: 0,
   totalLeads: 0,
@@ -232,7 +232,7 @@ function formatArea(value, unit) {
   const num = Number(value);
   if (!Number.isFinite(num) || num <= 0) return null;
   const safeUnit = unit ? String(unit).replace(/_/g, ' ') : 'sqft';
-  return `${num.toLocaleString('en-IN')} ${safeUnit}`;
+  return `${num.toFixed(2)} ${safeUnit}`;
 }
 
 function formatCurrency(value) {
@@ -1067,7 +1067,7 @@ export default function Dashboard() {
                                 onClick={() => toggleFilter(col.id)}
                                 title="Filter"
                               >
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                   <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
                                 </svg>
                               </button>
@@ -1113,7 +1113,7 @@ export default function Dashboard() {
                   </tr>
                 ) : paginatedFiltered.length ? (
                   paginatedFiltered.map((row) => {
-                    const areaText = formatArea(row.area, row.areaUnit);
+                    const areaText = formatArea(row.builtArea || row.area, row.areaUnit || row.builtAreaUnit);
                     const dateLabel = row.createdAt ? DATE_DISPLAY.format(new Date(row.createdAt)) : '—';
                     const brokerLabel = row.brokerName || '—';
                     const locationParts = [row.city, row.state].filter(Boolean);
@@ -1124,7 +1124,7 @@ export default function Dashboard() {
                       : '/templates/proclassic/public/img/noimg.png';
                     const propertyMeta = [row.property_type, row.buildingType].filter(Boolean).join(' • ');
                     const buildingType = row.buildingType || row.building_type || '—';
-                    const builtUp = formatArea(row.area, row.areaUnit) || '—';
+                    const builtUp = formatArea(row.builtArea || row.area, row.areaUnit || row.builtAreaUnit) || '—';
                     const carpet = formatArea(row.carpetArea, row.carpetAreaUnit) || '—';
                     const superArea = formatArea(row.superArea, row.superAreaUnit) || '—';
                     return (
