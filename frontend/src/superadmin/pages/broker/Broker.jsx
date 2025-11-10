@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import './broker.css';
 import { useSuperAdmin } from '../../../context/SuperAdminContext.jsx';
+import { FiEye, FiEyeOff } from 'react-icons/fi';
 
 const COLUMN_OPTIONS = [
   { id: 'broker', label: 'Broker' },
@@ -76,6 +77,7 @@ export default function SuperAdminBroker() {
     document_back: null,
   });
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [columnMenuOpen, setColumnMenuOpen] = useState(false);
   const [visibleColumnIds, setVisibleColumnIds] = useState(() => DEFAULT_COLUMN_IDS);
   const columnButtonRef = useRef(null);
@@ -501,7 +503,7 @@ export default function SuperAdminBroker() {
       </div>
 
       {showAdd && (
-        <div className="superadminbroker-modal-overlay" onClick={() => setShowAdd(false)}>
+        <div className="superadminbroker-modal-overlay">
           <div className="superadminbroker-modal" onClick={(e) => e.stopPropagation()}>
             <div className="superadminbroker-modal-header">
               <h3>Add Broker</h3>
@@ -522,7 +524,22 @@ export default function SuperAdminBroker() {
               </div>
               <div className="superadminbroker-formrow">
                 <label>Password</label>
-                <input type="password" value={formAdd.password} onChange={(e) => setFormAdd({ ...formAdd, password: e.target.value })} required />
+                <div className="password-input-wrapper">
+                  <input 
+                    type={showPassword ? "text" : "password"} 
+                    value={formAdd.password} 
+                    onChange={(e) => setFormAdd({ ...formAdd, password: e.target.value })} 
+                    required 
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle-btn"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <FiEyeOff /> : <FiEye />}
+                  </button>
+                </div>
               </div>
               <div className="superadminbroker-formrow">
                 <label>License No</label>
@@ -577,7 +594,7 @@ export default function SuperAdminBroker() {
       )}
 
       {showView && selected && (
-        <div className="superadminbroker-modal-overlay" onClick={() => setShowView(false)}>
+        <div className="superadminbroker-modal-overlay">
           <div className="superadminbroker-modal" onClick={(e) => e.stopPropagation()}>
             <div className="bm-view-head">
               <div>
@@ -626,7 +643,7 @@ export default function SuperAdminBroker() {
       )}
 
       {showEdit && (
-        <div className="superadminbroker-modal-overlay" onClick={() => setShowEdit(false)}>
+        <div className="superadminbroker-modal-overlay">
           <div className="superadminbroker-modal" onClick={(e) => e.stopPropagation()}>
             <div className="superadminbroker-modal-header">
               <h3>Edit Broker</h3>

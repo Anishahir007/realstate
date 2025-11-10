@@ -109,6 +109,35 @@
 .superadminbroker-formrow label { font-size: 13px; color: #374151; }
 .superadminbroker-formrow input { border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 10px; }
 .superadminbroker-formrow select { border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 10px; background: #fff; }
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.password-input-wrapper input {
+  width: 100%;
+  padding-right: 40px;
+}
+.password-toggle-btn {
+  position: absolute;
+  right: 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  padding: 4px;
+  transition: color 0.2s;
+}
+.password-toggle-btn:hover {
+  color: #0f172a;
+}
+.password-toggle-btn svg {
+  width: 18px;
+  height: 18px;
+}
 .superadminbroker-modal-header { 
   display: flex; 
   align-items: center; 
