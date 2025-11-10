@@ -329,7 +329,7 @@ export default function SuperAdminBroker() {
           <div className="bm-sub">Manage broker accounts & subscriptions</div>
         </div>
         <div className="bm-actions">
-          <button className="bm-btn bm-btn-light" onClick={exportCsv}>Export Leads</button>
+          <button className="bm-btn bm-btn-light" onClick={exportCsv}>Export</button>
           <div className="bm-tableactions">
             <button
               type="button"

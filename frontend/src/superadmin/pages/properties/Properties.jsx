@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import { useSuperAdmin } from '../../../context/SuperAdminContext.jsx';
+import { FiPrinter } from 'react-icons/fi';
 import './properties.css';
 
 const COLUMN_OPTIONS = [
@@ -47,7 +48,7 @@ const formatArea = (value, unit) => {
   const num = Number(value);
   if (!Number.isFinite(num) || num <= 0) return '—';
   const safeUnit = unit ? String(unit).replace(/_/g, ' ') : 'sqft';
-  return `${num.toLocaleString('en-IN')} ${safeUnit}`;
+  return `${num.toFixed(2)} ${safeUnit}`;
 };
 
 const statusColorClass = (status) => {
@@ -83,6 +84,7 @@ export default function SuperAdminProperties() {
   const columnButtonRef = useRef(null);
   const columnMenuRef = useRef(null);
   const filterMenuRefs = useRef({});
+  const exportInProgressRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -253,6 +255,68 @@ export default function SuperAdminProperties() {
     setOpenFilterMenu(null);
   };
 
+  const handleExport = useCallback(() => {
+    if (exportInProgressRef.current) return;
+    exportInProgressRef.current = true;
+    try {
+      if (!filtered.length) {
+        alert('No properties available to export.');
+        return;
+      }
+      const headers = [
+        'Title',
+        'Type',
+        'Building Type',
+        'Property For',
+        'Sale Type',
+        'Location',
+        'Price',
+        'Area',
+        'Bedrooms',
+        'Bathrooms',
+        'Broker',
+        'Status',
+        'Date'
+      ];
+      const rows = filtered.map((p) => {
+        const location = [p.locality, p.city, p.state].filter(Boolean).join(', ') || '—';
+        const price = p.price ? formatCurrency(p.price) : '—';
+        const area = p.builtArea ? formatArea(p.builtArea, p.areaUnit) : '—';
+        const date = p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '—';
+        return [
+          p.title || '—',
+          p.type || '—',
+          p.buildingType || '—',
+          p.propertyFor || '—',
+          p.saleType || '—',
+          location,
+          price,
+          area,
+          p.bedrooms || '—',
+          p.bathrooms || '—',
+          p.brokerName || '—',
+          p.status || '—',
+          date,
+        ];
+      });
+      const csvContent = [
+        headers.join(','),
+        ...rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      ].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `properties-${Date.now()}.csv`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
+    } finally {
+      exportInProgressRef.current = false;
+    }
+  }, [filtered]);
+
   const visibleColumns = useMemo(
     () => COLUMN_OPTIONS.filter((col) => visibleColumnIds.includes(col.id)),
     [visibleColumnIds]
@@ -342,7 +406,7 @@ export default function SuperAdminProperties() {
           <div className="superadminbrokerproperties-sub">Review and manage property listings from brokers</div>
         </div>
         <div className="superadminbrokerproperties-actions">
-          <button className="superadminbrokerproperties-btn superadminbrokerproperties-btn-primary">+ Add New Property</button>
+          {/* <button className="superadminbrokerproperties-btn superadminbrokerproperties-btn-primary">+ Add New Property</button> */}
           <div className="superadminbrokerproperties-tableactions">
             <button
               type="button"
@@ -438,6 +502,9 @@ export default function SuperAdminProperties() {
         <select className="superadminbrokerproperties-select" value={'Published'} readOnly>
           <option>Published</option>
         </select>
+        <button type="button" className="superadminbrokerproperties-export-btn" onClick={handleExport}>
+          <FiPrinter /> Export
+        </button>
       </div>
 
       <div className="superadminbrokerproperties-card">
@@ -464,7 +531,7 @@ export default function SuperAdminProperties() {
                               onClick={() => toggleFilter(col.id)}
                               title="Filter"
                             >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
                               </svg>
                             </button>
@@ -525,7 +592,7 @@ export default function SuperAdminProperties() {
                   const priceLabel = formatCurrency(p.price || p.expected_price);
                   const bookingLabel = formatCurrency(p.bookingAmount);
                   const maintenanceLabel = formatCurrency(p.maintenanceCharges);
-                  const dateLabel = p.createdAt ? new Date(p.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+                  const dateLabel = p.createdAt ? new Date(p.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
                   const helpers = {
                     location,
                     builtUp,
@@ -559,7 +626,7 @@ export default function SuperAdminProperties() {
                           </div>
                           <div className="property-meta">
                             <div className="property-title">{p.title || 'Untitled property'}</div>
-                            <div className="property-sub">{(p.area || '-')}{p.areaUnit ? ` ${p.areaUnit}` : ''}</div>
+                            <div className="property-sub">{formatArea(p.builtArea || p.area, p.areaUnit || p.builtAreaUnit)}</div>
                           </div>
                         </div>
                       </td>
