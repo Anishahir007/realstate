@@ -2,20 +2,22 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import './dashboard.css';
 import { useBroker } from '../../../context/BrokerContext.jsx';
 import axios from 'axios';
-import { Line } from 'react-chartjs-2';
+import { Line, Bar, Pie } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
   PointElement,
   LineElement,
+  BarElement,
+  ArcElement,
   Title as ChartTitle,
   Tooltip,
   Legend as ChartLegend,
   Filler,
 } from 'chart.js';
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ChartTitle, Tooltip, ChartLegend, Filler);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, ChartTitle, Tooltip, ChartLegend, Filler);
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DATE_DISPLAY = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -194,6 +196,8 @@ export default function Dashboard() {
   const [propertyTrend, setPropertyTrend] = useState(() =>
     ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sept','Oct','Nov','Dec'].map((m) => ({ m, created: 0, updated: 0 }))
   );
+  const [propertyTypesDistribution, setPropertyTypesDistribution] = useState([]);
+  const [propertyTrendsFilter, setPropertyTrendsFilter] = useState('this-month');
   const [filter, setFilter] = useState(() => createPresetFilter('all'));
   const [filterMenuOpen, setFilterMenuOpen] = useState(false);
   const filterButtonRef = useRef(null);
@@ -575,6 +579,42 @@ export default function Dashboard() {
     return () => { cancelled = true; };
   }, [broker?.token, broker?.apiBase, filter.key, filter.from, filter.to, filter.monthValue, filter.yearValue]);
 
+  // Calculate property types distribution
+  useEffect(() => {
+    const now = new Date();
+    let filteredProperties = recentProperties;
+    
+    // Filter based on propertyTrendsFilter
+    if (propertyTrendsFilter === 'this-month') {
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      filteredProperties = recentProperties.filter(prop => {
+        if (!prop.createdAt) return false;
+        const propDate = new Date(prop.createdAt);
+        return propDate >= startOfMonth;
+      });
+    } else if (propertyTrendsFilter === 'this-year') {
+      const startOfYear = new Date(now.getFullYear(), 0, 1);
+      filteredProperties = recentProperties.filter(prop => {
+        if (!prop.createdAt) return false;
+        const propDate = new Date(prop.createdAt);
+        return propDate >= startOfYear;
+      });
+    }
+    // 'all' doesn't need filtering
+    
+    const typeCounts = {};
+    filteredProperties.forEach(prop => {
+      const type = prop.type || prop.property_type || 'Other';
+      typeCounts[type] = (typeCounts[type] || 0) + 1;
+    });
+    
+    const distribution = Object.entries(typeCounts)
+      .map(([type, count]) => ({ type, count }))
+      .sort((a, b) => b.count - a.count);
+    
+    setPropertyTypesDistribution(distribution);
+  }, [recentProperties, propertyTrendsFilter]);
+
   const filterValues = useMemo(() => {
     const values = {
       type: [...new Set(recentProperties.map(x => x.type || x.property_type).filter(Boolean))].sort(),
@@ -681,6 +721,111 @@ export default function Dashboard() {
         beginAtZero: true,
         ticks: {
           precision: 0,
+        },
+      },
+    },
+  }), []);
+
+  // Property Types Pie Chart Data
+  const propertyTypesPieData = useMemo(() => {
+    const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#EC4899', '#84CC16'];
+    const labels = propertyTypesDistribution.map(d => d.type);
+    const data = propertyTypesDistribution.map(d => d.count);
+    const backgroundColors = propertyTypesDistribution.map((_, idx) => colors[idx % colors.length]);
+    
+    return {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: backgroundColors,
+        borderWidth: 0,
+      }],
+    };
+  }, [propertyTypesDistribution]);
+
+  const propertyTypesPieOptions = useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          usePointStyle: true,
+          padding: 15,
+          font: { size: 12 },
+        },
+      },
+      tooltip: {
+        callbacks: {
+          label: (context) => {
+            const label = context.label || '';
+            const value = context.parsed || 0;
+            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+            return `${label}: ${value} (${percentage}%)`;
+          },
+        },
+      },
+    },
+  }), []);
+
+  // Property Trends Horizontal Bar Chart Data (Property Types Distribution)
+  const propertyTrendsBarData = useMemo(() => {
+    const colors = ['#8B5CF6', '#10B981', '#3B82F6', '#F59E0B', '#06B6D4', '#EC4899', '#84CC16', '#EF4444'];
+    const maxValue = propertyTypesDistribution.length > 0 
+      ? Math.max(...propertyTypesDistribution.map(d => d.count))
+      : 100;
+    
+    const labels = propertyTypesDistribution.map(d => d.type);
+    const data = propertyTypesDistribution.map(d => d.count);
+    const backgroundColors = propertyTypesDistribution.map((_, idx) => colors[idx % colors.length]);
+    
+    return {
+      labels,
+      datasets: [{
+        label: 'Properties',
+        data,
+        backgroundColor: backgroundColors,
+        borderWidth: 0,
+        barThickness: 20,
+      }],
+    };
+  }, [propertyTypesDistribution]);
+
+  const propertyTrendsBarOptions = useMemo(() => ({
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false,
+      },
+      tooltip: {
+        callbacks: {
+          label: (context) => {
+            return `${context.label}: ${context.parsed.x} properties`;
+          },
+        },
+      },
+    },
+    scales: {
+      x: {
+        beginAtZero: true,
+        grid: {
+          display: true,
+          color: '#F1F5F9',
+        },
+        ticks: {
+          precision: 0,
+          font: { size: 11 },
+        },
+      },
+      y: {
+        grid: {
+          display: false,
+        },
+        ticks: {
+          font: { size: 11 },
         },
       },
     },
@@ -872,35 +1017,53 @@ export default function Dashboard() {
           <div className="brokerdashboard-panel trend-card">
             <div className="trend-head">
               <div className="trend-head-left">
-                <h2 className="trend-title">Property Trends</h2>
-                <div className="trend-sub">Monthly property creation and updates</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <path d="M3 9h18M9 21V9" />
+                  </svg>
+                  <h2 className="trend-title">Property Trends</h2>
+                </div>
+                <div className="trend-sub">Distribution of available properties</div>
+              </div>
+              <div className="trend-head-right">
+                <select 
+                  className="trend-filter-select"
+                  value={propertyTrendsFilter}
+                  onChange={(e) => setPropertyTrendsFilter(e.target.value)}
+                >
+                  <option value="this-month">This month</option>
+                  <option value="this-year">This year</option>
+                  <option value="all">All time</option>
+                </select>
               </div>
             </div>
-            <div className="trend-chart" role="img" aria-label="Property trends line chart">
-              <div className="trend-plot" style={{ height: 260 }}>
-                <Line data={chartData} options={chartOptions} />
+            <div className="trend-chart" role="img" aria-label="Property trends bar chart">
+              <div className="trend-plot" style={{ height: Math.max(300, propertyTypesDistribution.length * 50) }}>
+                {propertyTypesDistribution.length > 0 ? (
+                  <Bar data={propertyTrendsBarData} options={propertyTrendsBarOptions} />
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#64748b' }}>
+                    No property data available
+                  </div>
+                )}
               </div>
             </div>
         </div>
 
           <div className="brokerdashboard-panel">
             <div className="brokerdashboard-panel-head">
-              <h2>Quick Stats</h2>
-              <div className="brokerdashboard-sub">Property distribution</div>
+              <h2>Property Types</h2>
+              <div className="brokerdashboard-sub">Distribution of available properties</div>
             </div>
-            <div className="brokerdashboard-quickstats">
-              <div className="brokerdashboard-quickstat-item">
-                <div className="brokerdashboard-quickstat-label">Published</div>
-                <div className="brokerdashboard-quickstat-value">{formatNumber(stats.publishedProperties)}</div>
-              </div>
-              <div className="brokerdashboard-quickstat-item">
-                <div className="brokerdashboard-quickstat-label">New This Week</div>
-                <div className="brokerdashboard-quickstat-value">{formatNumber(stats.newThisWeek)}</div>
-              </div>
-              <div className="brokerdashboard-quickstat-item">
-                <div className="brokerdashboard-quickstat-label">Active Leads</div>
-                <div className="brokerdashboard-quickstat-value">{formatNumber(stats.activeLeads)}</div>
-              </div>
+            <div className="brokerdashboard-pie-chart" style={{ height: 300, position: 'relative' }}>
+              {propertyTypesDistribution.length > 0 ? (
+                <Pie data={propertyTypesPieData} options={propertyTypesPieOptions} />
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#64748b' }}>
+                  No property data available
+                </div>
+              )}
             </div>
           </div>
         </section>

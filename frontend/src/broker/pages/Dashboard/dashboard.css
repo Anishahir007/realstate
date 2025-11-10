@@ -285,6 +285,12 @@
   color: #1f2a37;
 }
 
+.brokerdashboard-pie-chart {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* Trend Chart */
 .trend-card {
   min-height: 360px;
@@ -292,12 +298,41 @@
 
 .trend-head {
   margin-bottom: 20px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .trend-head-left {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  flex: 1;
+}
+
+.trend-head-right {
+  flex-shrink: 0;
+}
+
+.trend-filter-select {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #fff;
+  color: #1f2937;
+  font-size: 14px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.trend-filter-select:hover {
+  border-color: #cbd5e1;
+}
+
+.trend-filter-select:focus {
+  border-color: #2563eb;
 }
 
 .trend-title {
