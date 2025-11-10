@@ -1,14 +1,81 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { FiGrid, FiUsers, FiHome, FiGlobe, FiBarChart2, FiBell, FiSettings, FiClipboard } from 'react-icons/fi';
+import { FiGrid, FiUsers, FiHome, FiGlobe, FiBarChart2, FiBell, FiSettings, FiClipboard, FiShield } from 'react-icons/fi';
 import './navbar.css';
 import { useSuperAdmin } from '../../../context/SuperAdminContext.jsx';
+
+const NAV_ITEMS = [
+  {
+    key: 'dashboard',
+    to: '/superadmin/dashboard',
+    label: 'Dashboard',
+    icon: <FiGrid />,
+    roles: ['super_admin'],
+  },
+  {
+    key: 'brokers',
+    to: '/superadmin/brokers',
+    label: 'Brokers',
+    icon: <FiUsers />,
+    roles: ['super_admin'],
+  },
+  {
+    key: 'crm',
+    to: '/superadmin/crm',
+    label: 'CRM',
+    icon: <FiClipboard />,
+    roles: ['super_admin', 'sales'],
+  },
+  {
+    key: 'properties',
+    to: '/superadmin/properties',
+    label: 'Manage Property',
+    icon: <FiHome />,
+    roles: ['super_admin', 'property_management'],
+  },
+  {
+    key: 'templates',
+    to: '/superadmin/manage-templates',
+    label: 'Manage Website',
+    icon: <FiGlobe />,
+    roles: ['super_admin'],
+  },
+  {
+    key: 'user-roles',
+    to: '/superadmin/user-roles',
+    label: 'User Roles',
+    icon: <FiShield />,
+    roles: ['super_admin'],
+  },
+  {
+    key: 'reports',
+    to: '/superadmin/reports',
+    label: 'Reports',
+    icon: <FiBarChart2 />,
+    roles: ['super_admin'],
+  },
+  {
+    key: 'notifications',
+    to: '/superadmin/notifications',
+    label: 'Notifications',
+    icon: <FiBell />,
+    roles: ['super_admin'],
+  },
+  {
+    key: 'settings',
+    to: '/superadmin/settings/view-profile',
+    label: 'System Settings',
+    icon: <FiSettings />,
+    roles: ['super_admin'],
+  },
+];
 
 export default function Navbar() {
   const superAdmin = useSuperAdmin();
   const name = superAdmin?.name;
   const email = superAdmin?.email;
   const photo = superAdmin?.photo;
+  const portalRole = superAdmin?.portalRole || 'super_admin';
   const initials = React.useMemo(() => {
     if (!name) return 'SA';
     const parts = String(name).trim().split(/\s+/);
@@ -24,45 +91,16 @@ export default function Navbar() {
         <span>Super Admin</span>
       </div>
       <nav className="superadminnavbar-nav">
-        <NavLink to="/superadmin/dashboard" className={({ isActive }) => `superadminnavbar-link${isActive ? ' superadminnavbar-link-active' : ''}`}>
-          <span className="superadminnavbar-icon"><FiGrid /></span>
-          <span>Dashboard</span>
-        </NavLink>
-
-        <NavLink to="/superadmin/brokers" className={({ isActive }) => `superadminnavbar-link${isActive ? ' superadminnavbar-link-active' : ''}`}>
-          <span className="superadminnavbar-icon"><FiUsers /></span>
-          <span>Brokers</span>
-        </NavLink>
-
-        <NavLink to="/superadmin/crm" className={({ isActive }) => `superadminnavbar-link${isActive ? ' superadminnavbar-link-active' : ''}`}>
-          <span className="superadminnavbar-icon"><FiClipboard /></span>
-          <span>CRM</span>
-        </NavLink>
-
-        <NavLink to="/superadmin/properties" className={({ isActive }) => `superadminnavbar-link${isActive ? ' superadminnavbar-link-active' : ''}`}>
-          <span className="superadminnavbar-icon"><FiHome /></span>
-          <span>Manage Property</span>
-        </NavLink>
-
-        <NavLink to="/superadmin/manage-templates" className={({ isActive }) => `superadminnavbar-link${isActive ? ' superadminnavbar-link-active' : ''}`}>
-          <span className="superadminnavbar-icon"><FiGlobe /></span>
-          <span>Manage Website</span>
-        </NavLink>
-
-        <NavLink to="/superadmin/reports" className={({ isActive }) => `superadminnavbar-link${isActive ? ' superadminnavbar-link-active' : ''}`}>
-          <span className="superadminnavbar-icon"><FiBarChart2 /></span>
-          <span>Reports</span>
-        </NavLink>
-
-        <NavLink to="/superadmin/notifications" className={({ isActive }) => `superadminnavbar-link${isActive ? ' superadminnavbar-link-active' : ''}`}>
-          <span className="superadminnavbar-icon"><FiBell /></span>
-          <span>Notifications</span>
-        </NavLink>
-
-        <NavLink to="/superadmin/settings/view-profile" className={({ isActive }) => `superadminnavbar-link${isActive ? ' superadminnavbar-link-active' : ''}`}>
-          <span className="superadminnavbar-icon"><FiSettings /></span>
-          <span>System Settings</span>
-        </NavLink>
+        {NAV_ITEMS.filter(item => item.roles.includes(portalRole)).map(item => (
+          <NavLink
+            key={item.key}
+            to={item.to}
+            className={({ isActive }) => `superadminnavbar-link${isActive ? ' superadminnavbar-link-active' : ''}`}
+          >
+            <span className="superadminnavbar-icon">{item.icon}</span>
+            <span>{item.label}</span>
+          </NavLink>
+        ))}
       </nav>
       <div className="superadminnavbar-profile">
         <div className="superadminnavbar-profile-avatar">

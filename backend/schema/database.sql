@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS super_admins (
   email VARCHAR(255) NOT NULL,
   phone VARCHAR(20) NULL,
   photo VARCHAR(512) NULL,
+  portal_role ENUM('super_admin', 'sales', 'property_management') NOT NULL DEFAULT 'super_admin',
   password_hash VARCHAR(255) NOT NULL,
   status ENUM('active', 'suspended') NOT NULL DEFAULT 'active',
   last_login_at DATETIME NULL,

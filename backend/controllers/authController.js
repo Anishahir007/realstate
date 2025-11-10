@@ -4,29 +4,22 @@ import { hashPassword, comparePassword } from '../utils/hash.js';
 import { signJwt } from '../utils/jwt.js';
 import { createBrokerDatabaseIfNotExists } from '../utils/tenant.js';
 import { sendSignupOtp, verifySignupOtp, consumeOtp } from '../utils/otp.js';
+import { normalizePortalRole, isValidPortalRole } from '../utils/portalRoles.js';
+import { emailExistsAnywhere } from '../utils/email.js';
 
 async function findUserByEmail(table, email) {
   const [rows] = await pool.query(`SELECT * FROM ${table} WHERE email = ? LIMIT 1`, [email]);
   return rows[0] || null;
 }
 
-async function emailExistsAnywhere(email) {
-  const [sa] = await pool.query('SELECT id FROM super_admins WHERE email = ? LIMIT 1', [email]);
-  if (sa[0]) return { exists: true, in: 'super_admins' };
-  const [br] = await pool.query('SELECT id FROM brokers WHERE email = ? LIMIT 1', [email]);
-  if (br[0]) return { exists: true, in: 'brokers' };
-  const [us] = await pool.query('SELECT id FROM users WHERE email = ? LIMIT 1', [email]);
-  if (us[0]) return { exists: true, in: 'users' };
-  return { exists: false };
-}
-
 export async function signupSuperAdmin(req, res) {
   try {
-    const { full_name, email, phone, password, photo } = req.body || {};
+    const { full_name, email, phone, password, photo, portal_role } = req.body || {};
     if (!isNonEmptyString(full_name) || !validateEmail(email) || !validatePassword(password)) {
       const pwdErr = getPasswordValidationError(password);
       return res.status(400).json({ message: 'Invalid input', errors: { password: pwdErr || 'Invalid password', email: validateEmail(email) ? undefined : 'Invalid email', full_name: isNonEmptyString(full_name) ? undefined : 'Name is required' } });
     }
+    const portalRole = normalizePortalRole(portal_role);
     // Cross-role uniqueness
     const existsAnywhere = await emailExistsAnywhere(email);
     if (existsAnywhere.exists) return res.status(409).json({ message: 'Email already in use' });
@@ -34,8 +27,8 @@ export async function signupSuperAdmin(req, res) {
     const password_hash = await hashPassword(password);
     const safeName = sanitizeName(full_name);
     const [result] = await pool.query(
-      `INSERT INTO super_admins (full_name, email, phone, photo, password_hash) VALUES (?, ?, ?, ?, ?)`,
-      [safeName, email, phone || null, photo || null, password_hash]
+      `INSERT INTO super_admins (full_name, email, phone, photo, portal_role, password_hash) VALUES (?, ?, ?, ?, ?, ?)`,
+      [safeName, email, phone || null, photo || null, portalRole, password_hash]
     );
     const id = result.insertId;
     const token = signJwt({ role: 'super_admin', id, email });
@@ -299,7 +292,7 @@ export async function whoami(req, res) {
 
     if (role === 'super_admin') {
       const [rows] = await pool.query(
-        'SELECT id, full_name, email, phone, photo, last_login_at FROM super_admins WHERE id = ? LIMIT 1',
+        'SELECT id, full_name, email, phone, photo, portal_role, last_login_at FROM super_admins WHERE id = ? LIMIT 1',
         [id]
       );
       const row = rows[0];
@@ -312,6 +305,7 @@ export async function whoami(req, res) {
           email: row.email,
           phone: row.phone,
           photo: row.photo,
+          portalRole: row.portal_role,
           lastLoginAt: row.last_login_at,
         },
       });
@@ -392,7 +386,7 @@ export async function updateSuperAdminProfile(req, res) {
       return res.status(403).json({ message: 'Forbidden' });
     }
 
-    const { full_name, email, phone } = req.body || {};  
+    const { full_name, email, phone, portal_role } = req.body || {};  
     // If file upload present, map to photo URL
     let photo = undefined;
     if (req.file) {
@@ -430,6 +424,14 @@ export async function updateSuperAdminProfile(req, res) {
       params.push(isNonEmptyString(photo) ? photo : null);
     }
 
+    if (portal_role !== undefined) {
+      if (!isValidPortalRole(String(portal_role))) {
+        return res.status(400).json({ message: 'Invalid portal_role' });
+      }
+      updates.push('portal_role = ?');
+      params.push(normalizePortalRole(portal_role));
+    }
+
     if (updates.length === 0) {
       return res.status(400).json({ message: 'No fields to update' });
     }
@@ -438,7 +440,7 @@ export async function updateSuperAdminProfile(req, res) {
     await pool.query(`UPDATE super_admins SET ${updates.join(', ')} WHERE id = ?`, params);
 
     const [rows] = await pool.query(
-      'SELECT id, full_name, email, phone, photo, last_login_at FROM super_admins WHERE id = ? LIMIT 1',
+      'SELECT id, full_name, email, phone, photo, portal_role, last_login_at FROM super_admins WHERE id = ? LIMIT 1',
       [id]
     );
     const row = rows[0];
@@ -450,6 +452,7 @@ export async function updateSuperAdminProfile(req, res) {
         email: row.email,
         phone: row.phone,
         photo: row.photo,
+        portalRole: row.portal_role,
         lastLoginAt: row.last_login_at,
       },
     });

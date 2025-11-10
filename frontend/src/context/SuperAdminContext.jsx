@@ -48,6 +48,7 @@ export function SuperAdminProvider({ children }) {
             email: profile.email,
             phone: profile.phone,
             photo: profile.photo,
+            portalRole: profile.portalRole || 'super_admin',
             lastLoginAt: profile.lastLoginAt,
           }));
         }
@@ -89,6 +90,7 @@ export function SuperAdminProvider({ children }) {
           email: profile.email,
           phone: profile.phone,
           photo: profile.photo,
+            portalRole: profile.portalRole || 'super_admin',
           lastLoginAt: profile.lastLoginAt,
         };
         setState(updated);
@@ -119,6 +121,7 @@ export function SuperAdminProvider({ children }) {
           email: p.email,
           phone: p.phone,
           photo: p.photo,
+          portalRole: p.portalRole || 'super_admin',
           lastLoginAt: p.lastLoginAt,
         };
         setState(updated);
@@ -147,6 +150,7 @@ export function SuperAdminProvider({ children }) {
         email: p.email,
         phone: p.phone,
         photo: p.photo,
+        portalRole: p.portalRole || 'super_admin',
         lastLoginAt: p.lastLoginAt,
       };
       setState(updated);
@@ -156,6 +160,7 @@ export function SuperAdminProvider({ children }) {
 
   const value = useMemo(() => ({
     ...state,
+    portalRole: state?.portalRole || 'super_admin',
     isAuthenticated: Boolean(state?.token),
     login,
     logout,
