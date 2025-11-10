@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import { useSuperAdmin } from '../../../context/SuperAdminContext.jsx';
 import './properties.css';
@@ -166,6 +166,14 @@ export default function SuperAdminProperties() {
       default: return null;
     }
   };
+
+  const buildImageUrl = useCallback((imagePath) => {
+    if (!imagePath) return null;
+    if (/^https?:\/\//i.test(imagePath)) return imagePath;
+    const base = apiBase ? apiBase.replace(/\/+$/, '') : '';
+    const path = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
+    return `${base}${path}`;
+  }, [apiBase]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -518,13 +526,36 @@ export default function SuperAdminProperties() {
                   const bookingLabel = formatCurrency(p.bookingAmount);
                   const maintenanceLabel = formatCurrency(p.maintenanceCharges);
                   const dateLabel = p.createdAt ? new Date(p.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
-                  const helpers = { location, builtUp, carpet, superArea, priceLabel, bookingLabel, maintenanceLabel, dateLabel };
+                  const helpers = {
+                    location,
+                    builtUp,
+                    carpet,
+                    superArea,
+                    priceLabel,
+                    bookingLabel,
+                    maintenanceLabel,
+                    dateLabel,
+                    normalizeImage: buildImageUrl,
+                  };
                   return (
                     <tr key={`${p.tenantDb}:${p.id}`}>
                       <td className="col-property">
                         <div className="property-cell">
                           <div className="property-thumb">
-                            <img src={p.image ? `${apiBase}${p.image}` : '/templates/proclassic/public/img/noimg.png'} alt="" />
+                            {p.image && helpers.normalizeImage(p.image) ? (
+                              <img
+                                src={helpers.normalizeImage(p.image)}
+                                alt=""
+                                onError={(event) => {
+                                  event.currentTarget.style.display = 'none';
+                                  const noImg = event.currentTarget.nextElementSibling;
+                                  if (noImg) noImg.style.display = 'flex';
+                                }}
+                              />
+                            ) : null}
+                            <div className="property-no-image" style={{ display: p.image && helpers.normalizeImage(p.image) ? 'none' : 'flex' }}>
+                              No Image
+                            </div>
                           </div>
                           <div className="property-meta">
                             <div className="property-title">{p.title || 'Untitled property'}</div>
@@ -565,7 +596,7 @@ export default function SuperAdminProperties() {
               </div>
               <button className="superadminbroker-iconbtn" onClick={() => setSelected(null)} aria-label="Close">×</button>
             </div>
-            {selected.loading && <div className="superadminbrokerproperties-loading">Loading...</div>}
+            {selected.loading && <div className="superadminbrokerproperties-loading">Loading...</div>}  
             {!selected.loading && selected.details && (() => {
               const media = Array.isArray(selected.details?.media) ? selected.details.media : [];
               const urls = media.map(m => m?.file_url).filter(Boolean);
@@ -578,14 +609,48 @@ export default function SuperAdminProperties() {
                 <div className="superadminbrokerproperties-detail-left">
                   <div className="superadminbrokerproperties-carousel">
                     <button className="superadminbrokerproperties-nav superadminbrokerproperties-prev" onClick={() => go(-1)} aria-label="Previous">‹</button>
-                    <img className="superadminbrokerproperties-detail-img" src={currentUrl ? `${apiBase}${currentUrl}` : ''} alt="" />
+                    {currentUrl && buildImageUrl(currentUrl) ? (
+                      <img 
+                        className="superadminbrokerproperties-detail-img" 
+                        src={buildImageUrl(currentUrl)} 
+                        alt=""
+                        onError={(event) => {
+                          event.currentTarget.style.display = 'none';
+                          const noImg = event.currentTarget.nextElementSibling;
+                          if (noImg) noImg.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <div className="superadminbrokerproperties-no-image" style={{ display: currentUrl && buildImageUrl(currentUrl) ? 'none' : 'flex' }}>
+                      No Image
+                    </div>
                     <button className="superadminbrokerproperties-nav superadminbrokerproperties-next" onClick={() => go(1)} aria-label="Next">›</button>
                   </div>
                   {urls.length > 1 && (
                     <div className="superadminbrokerproperties-thumbs">
-                      {urls.map((u, idx) => (
-                        <img key={idx} src={`${apiBase}${u}`} className={`superadminbrokerproperties-thumb ${idx === slideIdx ? 'active' : ''}`} onClick={() => setSlideIdx(idx)} alt="" />
-                      ))}
+                      {urls.map((u, idx) => {
+                        const imgUrl = buildImageUrl(u);
+                        return (
+                          <div key={idx} className={`superadminbrokerproperties-thumb-wrapper ${idx === slideIdx ? 'active' : ''}`}>
+                            {imgUrl ? (
+                              <img
+                                src={imgUrl}
+                                className="superadminbrokerproperties-thumb"
+                                onClick={() => setSlideIdx(idx)}
+                                alt=""
+                                onError={(event) => {
+                                  event.currentTarget.style.display = 'none';
+                                  const noImg = event.currentTarget.nextElementSibling;
+                                  if (noImg) noImg.style.display = 'flex';
+                                }}
+                              />
+                            ) : null}
+                            <div className="superadminbrokerproperties-thumb-no-image" style={{ display: imgUrl ? 'none' : 'flex' }}>
+                              No Image
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
 

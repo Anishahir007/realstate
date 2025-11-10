@@ -96,8 +96,20 @@
 .superadminbrokerproperties-prop-title { font-weight: 600; }
 .superadminbrokerproperties-prop-meta { color: #64748b; font-size: 12px; }
 .property-cell { display: flex; align-items: center; gap: 12px; }
-.property-thumb { flex: 0 0 64px; height: 48px; border-radius: 10px; overflow: hidden; border: 1px solid #e2e8f0; background: #fff; }
+.property-thumb { flex: 0 0 64px; height: 48px; border-radius: 10px; overflow: hidden; border: 1px solid #e2e8f0; background: #fff; position: relative; }
 .property-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.property-no-image {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
 .property-meta { display: flex; flex-direction: column; gap: 4px; }
 .property-title { font-weight: 600; color: #0f172a; }
 .property-sub { font-size: 12px; color: #64748b; }
@@ -110,6 +122,49 @@
 
 .superadminbrokerproperties-detail { display: grid; grid-template-columns: 1.4fr 1.6fr; gap: 16px; }
 .superadminbrokerproperties-detail-img { width: 100%; height: 220px; object-fit: cover; border-radius: 10px; border: 1px solid #e5e7eb; }
+.superadminbrokerproperties-no-image {
+  width: 100%;
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 500;
+  text-transform: uppercase;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+}
+.superadminbrokerproperties-thumb-wrapper {
+  position: relative;
+  width: 60px;
+  height: 45px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+.superadminbrokerproperties-thumb-wrapper.active {
+  border-color: #2563eb;
+}
+.superadminbrokerproperties-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.superadminbrokerproperties-thumb-no-image {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 9px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
 .superadminbrokerproperties-detail-title { margin: 0 0 4px 0; }
 .superadminbrokerproperties-detail-price { font-size: 22px; font-weight: 800; margin-bottom: 10px; }
 .superadminbrokerproperties-detail-line { margin: 6px 0; }

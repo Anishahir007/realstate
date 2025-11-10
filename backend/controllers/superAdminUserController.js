@@ -6,6 +6,11 @@ import { normalizePortalRole, isValidPortalRole } from '../utils/portalRoles.js'
 
 const STATUS_VALUES = ['active', 'suspended'];
 
+function buildPhotoPath(file) {
+  if (!file) return null;
+  return `/${file.destination.replace(/\\/g, '/').replace(/^public\//, '')}/${file.filename}`;
+}
+
 function toApiSuperAdmin(row) {
   if (!row) return null;
   return {
@@ -13,6 +18,7 @@ function toApiSuperAdmin(row) {
     name: row.full_name,
     email: row.email,
     phone: row.phone,
+    photo: row.photo,
     portalRole: row.portal_role,
     status: row.status,
     lastLoginAt: row.last_login_at,
@@ -55,7 +61,7 @@ export async function listSuperAdminUsers(req, res) {
     if (!current) return;
 
     const [rows] = await pool.query(
-      `SELECT id, full_name, email, phone, portal_role, status, last_login_at, created_at, updated_at
+      `SELECT id, full_name, email, phone, photo, portal_role, status, last_login_at, created_at, updated_at
        FROM super_admins
        WHERE portal_role <> 'super_admin'
        ORDER BY created_at DESC`
@@ -98,16 +104,17 @@ export async function createSuperAdminUser(req, res) {
       return res.status(400).json({ message: 'Cannot create additional super admin users' });
     }
     const normalizedStatus = normalizeStatus(status);
+    const photoPath = buildPhotoPath(req.file);
 
     const [result] = await pool.query(
-      `INSERT INTO super_admins (full_name, email, phone, portal_role, password_hash, status)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [safeName, email, phone || null, portalRole, password_hash, normalizedStatus]
+      `INSERT INTO super_admins (full_name, email, phone, photo, portal_role, password_hash, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [safeName, email, isNonEmptyString(phone) ? phone : null, photoPath, portalRole, password_hash, normalizedStatus]
     );
 
     const insertedId = result.insertId;
     const [[row]] = await pool.query(
-      `SELECT id, full_name, email, phone, portal_role, status, last_login_at, created_at, updated_at
+      `SELECT id, full_name, email, phone, photo, portal_role, status, last_login_at, created_at, updated_at
        FROM super_admins WHERE id = ? LIMIT 1`,
       [insertedId]
     );
@@ -147,7 +154,7 @@ export async function updateSuperAdminUser(req, res) {
         return res.status(400).json({ message: 'Invalid full_name' });
       }
       updates.push('full_name = ?');
-      params.push(sanitizeName(full_name));
+      params.push(sanitizeName(full_name)); 
     }
 
     if (email !== undefined) {
@@ -187,13 +194,27 @@ export async function updateSuperAdminUser(req, res) {
     }
 
     if (password !== undefined) {
-      if (!isNonEmptyString(password) || !validatePassword(password)) {
-        const pwdErr = getPasswordValidationError(password);
-        return res.status(400).json({ message: pwdErr || 'Invalid password' });
+      const trimmedPassword = typeof password === 'string' ? password.trim() : '';
+      if (trimmedPassword) {
+        if (!validatePassword(trimmedPassword)) {
+          const pwdErr = getPasswordValidationError(trimmedPassword);
+          return res.status(400).json({ message: pwdErr || 'Invalid password' });
+        }
+        const password_hash = await hashPassword(trimmedPassword);
+        updates.push('password_hash = ?');
+        params.push(password_hash);
       }
-      const password_hash = await hashPassword(password);
-      updates.push('password_hash = ?');
-      params.push(password_hash);
+    }
+
+    if (req.file) {
+      updates.push('photo = ?');
+      params.push(buildPhotoPath(req.file));
+    } else if (req.body && Object.prototype.hasOwnProperty.call(req.body, 'remove_photo')) {
+      const removeFlag = String(req.body.remove_photo).toLowerCase();
+      if (['1', 'true', 'yes'].includes(removeFlag)) {
+        updates.push('photo = ?');
+        params.push(null);
+      }
     }
 
     if (updates.length === 0) {
@@ -207,7 +228,7 @@ export async function updateSuperAdminUser(req, res) {
     );
 
     const [[row]] = await pool.query(
-      `SELECT id, full_name, email, phone, portal_role, status, last_login_at, created_at, updated_at
+      `SELECT id, full_name, email, phone, photo, portal_role, status, last_login_at, created_at, updated_at
        FROM super_admins WHERE id = ? LIMIT 1`,
       [id]
     );
