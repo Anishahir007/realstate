@@ -4,19 +4,19 @@ import { listTemplates, previewTemplate, publishTemplateAsSite, listMySites, ser
 
 const router = Router();
 
-// Broker can list templates and preview
-router.get('/list', requireAuth, requireRole('broker'), listTemplates);
-router.get('/preview/:template', requireAuth, requireRole('broker'), previewTemplate);
+// Broker and Company can list templates and preview
+router.get('/list', requireAuth, requireRole('broker', 'company'), listTemplates);
+router.get('/preview/:template', requireAuth, requireRole('broker', 'company'), previewTemplate);
 // Preview JSON for frontend templates (use token in query or header)
-router.get('/preview/:template/context', requireAuth, requireRole('broker'), getPreviewContext);
+router.get('/preview/:template/context', requireAuth, requireRole('broker', 'company'), getPreviewContext);
 
-// Broker can publish
-router.post('/publish', requireAuth, requireRole('broker'), publishTemplateAsSite);
-router.get('/my-sites', requireAuth, requireRole('broker'), listMySites);
+// Broker and Company can publish
+router.post('/publish', requireAuth, requireRole('broker', 'company'), publishTemplateAsSite);
+router.get('/my-sites', requireAuth, requireRole('broker', 'company'), listMySites);
 
 // Custom domain
-router.post('/connect-domain', requireAuth, requireRole('broker'), connectCustomDomain);
-router.get('/check-domain', requireAuth, requireRole('broker'), checkCustomDomain);
+router.post('/connect-domain', requireAuth, requireRole('broker', 'company'), connectCustomDomain);
+router.get('/check-domain', requireAuth, requireRole('broker', 'company'), checkCustomDomain);
 
 // JSON for frontend
 router.get('/site/:slug/context', getSiteContext);

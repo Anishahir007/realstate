@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { SuperAdminRoutes } from './routes/superadminRoutes.jsx';
 import { BrokerRoutes } from './routes/brokerRoutes.jsx';
+import { CompanyRoutes } from './routes/companyRoutes.jsx';
 import { UserRoutes } from './routes/userRoutes.jsx';
 import UnifiedAuth from './components/auth/UnifiedAuth.jsx';
 const SiteRenderer = lazy(() => import('./superadmin/templates/SiteRenderer.jsx'));
@@ -52,6 +53,7 @@ export default function App() {
         
         
         {BrokerRoutes()}
+        {CompanyRoutes()}
         {UserRoutes()}
         <Route path="/brokers/auth" element={<UnifiedAuth />} />
         <Route path="*" element={<div style={{ padding: 24 }}>Not Found</div>} />

@@ -27,4 +27,18 @@ export async function notifyBroker({ tenantDb, type, title, message }) {
   }
 }
 
+export async function notifyCompany({ tenantDb, type, title, message }) {
+  try {
+    if (!tenantDb) return;
+    const tenantPool = await getTenantPool(tenantDb);
+    await tenantPool.query(
+      `INSERT INTO company_notifications (type, title, message)
+       VALUES (?, ?, ?)`,
+      [String(type || ''), String(title || ''), message || null]
+    );
+  } catch (e) {
+    // non-blocking: avoid failing main flow due to notification issues
+  }
+}
+
 

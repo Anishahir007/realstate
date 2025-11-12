@@ -1,8 +1,10 @@
 import React from 'react';
 import { useOutletContext } from 'react-router-dom';
 import Hero from '../components/hero/Hero.jsx';
-import PropertyCard from '../components/property/PropertyCard.jsx';
+import { PropertiesGrid } from '../components/property/PropertyCard.jsx';
+import { FeaturedPropertiesGrid } from '../components/featuredProperties/FeaturedProperties.jsx';
 import '../components/property/property.css';
+import '../components/featuredProperties/featuredProperties.css';
 
 export default function ProClassicHome({ site: siteProp, properties: propsProps }) {
   const ctx = useOutletContext?.() || {};
@@ -11,12 +13,8 @@ export default function ProClassicHome({ site: siteProp, properties: propsProps 
   return (
     <div>
       <Hero />
-      <h2 style={{ marginTop: 0 }}>Latest Properties</h2>
-      {properties.length === 0 ? (<div>No properties yet.</div>) : (
-        <div className="pc-prop-grid">
-          {properties.map((p) => (<PropertyCard key={p.id} property={p} />))}
-        </div>
-      )}
+      <FeaturedPropertiesGrid properties={properties} />
+      <PropertiesGrid properties={properties} />
     </div>
   );
 }

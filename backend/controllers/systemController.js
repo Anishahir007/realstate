@@ -66,11 +66,25 @@ export async function getSuperAdminDashboardStats(req, res) {
       `SELECT COUNT(*) AS total FROM brokers ${brokerWhereSql}`,
       brokerParams
     );
+    
+    const companyParams = [];
+    let companyWhereSql = '';
+    if (startDate && endDate) {
+      companyWhereSql = 'WHERE created_at BETWEEN ? AND ?';
+      companyParams.push(startDate, endDate);
+    }
+    const [[companyCountRow]] = await pool.query(
+      `SELECT COUNT(*) AS total FROM companies ${companyWhereSql}`,
+      companyParams
+    );
+    
     const [brokers] = await pool.query('SELECT id, tenant_db FROM brokers WHERE tenant_db IS NOT NULL');
+    const [companies] = await pool.query('SELECT id, tenant_db FROM companies WHERE tenant_db IS NOT NULL');
 
     let totalProperties = 0;
     let activeProperties = 0;
     let totalBrokerLeads = 0;
+    let totalCompanyLeads = 0;
 
     for (const broker of brokers) {
       const tenantDb = broker?.tenant_db;
@@ -114,6 +128,33 @@ export async function getSuperAdminDashboardStats(req, res) {
       }
     }
 
+    for (const company of companies) {
+      const tenantDb = company?.tenant_db;
+      if (!tenantDb) continue;
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        const tenantPool = await getTenantPool(tenantDb);
+
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          await ensureTenantLeadsTableExists(tenantPool);
+          // eslint-disable-next-line no-await-in-loop
+          const leadParams = [];
+          let leadSql = 'SELECT COUNT(*) AS total FROM leads';
+          if (startDate && endDate) {
+            leadSql += ' WHERE created_at BETWEEN ? AND ?';
+            leadParams.push(startDate, endDate);
+          }
+          const [[leadRow]] = await tenantPool.query(leadSql, leadParams);
+          totalCompanyLeads += Number(leadRow?.total || 0);
+        } catch {
+          // Ignore tenant lead errors; continue with other tenants
+        }
+      } catch {
+        // Skip companies whose tenant DB is unavailable
+      }
+    }
+
     const adminLeadParams = [];
     let adminLeadSql = 'SELECT COUNT(*) AS total FROM leads';
     if (startDate && endDate) {
@@ -121,7 +162,7 @@ export async function getSuperAdminDashboardStats(req, res) {
       adminLeadParams.push(startDate, endDate);
     }
     const [[adminLeadRow]] = await pool.query(adminLeadSql, adminLeadParams);
-    const totalLeads = totalBrokerLeads + Number(adminLeadRow?.total || 0);
+    const totalLeads = totalBrokerLeads + totalCompanyLeads + Number(adminLeadRow?.total || 0);
 
     const sitesMap = loadSitesMap();
     const sitesList = Object.values(sitesMap || {});
@@ -150,6 +191,7 @@ export async function getSuperAdminDashboardStats(req, res) {
     return res.json({
       data: {
         totalBrokers: Number(brokerCountRow?.total || 0),
+        totalCompanies: Number(companyCountRow?.total || 0),
         totalLeads,
         totalProperties,
         activeProperties,

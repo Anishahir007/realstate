@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import ejs from 'ejs';
 import { getTenantPool } from '../utils/tenant.js';
 import pool from '../config/database.js';
-import { generateSiteSlug, generateStableBrokerSlug, publishSite, listPublishedSitesForBroker, getSiteBySlug, setCustomDomainForSite, getSiteByDomain, markDomainVerified } from '../utils/sites.js';
+import { generateSiteSlug, generateStableBrokerSlug, generateStableCompanySlug, publishSite, listPublishedSitesForBroker, listPublishedSitesForCompany, getSiteBySlug, setCustomDomainForSite, getSiteByDomain, markDomainVerified } from '../utils/sites.js';
 import dns from 'dns/promises';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -372,10 +372,15 @@ export async function getPreviewContext(req, res) {
     const template = (req.params.template || '').toString();
     const user = req.user || null;
     const tenantDb = user?.tenant_db || '';
-    // basic broker object
-    const broker = user ? { id: user.id, full_name: user.name || user.full_name || 'Broker', email: user.email, tenant_db: user.tenant_db } : null;
+    // basic owner object (broker or company)
+    const owner = user ? { 
+      id: user.id, 
+      full_name: user.role === 'company' ? (user.companyName || user.name || user.full_name || 'Company') : (user.name || user.full_name || 'Broker'), 
+      email: user.email, 
+      tenant_db: user.tenant_db 
+    } : null;
     const properties = tenantDb ? await fetchBrokerAndProperties(tenantDb, req) : [];
-    return res.json({ site: { title: broker?.full_name ? `${broker.full_name} Real Estate` : 'Real Estate', broker, template }, properties });
+    return res.json({ site: { title: owner?.full_name ? `${owner.full_name} Real Estate` : 'Real Estate', broker: owner, template }, properties });
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';
     return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
@@ -387,10 +392,22 @@ export async function publishTemplateAsSite(req, res) {
     const template = (req.body?.template || '').toString();
     const siteTitle = (req.body?.siteTitle || '').toString();
     if (!template) return res.status(400).json({ message: 'template is required' });
-    if (!req.user || req.user.role !== 'broker') return res.status(403).json({ message: 'Forbidden' });
-    // Use a stable slug per broker so it replaces previous site
-    const slug = generateStableBrokerSlug({ brokerName: req.user.name || req.user.full_name || 'broker', brokerId: req.user.id });
-    const site = publishSite({ slug, brokerId: req.user.id, template, siteTitle });
+    if (!req.user || (req.user.role !== 'broker' && req.user.role !== 'company')) return res.status(403).json({ message: 'Forbidden' });
+    
+    let slug;
+    let site;
+    if (req.user.role === 'company') {
+      // Use a stable slug per company so it replaces previous site
+      const companyName = req.user.companyName || req.user.name || req.user.full_name || 'company';
+      slug = generateStableCompanySlug({ companyName, companyId: req.user.id });
+      site = publishSite({ slug, companyId: req.user.id, ownerType: 'company', template, siteTitle });
+    } else {
+      // Use a stable slug per broker so it replaces previous site
+      const brokerName = req.user.name || req.user.full_name || 'broker';
+      slug = generateStableBrokerSlug({ brokerName, brokerId: req.user.id });
+      site = publishSite({ slug, brokerId: req.user.id, ownerType: 'broker', template, siteTitle });
+    }
+    
     // Build a public URL that points through the frontend origin when available
     const origin = req.get('origin') || process.env.PUBLIC_ORIGIN || `${req.protocol}://${req.get('host')}`;
     const urlPath = `/site/${site.slug}`;
@@ -404,8 +421,10 @@ export async function publishTemplateAsSite(req, res) {
 
 export async function listMySites(req, res) {
   try {
-    if (!req.user || req.user.role !== 'broker') return res.status(403).json({ message: 'Forbidden' });
-    const sites = listPublishedSitesForBroker(req.user.id);
+    if (!req.user || (req.user.role !== 'broker' && req.user.role !== 'company')) return res.status(403).json({ message: 'Forbidden' });
+    const sites = req.user.role === 'company' 
+      ? listPublishedSitesForCompany(req.user.id)
+      : listPublishedSitesForBroker(req.user.id);
     const origin = req.get('origin') || process.env.PUBLIC_ORIGIN || `${req.protocol}://${req.get('host')}`;
     return res.json({ data: sites.map((s) => ({ ...s, url: `${origin}/site/${s.slug}`, urlPath: `/site/${s.slug}` })) });
   } catch (err) {
@@ -422,21 +441,33 @@ export async function serveSiteBySlug(req, res) {
     if (!site) return res.status(404).send('Site not found');
     const viewPath = getTemplateViewPath(site.template, view);
     if (!fs.existsSync(viewPath)) return res.status(404).send('Page not found');
-    // Look up broker name/email and tenant_db to pull properties
-    let broker = { id: site.brokerId, full_name: site.siteTitle || 'Broker Site' };
+    // Look up owner (broker or company) name/email and tenant_db to pull properties
+    const ownerType = site.ownerType || 'broker'; // default to broker for backward compatibility
+    let owner = { id: ownerType === 'company' ? site.companyId : site.brokerId, full_name: site.siteTitle || (ownerType === 'company' ? 'Company Site' : 'Broker Site') };
     let properties = [];
     try {
-      const [rows] = await pool.query('SELECT id, full_name, email, phone, photo, tenant_db FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
-      const row = rows?.[0];
-      if (row) {
-        broker = { id: row.id, full_name: row.full_name || broker.full_name, email: row.email, phone: row.phone, photo: row.photo, tenant_db: row.tenant_db };
-        if (row.tenant_db) {
-          properties = await fetchBrokerAndProperties(row.tenant_db, req);
+      if (ownerType === 'company') {
+        const [rows] = await pool.query('SELECT id, name, email, phone, photo, tenant_db FROM companies WHERE id = ? LIMIT 1', [site.companyId]);
+        const row = rows?.[0];
+        if (row) {
+          owner = { id: row.id, full_name: row.name || owner.full_name, email: row.email, phone: row.phone, photo: row.photo, tenant_db: row.tenant_db };
+          if (row.tenant_db) {
+            properties = await fetchBrokerAndProperties(row.tenant_db, req);
+          }
+        }
+      } else {
+        const [rows] = await pool.query('SELECT id, full_name, email, phone, photo, tenant_db FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
+        const row = rows?.[0];
+        if (row) {
+          owner = { id: row.id, full_name: row.full_name || owner.full_name, email: row.email, phone: row.phone, photo: row.photo, tenant_db: row.tenant_db };
+          if (row.tenant_db) {
+            properties = await fetchBrokerAndProperties(row.tenant_db, req);
+          }
         }
       }
     } catch {}
     const nav = { home: `/site/${slug}`, properties: `/site/${slug}/properties`, about: `/site/${slug}/about`, contact: `/site/${slug}/contact` };
-    const context = buildSiteContext({ broker, properties, page: view, nav });
+    const context = buildSiteContext({ broker: owner, properties, page: view, nav });
     const html = await ejs.renderFile(viewPath, context, { async: true, root: getTemplatesRoot() });
     return res.set('Content-Type', 'text/html').send(html);
   } catch (err) {
@@ -445,25 +476,37 @@ export async function serveSiteBySlug(req, res) {
   }
 }
 
-// JSON context for frontend templates (broker + properties)
+// JSON context for frontend templates (broker/company + properties)
 export async function getSiteContext(req, res) {
   try {
     const slug = (req.params.slug || '').toString();
     const site = getSiteBySlug(slug);
     if (!site) return res.status(404).json({ message: 'Site not found' });
-    let broker = { id: site.brokerId, full_name: site.siteTitle || 'Broker Site' };
+    const ownerType = site.ownerType || 'broker'; // default to broker for backward compatibility
+    let owner = { id: ownerType === 'company' ? site.companyId : site.brokerId, full_name: site.siteTitle || (ownerType === 'company' ? 'Company Site' : 'Broker Site') };
     let properties = [];
     try {
-      const [rows] = await pool.query('SELECT id, full_name, email, phone, photo, tenant_db FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
-      const row = rows?.[0];
-      if (row) {
-        broker = { id: row.id, full_name: row.full_name || broker.full_name, email: row.email, phone: row.phone, photo: row.photo, tenant_db: row.tenant_db };
-        if (row.tenant_db) {
-          properties = await fetchBrokerAndProperties(row.tenant_db, req);
+      if (ownerType === 'company') {
+        const [rows] = await pool.query('SELECT id, name, email, phone, photo, tenant_db FROM companies WHERE id = ? LIMIT 1', [site.companyId]);
+        const row = rows?.[0];
+        if (row) {
+          owner = { id: row.id, full_name: row.name || owner.full_name, email: row.email, phone: row.phone, photo: row.photo, tenant_db: row.tenant_db };
+          if (row.tenant_db) {
+            properties = await fetchBrokerAndProperties(row.tenant_db, req);
+          }
+        }
+      } else {
+        const [rows] = await pool.query('SELECT id, full_name, email, phone, photo, tenant_db FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
+        const row = rows?.[0];
+        if (row) {
+          owner = { id: row.id, full_name: row.full_name || owner.full_name, email: row.email, phone: row.phone, photo: row.photo, tenant_db: row.tenant_db };
+          if (row.tenant_db) {
+            properties = await fetchBrokerAndProperties(row.tenant_db, req);
+          }
         }
       }
     } catch {}
-    return res.json({ site: { broker, title: broker?.full_name ? `${broker.full_name} Real Estate` : 'Real Estate' }, properties, template: site.template });
+    return res.json({ site: { broker: owner, title: owner?.full_name ? `${owner.full_name} Real Estate` : 'Real Estate' }, properties, template: site.template });
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';
     return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
@@ -517,13 +560,19 @@ async function isDomainPointingToTarget(domain) {
 
 export async function connectCustomDomain(req, res) {
   try {
-    if (!req.user || req.user.role !== 'broker') return res.status(403).json({ message: 'Forbidden' });
+    if (!req.user || (req.user.role !== 'broker' && req.user.role !== 'company')) return res.status(403).json({ message: 'Forbidden' });
     const slug = (req.body?.slug || '').toString();
     const domain = (req.body?.domain || '').toString();
     if (!slug) return res.status(400).json({ message: 'slug is required' });
     if (!domain) return res.status(400).json({ message: 'domain is required' });
     const site = getSiteBySlug(slug);
-    if (!site || String(site.brokerId) !== String(req.user.id)) return res.status(404).json({ message: 'Site not found' });
+    if (!site) return res.status(404).json({ message: 'Site not found' });
+    // Verify ownership
+    const siteOwnerType = site.ownerType || 'broker'; // default to broker for backward compatibility
+    const siteOwnerId = siteOwnerType === 'company' ? site.companyId : site.brokerId;
+    if (String(siteOwnerId) !== String(req.user.id) || siteOwnerType !== req.user.role) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
     const updated = setCustomDomainForSite(slug, domain);
     const instructions = `Set an A record for ${updated.customDomain} to ${TARGET_A}`;
     return res.json({ data: { ...updated, instructions } });

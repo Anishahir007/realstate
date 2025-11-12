@@ -1,14 +1,17 @@
 import React, { useMemo, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import "./UnifiedAuth.css";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { SuperAdminProvider } from "../../context/SuperAdminContext.jsx";
 import { BrokerProvider, useBroker } from "../../context/BrokerContext.jsx";
+import { CompanyProvider, useCompany } from "../../context/CompanyContext.jsx";
 import { AppUserProvider, useAppUser } from "../../context/UserRoleContext.jsx";
 
  const ROLE_OPTIONS = [
    { value: "user", label: "Buyer/Owner/Tenant" },
    { value: "broker", label: "Agent/Broker" },
+   { value: "company", label: "Company" },
    // Super admin hidden in UI per requirement; can be exposed later if needed
  ];
 function PasswordHint() {
@@ -22,9 +25,17 @@ function PasswordHint() {
 }
 
 function UnifiedAuthInner() {
+  const navigate = useNavigate();
   const broker = (() => {
     try {
       return useBroker();
+    } catch {
+      return {};
+    }
+  })();
+  const company = (() => {
+    try {
+      return useCompany();
     } catch {
       return {};
     }
@@ -42,6 +53,7 @@ function UnifiedAuthInner() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [companyName, setCompanyName] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -53,6 +65,7 @@ function UnifiedAuthInner() {
 
   const apiBase =
     broker?.apiBase ||
+    company?.apiBase ||
     appUser?.apiBase ||
     import.meta.env.VITE_API_BASE;
 
@@ -64,6 +77,7 @@ function UnifiedAuthInner() {
   async function handleLogin() {
     try {
       if (role === "broker") return await broker.login(email, password);
+      if (role === "company") return await company.login(email, password);
       return await appUser.login(email, password);
     } catch (err) {
       const status = err?.response?.status;
@@ -91,13 +105,24 @@ function UnifiedAuthInner() {
       setPasswordError(localPwdErr);
       throw new Error(localPwdErr);
     }
-    const payload = { full_name: fullName, email, phone, password };
+    
+    // Company requires company_name
+    if (role === "company" && !companyName.trim()) {
+      throw new Error("Company name is required");
+    }
+    
+    const payload = role === "company" 
+      ? { full_name: fullName, email, phone, password, company_name: companyName }
+      : { full_name: fullName, email, phone, password };
+    
     const url =
       role === "broker"
         ? `${apiBase}/api/auth/broker/signup`
+        : role === "company"
+        ? `${apiBase}/api/auth/company/signup`
         : `${apiBase}/api/auth/user/signup`;
 
-    // User/Broker two-step: send OTP or verify
+    // User/Broker/Company two-step: send OTP or verify
     const body = otpId ? { ...payload, otpId, otpCode } : payload;
     try {
       const { status, data } = await axios.post(url, body, { headers: { "Content-Type": "application/json" } });
@@ -133,8 +158,16 @@ function UnifiedAuthInner() {
       }
       // Only redirect when flow completed
       if (result?.step === "done") {
-        if (role === "broker") window.location.href = "/broker/dashboard";
-        else window.location.href = "/";
+        // Small delay to ensure state is updated and context is ready
+        setTimeout(() => {
+          if (role === "broker") {
+            navigate("/broker/dashboard", { replace: true });
+          } else if (role === "company") {
+            navigate("/company/dashboard", { replace: true });
+          } else {
+            navigate("/", { replace: true });
+          }
+        }, 200);
       }
     } catch (err) {
       const msg = err?.message || "Action failed";
@@ -158,7 +191,10 @@ function UnifiedAuthInner() {
             name="role"
             value="user"
             checked={role === "user"}
-            onChange={() => setRole("user")}
+            onChange={() => {
+              setRole("user");
+              if (mode === "signup") setCompanyName("");
+            }}
           />{" "}
           Buyer/Owner/Tenant
         </label>
@@ -168,9 +204,22 @@ function UnifiedAuthInner() {
             name="role"
             value="broker"
             checked={role === "broker"}
-            onChange={() => setRole("broker")}
+            onChange={() => {
+              setRole("broker");
+              if (mode === "signup") setCompanyName("");
+            }}
           />{" "}
           Agent
+        </label>
+        <label className="uauth-role">
+          <input
+            type="radio"
+            name="role"
+            value="company"
+            checked={role === "company"}
+            onChange={() => setRole("company")}
+          />{" "}
+          Company
         </label>
       </div>
 
@@ -189,6 +238,19 @@ function UnifiedAuthInner() {
               required
               className="uauth-input"
             />
+            {role === "company" && (
+              <>
+                <label className="uauth-label">Company Name</label>
+                <input
+                  type="text"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  placeholder="Company Name"
+                  required
+                  className="uauth-input"
+                />
+              </>
+            )}
           </>
         )}
 
@@ -317,9 +379,11 @@ export default function UnifiedAuth() {
     <div className="uauth-page">
       <SuperAdminProvider>
         <BrokerProvider>
-          <AppUserProvider>
-            <UnifiedAuthInner />
-          </AppUserProvider>
+          <CompanyProvider>
+            <AppUserProvider>
+              <UnifiedAuthInner />
+            </AppUserProvider>
+          </CompanyProvider>
         </BrokerProvider>
       </SuperAdminProvider>
     </div>

@@ -301,3 +301,112 @@ export async function brokerSearch(req, res) {
   }
 }
 
+// Company: Search across own properties and leads
+export async function companySearch(req, res) {
+  try {
+    const companyId = req.user?.id;
+    const tenantDb = req.user?.tenant_db;
+    if (!companyId || !tenantDb) {
+      return res.status(400).json({ message: 'Missing tenant' });
+    }
+
+    const query = (req.query.q || '').toString().trim();
+    if (!query || query.length < 2) {
+      return res.json({
+        data: {
+          properties: [],
+          leads: [],
+        },
+        meta: { query, total: 0 },
+      });
+    }
+
+    const searchTerm = `%${query}%`;
+    const results = {
+      properties: [],
+      leads: [],
+    };
+
+    const tenantPool = await getTenantPool(tenantDb);
+
+    // Search properties
+    try {
+      const [propRows] = await tenantPool.query(
+        `SELECT p.id, p.title, p.city, p.state, p.locality, p.address, p.property_type, p.building_type, p.status,
+                pf.expected_price, pf.built_up_area, pf.area_unit, p.created_at,
+                (SELECT pm.file_url FROM property_media pm 
+                 WHERE pm.property_id = p.id 
+                 ORDER BY pm.is_primary DESC, pm.id ASC 
+                 LIMIT 1) as primary_image
+         FROM properties p
+         LEFT JOIN property_features pf ON pf.property_id = p.id
+         WHERE p.title LIKE ? OR p.city LIKE ? OR p.locality LIKE ? OR p.address LIKE ? OR p.state LIKE ?
+         ORDER BY p.id DESC
+         LIMIT 20`,
+        [searchTerm, searchTerm, searchTerm, searchTerm, searchTerm]
+      );
+      results.properties = propRows.map(prop => ({
+        id: prop.id,
+        title: prop.title,
+        city: prop.city,
+        state: prop.state,
+        locality: prop.locality,
+        address: prop.address,
+        propertyType: prop.property_type,
+        buildingType: prop.building_type,
+        price: prop.expected_price,
+        area: prop.built_up_area,
+        areaUnit: prop.area_unit,
+        image: prop.primary_image,
+        status: prop.status,
+        createdAt: prop.created_at,
+        type: 'property',
+      }));
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Property search error:', err);
+    }
+
+    // Search leads
+    try {
+      await ensureTenantLeadsTableExists(tenantPool);
+      const [leadRows] = await tenantPool.query(
+        `SELECT id, full_name, email, phone, city, property_interest, status, created_at
+         FROM leads
+         WHERE full_name LIKE ? OR email LIKE ? OR phone LIKE ? OR city LIKE ? OR property_interest LIKE ?
+         ORDER BY id DESC
+         LIMIT 20`,
+        [searchTerm, searchTerm, searchTerm, searchTerm, searchTerm]
+      );
+      results.leads = leadRows.map(lead => ({
+        id: lead.id,
+        fullName: lead.full_name,
+        email: lead.email,
+        phone: lead.phone,
+        city: lead.city,
+        propertyInterest: lead.property_interest,
+        status: lead.status,
+        createdAt: lead.created_at,
+        type: 'lead',
+      }));
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Lead search error:', err);
+    }
+
+    const total = results.properties.length + results.leads.length;
+    return res.json({
+      data: results,
+      meta: { query, total },
+    });
+  } catch (err) {
+    const isProd = process.env.NODE_ENV === 'production';
+    // eslint-disable-next-line no-console
+    console.error('Company search error:', err);
+    return res.status(500).json({
+      message: 'Server error',
+      error: isProd ? undefined : String(err?.message || err),
+    });
+  }
+}
+

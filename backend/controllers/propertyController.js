@@ -124,6 +124,88 @@ export async function getPropertyById(req, res) {
   }
 }
 
+export async function getFeaturedProperties(req, res) {
+  try {
+    const tenantDb = getTenantDb(req);
+    if (!tenantDb) return res.status(400).json({ message: 'Missing tenant' });
+
+    const limit = Math.min(20, Math.max(1, parseInt(req.query.limit, 10) || 8));
+    const tenantPool = await getTenantPool(tenantDb);
+    const baseUrl = process.env.API_BASE_URL || req.protocol + '://' + req.get('host');
+
+    const [rows] = await tenantPool.query(
+      `SELECT p.id, p.title, p.city, p.state, p.locality, p.sub_locality, p.address, 
+              p.property_type, p.building_type, p.property_for, p.status, p.is_featured,
+              p.description, p.created_at,
+              pf.expected_price, pf.built_up_area, pf.area_unit, pf.carpet_area, pf.carpet_area_unit,
+              pf.super_area, pf.super_area_unit, pf.num_bedrooms, pf.num_bathrooms,
+              pf.sale_type, pf.availability, pf.furnishing_status, pf.facing
+       FROM properties p
+       LEFT JOIN property_features pf ON pf.property_id = p.id
+       WHERE p.is_featured = 1 AND p.status = 'active'
+       ORDER BY p.created_at DESC
+       LIMIT ?`,
+      [limit]
+    );
+
+    // Fetch media for each property
+    const propertiesWithMedia = await Promise.all(
+      rows.map(async (r) => {
+        let image_url = null;
+        let primary_image = null;
+        let media = [];
+        
+        try {
+          const [mediaRows] = await tenantPool.query(
+            'SELECT id, file_url, is_primary, category, media_type FROM property_media WHERE property_id = ? ORDER BY is_primary DESC, id ASC',
+            [r.id]
+          );
+          
+          if (mediaRows && mediaRows.length > 0) {
+            media = mediaRows.map(m => {
+              const fileUrl = m.file_url || '';
+              const fullUrl = fileUrl.startsWith('http') ? fileUrl : (fileUrl.startsWith('/') ? `${baseUrl}${fileUrl}` : `${baseUrl}/${fileUrl}`);
+              return {
+                id: m.id,
+                file_url: fullUrl,
+                url: fullUrl,
+                is_primary: Boolean(m.is_primary),
+                category: m.category,
+                media_type: m.media_type
+              };
+            });
+            
+            const primary = media.find(m => m.is_primary) || media[0];
+            if (primary) {
+              image_url = primary.file_url;
+              primary_image = primary.file_url;
+            }
+          }
+        } catch (mediaErr) {
+          console.error(`Error fetching media for property ${r.id}:`, mediaErr);
+        }
+
+        return {
+          ...r,
+          image_url,
+          primary_image,
+          image: image_url,
+          media,
+          price: r.expected_price,
+          area: r.built_up_area,
+          areaUnit: r.area_unit,
+          type: r.property_type
+        };
+      })
+    );
+
+    return res.json({ data: propertiesWithMedia });
+  } catch (err) {
+    const isProd = process.env.NODE_ENV === 'production';
+    return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
+  }
+}
+
 export async function createProperty(req, res) {
   try {
     const tenantDb = getTenantDb(req);
@@ -222,7 +304,7 @@ export async function updateProperty(req, res) {
     const id = parseInt(req.params.id, 10);
     if (!id) return res.status(400).json({ message: 'Invalid id' });
     const body = req.body || {};
-    const allowed = ['property_for','building_type','property_type','title','description','state','city','locality','sub_locality','society_name','address','status'];
+    const allowed = ['property_for','building_type','property_type','title','description','state','city','locality','sub_locality','society_name','address','status','is_featured'];
     const updates = [];
     const params = [];
     for (const f of allowed) {
@@ -607,6 +689,7 @@ export async function listAllBrokerPropertiesAdmin(req, res) {
     // Remove limit or set it very high to return all properties (frontend will handle pagination)
     const limit = req.query.limit ? Math.max(1, Math.min(10000, parseInt(req.query.limit, 10))) : 10000;
     const [brokers] = await pool.query('SELECT id, full_name, tenant_db FROM brokers WHERE tenant_db IS NOT NULL');
+    const [companies] = await pool.query('SELECT id, full_name, company_name, tenant_db FROM companies WHERE tenant_db IS NOT NULL');
     const out = [];
     for (const br of brokers) {
       try {
@@ -669,6 +752,9 @@ export async function listAllBrokerPropertiesAdmin(req, res) {
             tenantDb: br.tenant_db,
             brokerId: br.id,
             brokerName: br.full_name,
+            companyId: null,
+            companyName: null,
+            sourceType: 'broker',
             title: r.title,
             property_type: r.property_type,
             type: r.property_type,
@@ -741,6 +827,138 @@ export async function listAllBrokerPropertiesAdmin(req, res) {
         // ignore tenant failures
       }
     }
+    
+    // Fetch company properties
+    for (const comp of companies) {
+      try {
+        const tenantPool = await getTenantPool(comp.tenant_db);
+        const [rows] = await tenantPool.query(
+          `SELECT p.id, p.title, p.city, p.state, p.locality, p.sub_locality, p.address, p.property_type, p.building_type, p.property_for, p.status,
+                  p.description, p.created_at,
+                  pf.expected_price, pf.built_up_area, pf.area_unit, pf.carpet_area, pf.carpet_area_unit,
+                  pf.super_area, pf.super_area_unit, pf.num_bedrooms, pf.num_bathrooms,
+                  pf.sale_type, pf.availability, pf.approving_authority, pf.ownership, pf.rera_status, pf.rera_number,
+                  pf.no_of_floors, pf.property_on_floor, pf.furnishing_status, pf.facing, pf.flooring_type, pf.age_years,
+                  pf.booking_amount, pf.maintenance_charges, pf.possession_by
+           FROM properties p
+           LEFT JOIN property_features pf ON pf.property_id = p.id
+           ORDER BY p.id DESC`
+        );
+        for (const r of rows) {
+          // fetch first/primary image and all media
+          let image = null;
+          let imageUrl = null;
+          let primaryImage = null;
+          let media = [];
+          const baseUrl = process.env.API_BASE_URL || req.protocol + '://' + req.get('host');
+          try {
+            const [mediaRows] = await tenantPool.query(
+              'SELECT id, file_url, is_primary, category, media_type FROM property_media WHERE property_id = ? ORDER BY is_primary DESC, id ASC',
+              [r.id]
+            );
+            if (mediaRows && mediaRows.length > 0) {
+              media = mediaRows.map(m => {
+                const fileUrl = m.file_url || '';
+                const fullUrl = fileUrl.startsWith('http') ? fileUrl : (fileUrl.startsWith('/') ? `${baseUrl}${fileUrl}` : `${baseUrl}/${fileUrl}`);
+                return {
+                  id: m.id,
+                  file_url: fullUrl,
+                  url: fullUrl,
+                  is_primary: Boolean(m.is_primary),
+                  category: m.category,
+                  media_type: m.media_type
+                };
+              });
+              const primary = mediaRows.find(m => m.is_primary) || mediaRows[0];
+              const fileUrl = primary?.file_url || '';
+              const fullImageUrl = fileUrl.startsWith('http') ? fileUrl : (fileUrl.startsWith('/') ? `${baseUrl}${fileUrl}` : `${baseUrl}/${fileUrl}`);
+              image = fileUrl ? fullImageUrl : null;
+              imageUrl = fileUrl ? fullImageUrl : null;
+              primaryImage = fileUrl ? fullImageUrl : null;
+            }
+          } catch (mediaErr) {
+            // Ignore media errors
+          }
+          
+          out.push({
+            id: r.id,
+            tenantDb: comp.tenant_db,
+            brokerId: null,
+            brokerName: null,
+            companyId: comp.id,
+            companyName: comp.company_name || comp.full_name,
+            sourceType: 'company',
+            title: r.title,
+            property_type: r.property_type,
+            type: r.property_type,
+            building_type: r.building_type,
+            buildingType: r.building_type,
+            property_for: r.property_for,
+            propertyFor: r.property_for,
+            sale_type: r.sale_type,
+            saleType: r.sale_type,
+            availability: r.availability,
+            approvingAuthority: r.approving_authority,
+            ownership: r.ownership,
+            rera_status: r.rera_status,
+            reraStatus: r.rera_status,
+            rera_number: r.rera_number,
+            reraNumber: r.rera_number,
+            floors: r.no_of_floors,
+            no_of_floors: r.no_of_floors,
+            property_on_floor: r.property_on_floor,
+            propertyOnFloor: r.property_on_floor,
+            furnishing_status: r.furnishing_status,
+            furnishingStatus: r.furnishing_status,
+            facing: r.facing,
+            flooring_type: r.flooring_type,
+            flooringType: r.flooring_type,
+            age_years: r.age_years,
+            ageYears: r.age_years,
+            expected_price: r.expected_price,
+            price: r.expected_price,
+            built_up_area: r.built_up_area,
+            area: r.built_up_area,
+            area_unit: r.area_unit,
+            areaUnit: r.area_unit,
+            carpet_area: r.carpet_area,
+            carpetArea: r.carpet_area,
+            carpet_area_unit: r.carpet_area_unit,
+            carpetAreaUnit: r.carpet_area_unit,
+            super_area: r.super_area,
+            superArea: r.super_area,
+            super_area_unit: r.super_area_unit,
+            superAreaUnit: r.super_area_unit,
+            num_bedrooms: r.num_bedrooms,
+            bedrooms: r.num_bedrooms,
+            num_bathrooms: r.num_bathrooms,
+            bathrooms: r.num_bathrooms,
+            booking_amount: r.booking_amount,
+            bookingAmount: r.booking_amount,
+            maintenance_charges: r.maintenance_charges,
+            maintenanceCharges: r.maintenance_charges,
+            possession_by: r.possession_by,
+            possessionBy: r.possession_by,
+            description: r.description,
+            city: r.city,
+            state: r.state,
+            locality: r.locality,
+            sub_locality: r.sub_locality,
+            subLocality: r.sub_locality,
+            address: r.address,
+            image: image || null,
+            image_url: imageUrl || null,
+            primary_image: primaryImage || null,
+            media: media || [],
+            status: r.status || 'active',
+            created_at: r.created_at ? new Date(r.created_at).toISOString() : null,
+            createdAt: r.created_at ? new Date(r.created_at).toISOString() : null,
+          });
+        }
+      } catch (e) {
+        // ignore tenant failures
+      }
+    }
     out.sort((a, b) => {
       const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -802,6 +1020,7 @@ export async function getBrokerPropertyAdmin(req, res) {
 export async function getSuperAdminPropertyStats(req, res) {
   try {
     const [brokers] = await pool.query('SELECT id, tenant_db FROM brokers WHERE tenant_db IS NOT NULL');
+    const [companies] = await pool.query('SELECT id, tenant_db FROM companies WHERE tenant_db IS NOT NULL');
     let totalProperties = 0;
     let publishedProperties = 0;
     let highDemandProperties = 0;
@@ -842,6 +1061,37 @@ export async function getSuperAdminPropertyStats(req, res) {
         highDemandProperties += Number(highDemand?.count || 0);
         
         // Broker tenant leads (updated in last 24 hours)
+        try {
+          await ensureTenantLeadsTableExists(tenantPool);
+          const [[leads]] = await tenantPool.query('SELECT COUNT(*) as count FROM leads WHERE updated_at >= ?', [oneDayAgoStr]);
+          activeLeads += Number(leads?.count || 0);
+        } catch (e) {
+          // Ignore if leads table doesn't exist
+        }
+      } catch (e) {
+        // Ignore tenant errors
+      }
+    }
+    
+    // Company properties
+    for (const comp of companies) {
+      if (!comp.tenant_db) continue;
+      try {
+        const tenantPool = await getTenantPool(comp.tenant_db);
+        const [[total]] = await tenantPool.query('SELECT COUNT(*) as count FROM properties');
+        totalProperties += Number(total?.count || 0);
+        
+        const [[published]] = await tenantPool.query('SELECT COUNT(*) as count FROM properties WHERE (status != ? AND status != ?) OR status IS NULL', ['inactive', 'sold']);
+        publishedProperties += Number(published?.count || 0);
+        
+        const [[newWeek]] = await tenantPool.query('SELECT COUNT(*) as count FROM properties WHERE created_at >= ?', [oneWeekAgoStr]);
+        newThisWeek += Number(newWeek?.count || 0);
+        
+        // High demand: properties updated in last 24 hours (most active)
+        const [[highDemand]] = await tenantPool.query('SELECT COUNT(*) as count FROM properties WHERE updated_at >= ? AND (status = ? OR status IS NULL)', [oneDayAgoStr, 'active']);
+        highDemandProperties += Number(highDemand?.count || 0);
+        
+        // Company tenant leads (updated in last 24 hours)
         try {
           await ensureTenantLeadsTableExists(tenantPool);
           const [[leads]] = await tenantPool.query('SELECT COUNT(*) as count FROM leads WHERE updated_at >= ?', [oneDayAgoStr]);

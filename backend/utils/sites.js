@@ -59,43 +59,63 @@ export function generateStableBrokerSlug({ brokerName, brokerId }) {
   return `${namePart}-${idPart}`;
 }
 
+export function generateStableCompanySlug({ companyName, companyId }) {
+  const namePart = sanitizeSlugPart(companyName) || 'company';
+  const idPart = String(companyId || '').replace(/[^0-9]/g, '');
+  return `${namePart}-${idPart}`;
+}
+
 export function getSiteBySlug(slug) {
   const map = loadSitesMap();
   return map[slug] || null;
 }
 
-export function publishSite({ slug, brokerId, template, siteTitle }) {
+export function publishSite({ slug, brokerId, companyId, ownerType, template, siteTitle }) {
   const map = loadSitesMap();
   const now = new Date().toISOString();
-  // Ensure only one active site per broker: capture any previous domain then remove previous entries
+  const ownerId = ownerType === 'company' ? companyId : brokerId;
+  // Ensure only one active site per owner: capture any previous domain then remove previous entries
   let preservedDomain = null;
   let preservedVerifiedAt = null;
   for (const key of Object.keys(map)) {
-    if (String(map[key]?.brokerId) === String(brokerId)) {
-      if (map[key]?.customDomain) {
-        preservedDomain = map[key].customDomain;
-        preservedVerifiedAt = map[key].domainVerifiedAt || null;
+    const site = map[key];
+    const siteOwnerId = site.ownerType === 'company' ? site.companyId : site.brokerId;
+    if (String(siteOwnerId) === String(ownerId) && site.ownerType === ownerType) {
+      if (site?.customDomain) {
+        preservedDomain = site.customDomain;
+        preservedVerifiedAt = site.domainVerifiedAt || null;
       }
       delete map[key];
     }
   }
-  map[slug] = {
+  const siteData = {
     slug,
-    brokerId,
     template,
     siteTitle: siteTitle || null,
     createdAt: now,
     updatedAt: now,
     customDomain: preservedDomain,
     domainVerifiedAt: preservedVerifiedAt,
+    ownerType: ownerType || 'broker',
   };
+  if (ownerType === 'company') {
+    siteData.companyId = companyId;
+  } else {
+    siteData.brokerId = brokerId;
+  }
+  map[slug] = siteData;
   saveSitesMap(map);
   return map[slug];
 }
 
 export function listPublishedSitesForBroker(brokerId) {
   const map = loadSitesMap();
-  return Object.values(map).filter((s) => String(s.brokerId) === String(brokerId));
+  return Object.values(map).filter((s) => (s.ownerType !== 'company' && !s.ownerType) && String(s.brokerId) === String(brokerId));
+}
+
+export function listPublishedSitesForCompany(companyId) {
+  const map = loadSitesMap();
+  return Object.values(map).filter((s) => s.ownerType === 'company' && String(s.companyId) === String(companyId));
 }
 
 

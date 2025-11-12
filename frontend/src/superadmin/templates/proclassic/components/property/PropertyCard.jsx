@@ -105,4 +105,30 @@ export default function PropertyCard({ property }) {
   );
 }
 
+export function PropertiesGrid({ properties, title = 'Latest Properties' }) {
+  return (
+    <>
+      <div className="pc-prop-grid-header">
+        <div className="pc-prop-icon">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M24 4L6 18V42H18V28H30V42H42V18L24 4Z" fill="#1e40af" stroke="#1e40af" strokeWidth="2"/>
+            <rect x="20" y="24" width="8" height="8" fill="#f97316" stroke="#f97316" strokeWidth="1"/>
+            <line x1="20" y1="24" x2="28" y2="24" stroke="#1e40af" strokeWidth="1"/>
+            <line x1="20" y1="28" x2="28" y2="28" stroke="#1e40af" strokeWidth="1"/>
+            <line x1="24" y1="24" x2="24" y2="32" stroke="#1e40af" strokeWidth="1"/>
+          </svg>
+        </div>
+        <h2 className="pc-prop-grid-title">{title}</h2>
+      </div>
+      {properties.length === 0 ? (
+        <div>No properties yet.</div>
+      ) : (
+        <div className="pc-prop-grid">
+          {properties.map((p) => (<PropertyCard key={p.id} property={p} />))}
+        </div>
+      )}
+    </>
+  );
+}
+
 

@@ -1,0 +1,29 @@
+/* Company view profile */
+.companyviewprofile-root { padding: 20px; }
+.companyviewprofile-titlebar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.companyviewprofile-title { margin: 0; font-size: 20px; }
+.companyviewprofile-actions { display: flex; gap: 10px; }
+.companyviewprofile-btn { border: 1px solid #dde3ee; background: #f6f8fb; color: #203048; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
+.companyviewprofile-btn:hover { background: #eef2f8; }
+
+.companyviewprofile-header { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+.companyviewprofile-avatar { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; }
+.companyviewprofile-name { font-weight: 700; }
+.companyviewprofile-email { color: #6b7280; font-size: 13px; }
+
+.companyviewprofile-grid { display: grid; grid-template-columns: 160px 1fr; gap: 10px 16px; background: #fff; border: 1px solid #eef0f2; border-radius: 12px; padding: 14px; margin-bottom: 20px; }
+.companyviewprofile-label { color: #6b7280; }
+
+/* Documents Section */
+.companyviewprofile-documents { background: #fff; border: 1px solid #eef0f2; border-radius: 12px; padding: 20px; }
+.companyviewprofile-documents-title { margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: #203048; }
+.companyviewprofile-documents-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+.companyviewprofile-document-item { display: flex; flex-direction: column; gap: 10px; }
+.companyviewprofile-document-label { font-weight: 600; color: #6b7280; font-size: 14px; }
+.companyviewprofile-document-image { border: 1px solid #eef0f2; border-radius: 8px; overflow: hidden; background: #f9fafb; min-height: 200px; display: flex; align-items: center; justify-content: center; }
+.companyviewprofile-document-img { width: 100%; height: auto; max-height: 400px; object-fit: contain; display: block; }
+.companyviewprofile-document-link { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 40px; text-decoration: none; color: #203048; transition: background 0.2s; width: 100%; min-height: 200px; }
+.companyviewprofile-document-link:hover { background: #f3f4f6; }
+.companyviewprofile-document-pdf-icon { font-size: 48px; }
+.companyviewprofile-document-pdf-text { font-weight: 600; font-size: 14px; }
+

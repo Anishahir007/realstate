@@ -12,6 +12,7 @@ const COLUMN_OPTIONS = [
   { id: 'score', label: 'Score' },
   { id: 'source', label: 'Source' },
   { id: 'brokerName', label: 'Broker Name' },
+  { id: 'companyName', label: 'Company Name' },
   { id: 'city', label: 'City' },
   { id: 'assignedTo', label: 'Assigned To' },
   { id: 'createdAt', label: 'Created At' },
@@ -74,17 +75,22 @@ export default function SuperAdminAdmincrm() {
 
   const [adminLeads, setAdminLeads] = useState([]);
   const [brokerLeads, setBrokerLeads] = useState([]);
+  const [companyLeads, setCompanyLeads] = useState([]);
 
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All Status');
   const [brokerColumnMenuOpen, setBrokerColumnMenuOpen] = useState(false);
   const [adminColumnMenuOpen, setAdminColumnMenuOpen] = useState(false);
+  const [companyColumnMenuOpen, setCompanyColumnMenuOpen] = useState(false);
   const [brokerVisibleColumnIds, setBrokerVisibleColumnIds] = useState(() => DEFAULT_COLUMN_IDS);
   const [adminVisibleColumnIds, setAdminVisibleColumnIds] = useState(() => DEFAULT_COLUMN_IDS);
+  const [companyVisibleColumnIds, setCompanyVisibleColumnIds] = useState(() => DEFAULT_COLUMN_IDS);
   const brokerColumnButtonRef = useRef(null);
   const brokerColumnMenuRef = useRef(null);
   const adminColumnButtonRef = useRef(null);
   const adminColumnMenuRef = useRef(null);
+  const companyColumnButtonRef = useRef(null);
+  const companyColumnMenuRef = useRef(null);
 
   const [showAdd, setShowAdd] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
@@ -120,8 +126,9 @@ export default function SuperAdminAdmincrm() {
   const allLeads = useMemo(() => {
     const admin = adminLeads.map(l => ({ ...l, lead_score: calculateLeadScore(l) }));
     const broker = brokerLeads.map(l => ({ ...l, lead_score: calculateLeadScore(l) }));
-    return [...admin, ...broker];
-  }, [adminLeads, brokerLeads]);
+    const company = companyLeads.map(l => ({ ...l, lead_score: calculateLeadScore(l) }));
+    return [...admin, ...broker, ...company];
+  }, [adminLeads, brokerLeads, companyLeads]);
 
   // Calculate metrics
   const metrics = useMemo(() => {
@@ -148,7 +155,7 @@ export default function SuperAdminAdmincrm() {
     return { total, qualified, avgScore, active, newThisWeek };
   }, [allLeads]);
 
-  // Separate broker and admin leads with scores
+  // Separate broker, admin, and company leads with scores
   const brokerLeadsWithScores = useMemo(() => 
     brokerLeads.map(l => ({ ...l, lead_score: calculateLeadScore(l) })), 
     [brokerLeads]
@@ -157,8 +164,12 @@ export default function SuperAdminAdmincrm() {
     adminLeads.map(l => ({ ...l, lead_score: calculateLeadScore(l) })), 
     [adminLeads]
   );
+  const companyLeadsWithScores = useMemo(() => 
+    companyLeads.map(l => ({ ...l, lead_score: calculateLeadScore(l) })), 
+    [companyLeads]
+  );
 
-  // Filter broker and admin leads separately
+  // Filter broker, admin, and company leads separately
   const filteredBrokerLeads = useMemo(() => 
     filterLeads(brokerLeadsWithScores, query, statusFilter), 
     [brokerLeadsWithScores, query, statusFilter]
@@ -166,6 +177,10 @@ export default function SuperAdminAdmincrm() {
   const filteredAdminLeads = useMemo(() => 
     filterLeads(adminLeadsWithScores, query, statusFilter), 
     [adminLeadsWithScores, query, statusFilter]
+  );
+  const filteredCompanyLeads = useMemo(() => 
+    filterLeads(companyLeadsWithScores, query, statusFilter), 
+    [companyLeadsWithScores, query, statusFilter]
   );
 
   const brokerVisibleColumns = useMemo(
@@ -175,6 +190,10 @@ export default function SuperAdminAdmincrm() {
   const adminVisibleColumns = useMemo(
     () => COLUMN_OPTIONS.filter((col) => adminVisibleColumnIds.includes(col.id)),
     [adminVisibleColumnIds]
+  );
+  const companyVisibleColumns = useMemo(
+    () => COLUMN_OPTIONS.filter((col) => companyVisibleColumnIds.includes(col.id)),
+    [companyVisibleColumnIds]
   );
 
   const toggleBrokerColumn = (id) => {
@@ -187,6 +206,14 @@ export default function SuperAdminAdmincrm() {
 
   const toggleAdminColumn = (id) => {
     setAdminVisibleColumnIds((prev) => {
+      const set = new Set(prev);
+      if (set.has(id)) set.delete(id); else set.add(id);
+      return COLUMN_OPTIONS.map((col) => col.id).filter((colId) => set.has(colId));
+    });
+  };
+
+  const toggleCompanyColumn = (id) => {
+    setCompanyVisibleColumnIds((prev) => {
       const set = new Set(prev);
       if (set.has(id)) set.delete(id); else set.add(id);
       return COLUMN_OPTIONS.map((col) => col.id).filter((colId) => set.has(colId));
@@ -230,6 +257,24 @@ export default function SuperAdminAdmincrm() {
   }, [adminColumnMenuOpen]);
 
   useEffect(() => {
+    if (!companyColumnMenuOpen) return undefined;
+    function handleClickOutside(event) {
+      if (!companyColumnMenuRef.current || !companyColumnButtonRef.current) return;
+      if (companyColumnMenuRef.current.contains(event.target) || companyColumnButtonRef.current.contains(event.target)) return;
+      setCompanyColumnMenuOpen(false);
+    }
+    function handleEsc(event) {
+      if (event.key === 'Escape') setCompanyColumnMenuOpen(false);
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEsc);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEsc);
+    };
+  }, [companyColumnMenuOpen]);
+
+  useEffect(() => {
     let cancelled = false;
     async function load() {
       if (!token) return;
@@ -244,8 +289,10 @@ export default function SuperAdminAdmincrm() {
         const admin = Array.isArray(adminRes.data?.data) ? adminRes.data.data : [];
         const all = Array.isArray(allSourcesRes.data?.data) ? allSourcesRes.data.data : [];
         const brokersOnly = all.filter((x) => x.lead_source_type === 'broker');
+        const companiesOnly = all.filter((x) => x.lead_source_type === 'company');
         setAdminLeads(admin);
         setBrokerLeads(brokersOnly);
+        setCompanyLeads(companiesOnly);
       } catch (e) {
         if (!cancelled) setError(e?.response?.data?.message || e?.message || 'Failed to load leads');
       } finally {
@@ -266,6 +313,7 @@ export default function SuperAdminAdmincrm() {
       const all = Array.isArray(allSourcesRes.data?.data) ? allSourcesRes.data.data : [];
       setAdminLeads(admin);
       setBrokerLeads(all.filter((x) => x.lead_source_type === 'broker'));
+      setCompanyLeads(all.filter((x) => x.lead_source_type === 'company'));
     } catch {
       // ignore
     }
@@ -277,7 +325,9 @@ export default function SuperAdminAdmincrm() {
   }
 
   function openView(lead) {
-    const source = lead.lead_source_type === 'broker' ? 'broker' : 'admin';
+    let source = 'admin';
+    if (lead.lead_source_type === 'broker') source = 'broker';
+    else if (lead.lead_source_type === 'company') source = 'company';
     navigate(`/superadmin/crm/lead/${lead.id}/${source}`);
   }
 
@@ -324,7 +374,7 @@ export default function SuperAdminAdmincrm() {
   }
 
   function exportCsv() {
-    const headersCsv = ['id','full_name','email','phone','city','property_interest','source','status','assigned_to','lead_score','created_at','broker_name'];
+    const headersCsv = ['id','full_name','email','phone','city','property_interest','source','status','assigned_to','lead_score','created_at','broker_name','company_name','lead_source_type'];
     const csv = [
       headersCsv.join(','), 
       ...allLeads.map(r => headersCsv.map(h => toCsv(String(r[h] ?? ''))).join(','))
@@ -546,6 +596,8 @@ export default function SuperAdminAdmincrm() {
                         return <td key={col.id}>{labelize(l.source)}</td>;
                       case 'brokerName':
                         return <td key={col.id}>{l.broker_name || '-'}</td>;
+                      case 'companyName':
+                        return <td key={col.id}>-</td>;
                       case 'city':
                         return <td key={col.id}>{l.city || '-'}</td>;
                       case 'assignedTo':
@@ -576,6 +628,160 @@ export default function SuperAdminAdmincrm() {
                         );
                       default:
                         return <td key={col.id}>—</td>;
+                    }
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* Company Leads Section */}
+      <section className="superadminadmincrm-card">
+        <div className="superadminadmincrm-section-header">
+          <div>
+            <h3 className="superadminadmincrm-sectiontitle">All Company Leads ({filteredCompanyLeads.length})</h3>
+            <p className="superadminadmincrm-subtle">Read-only list aggregated from all companies</p>
+          </div>
+          <div className="superadminadmincrm-tableactions">
+            <button
+              type="button"
+              ref={companyColumnButtonRef}
+              className="superadminadmincrm-columns-btn"
+              onClick={() => setCompanyColumnMenuOpen((open) => !open)}
+            >
+              <span aria-hidden>🗂️</span>
+              <span>Columns</span>
+            </button>
+            {companyColumnMenuOpen && (
+              <div className="superadminadmincrm-colmenu" ref={companyColumnMenuRef} role="menu">
+                <div className="superadminadmincrm-colmenu-head">Show columns</div>
+                {COLUMN_OPTIONS.map((col) => (
+                  <label key={col.id} className="superadminadmincrm-colmenu-item">
+                    <input
+                      type="checkbox"
+                      checked={companyVisibleColumnIds.includes(col.id)}
+                      onChange={() => toggleCompanyColumn(col.id)}
+                    />
+                    <span>{col.label}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="superadminadmincrm-tablewrap">
+          <table className="superadminadmincrm-table">
+            <thead>
+              <tr>
+                {companyVisibleColumns.map((col) => (
+                  <th key={col.id} scope="col">{col.label}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {loading && (
+                <tr>
+                  <td colSpan={companyVisibleColumns.length} className="superadminadmincrm-table-empty">Loading leads…</td>
+                </tr>
+              )}
+              {!!error && !loading && (
+                <tr>
+                  <td colSpan={companyVisibleColumns.length} className="superadminadmincrm-error">{error}</td>
+                </tr>
+              )}
+              {!loading && !error && filteredCompanyLeads.length === 0 && (
+                <tr>
+                  <td colSpan={companyVisibleColumns.length} className="superadminadmincrm-table-empty">No company leads</td>
+                </tr>
+              )}
+              {!loading && !error && filteredCompanyLeads.map((l) => (
+                <tr key={`c-${l.id}-${l.tenant_db || ''}`}>
+                  {companyVisibleColumns.map((col) => {
+                    switch (col.id) {
+                      case 'lead':
+                        return (
+                          <td key={col.id}>
+                            <div className="superadminadmincrm-leadcell">
+                              <div className="superadminadmincrm-avatar">{initials(l.full_name)}</div>
+                              <div>
+                                <div 
+                                  className="superadminadmincrm-textbold" 
+                                  style={{ cursor: 'pointer', color: '#2563eb' }}
+                                  onClick={() => openView(l)}
+                                >
+                                  {l.full_name}
+                                </div>
+                                <div className="superadminadmincrm-textmuted">{l.city || '-'}</div>
+                              </div>
+                            </div>
+                          </td>
+                        );
+                      case 'contact':
+                        return (
+                          <td key={col.id}>
+                            <div className="superadminadmincrm-textbold">{l.email}</div>
+                            <div className="superadminadmincrm-textmuted">{l.phone || '-'}</div>
+                          </td>
+                        );
+                      case 'status':
+                        return (
+                          <td key={col.id}>
+                            <span className={`superadminadmincrm-badge status-${(l.status || 'new').toLowerCase()}`}>
+                              {labelize(l.status)}
+                            </span>
+                          </td>
+                        );
+                      case 'propertyInterest':
+                        return <td key={col.id}>{l.property_interest || '-'}</td>;
+                      case 'score':
+                        return (
+                          <td key={col.id}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: '#64748b' }}>
+                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                              </svg>
+                              <span style={{ fontWeight: 600 }}>{l.lead_score || 0}</span>
+                            </div>
+                          </td>
+                        );
+                      case 'source':
+                        return <td key={col.id}>{labelize(l.source)}</td>;
+                      case 'brokerName':
+                        return <td key={col.id}>-</td>;
+                      case 'companyName':
+                        return <td key={col.id}>{l.company_name || '-'}</td>;
+                      case 'city':
+                        return <td key={col.id}>{l.city || '-'}</td>;
+                      case 'assignedTo':
+                        return <td key={col.id}>{l.assigned_to || '-'}</td>;
+                      case 'createdAt':
+                        return (
+                          <td key={col.id}>
+                            {l.created_at
+                              ? new Date(l.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+                              : '-'}
+                          </td>
+                        );
+                      case 'actions':
+                        return (
+                          <td key={col.id}>
+                            <div className="superadminadmincrm-actions-col">
+                              <button
+                                className="superadminadmincrm-link"
+                                onClick={() => openView(l)}
+                                title="View"
+                                aria-label="View"
+                                style={{ fontSize: '18px', padding: '4px' }}
+                              >
+                                👁️
+                              </button>
+                            </div>
+                          </td>
+                        );
+                      default:
+                        return <td key={col.id}>—</td>
                     }
                   })}
                 </tr>
@@ -697,7 +903,9 @@ export default function SuperAdminAdmincrm() {
                       case 'source':
                         return <td key={col.id}>{labelize(l.source)}</td>;
                       case 'brokerName':
-                        return <td key={col.id}>—</td>;
+                        return <td key={col.id}>-</td>;
+                      case 'companyName':
+                        return <td key={col.id}>-</td>;
                       case 'city':
                         return <td key={col.id}>{l.city || '-'}</td>;
                       case 'assignedTo':
