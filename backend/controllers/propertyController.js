@@ -214,11 +214,19 @@ export async function getPropertyFilters(req, res) {
 
     const tenantPool = await getTenantPool(tenantDb);
 
-    // Get unique cities with count
+    // Debug: Check total properties first
+    const [totalCheck] = await tenantPool.query(`SELECT COUNT(*) as total FROM properties`);
+    const [activeCheck] = await tenantPool.query(`SELECT COUNT(*) as active FROM properties WHERE status = 'active'`);
+    const [nullStatusCheck] = await tenantPool.query(`SELECT COUNT(*) as null_status FROM properties WHERE status IS NULL OR status = ''`);
+    const [withCity] = await tenantPool.query(`SELECT COUNT(*) as with_city FROM properties WHERE city IS NOT NULL AND city != ''`);
+    const [withType] = await tenantPool.query(`SELECT COUNT(*) as with_type FROM properties WHERE property_type IS NOT NULL AND property_type != ''`);
+    console.log(`[getPropertyFilters] Tenant: ${tenantDb}, Total: ${totalCheck[0]?.total || 0}, Active: ${activeCheck[0]?.active || 0}, Null/Empty Status: ${nullStatusCheck[0]?.null_status || 0}, With City: ${withCity[0]?.with_city || 0}, With Type: ${withType[0]?.with_type || 0}`);
+
+    // Get unique cities with count - show all properties (not just active) for filters
     const [cities] = await tenantPool.query(
       `SELECT city, COUNT(*) as count 
        FROM properties 
-       WHERE status = 'active' AND city IS NOT NULL AND city != ''
+       WHERE city IS NOT NULL AND city != ''
        GROUP BY city 
        ORDER BY count DESC, city ASC`
     );
@@ -227,7 +235,7 @@ export async function getPropertyFilters(req, res) {
     const [propertyTypes] = await tenantPool.query(
       `SELECT property_type, COUNT(*) as count 
        FROM properties 
-       WHERE status = 'active' AND property_type IS NOT NULL AND property_type != ''
+       WHERE property_type IS NOT NULL AND property_type != ''
        GROUP BY property_type 
        ORDER BY count DESC, property_type ASC`
     );
@@ -236,7 +244,7 @@ export async function getPropertyFilters(req, res) {
     const [localities] = await tenantPool.query(
       `SELECT locality, COUNT(*) as count 
        FROM properties 
-       WHERE status = 'active' AND locality IS NOT NULL AND locality != ''
+       WHERE locality IS NOT NULL AND locality != ''
        GROUP BY locality 
        ORDER BY count DESC, locality ASC
        LIMIT 100`
@@ -268,12 +276,32 @@ export async function searchPropertiesPublic(req, res) {
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
     const offset = (page - 1) * limit;
 
-    const where = ['p.status = ?'];
-    const params = ['active'];
+    // Build WHERE conditions
+    const where = [];
+    const params = [];
 
-    // Filters
-    const property_for = (req.query.property_for || '').toString();
-    if (property_for) { where.push('p.property_for = ?'); params.push(property_for); }
+    // Status filter - show all properties except 'inactive' and 'deleted'
+    // This includes: 'active', NULL, empty string, or any other status
+    where.push('(p.status IS NULL OR p.status NOT IN (?, ?))');
+    params.push('inactive', 'deleted');
+
+    // Property_for filter - handle multiple possible values with case-insensitive matching
+    const property_for = (req.query.property_for || '').toString().toLowerCase().trim();
+    if (property_for) {
+      if (property_for === 'sale') {
+        // When user selects "Buy", search for: sale, buy, purchase, sell (case-insensitive)
+        where.push('LOWER(TRIM(p.property_for)) IN (?, ?, ?, ?)');
+        params.push('sale', 'buy', 'purchase', 'sell');
+      } else if (property_for === 'rent') {
+        // When user selects "Rent", search for: rent, rental, lease (case-insensitive)
+        where.push('LOWER(TRIM(p.property_for)) IN (?, ?, ?)');
+        params.push('rent', 'rental', 'lease');
+      } else {
+        // For any other value, do case-insensitive match
+        where.push('LOWER(TRIM(p.property_for)) = LOWER(TRIM(?))');
+        params.push(property_for);
+      }
+    }
 
     const property_type = (req.query.property_type || '').toString();
     if (property_type) { where.push('p.property_type = ?'); params.push(property_type); }
@@ -317,6 +345,20 @@ export async function searchPropertiesPublic(req, res) {
     );
 
     const [countRows] = await tenantPool.query(`SELECT COUNT(*) as total FROM properties p LEFT JOIN property_features pf ON pf.property_id = p.id ${whereSql}`, params);
+    
+    // Debug logging - check what's actually in the database
+    const [propertyForCheck] = await tenantPool.query(`SELECT DISTINCT property_for, COUNT(*) as count FROM properties GROUP BY property_for ORDER BY count DESC`);
+    const [statusCheck] = await tenantPool.query(`SELECT DISTINCT status, COUNT(*) as count FROM properties GROUP BY status`);
+    const [totalProps] = await tenantPool.query(`SELECT COUNT(*) as total FROM properties`);
+    
+    console.log(`[searchPropertiesPublic] Tenant: ${tenantDb}`);
+    console.log(`[searchPropertiesPublic] Filter applied: property_for="${property_for}"`);
+    console.log(`[searchPropertiesPublic] WHERE SQL: ${whereSql}`);
+    console.log(`[searchPropertiesPublic] WHERE Params:`, params);
+    console.log(`[searchPropertiesPublic] Results: ${rows.length} properties found, Total matching: ${countRows[0]?.total || 0}`);
+    console.log(`[searchPropertiesPublic] DB Stats - Total properties: ${totalProps[0]?.total || 0}`);
+    console.log(`[searchPropertiesPublic] DB Stats - property_for values:`, propertyForCheck);
+    console.log(`[searchPropertiesPublic] DB Stats - status values:`, statusCheck);
 
     // Fetch media for each property
     const propertiesWithMedia = await Promise.all(

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
 import { getApiBase } from '../../../../../utils/apiBase.js';
 import EnquiryModal from './EnquiryModal.jsx';
@@ -84,7 +84,6 @@ export default function FindProperty({ site: siteProp, properties: propsProps })
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [showEnquiryModal, setShowEnquiryModal] = useState(false);
   const [cityCounts, setCityCounts] = useState({});
-  const searchTimeoutRef = useRef(null);
   
   const apiBase = getApiBase() || '';
   const tenantDb = site?.tenant_db || 
@@ -109,10 +108,14 @@ export default function FindProperty({ site: siteProp, properties: propsProps })
         if (tenantDb) headers['x-tenant-db'] = tenantDb;
         
         const apiUrl = apiBase ? `${apiBase}/api/properties/filters` : '/api/properties/filters';
+        console.log('Fetching filters from:', apiUrl, 'with tenant:', tenantDb);
+        
         const response = await fetch(apiUrl, { headers });
+        console.log('Filters response status:', response.status, response.statusText);
         
         if (response.ok) {
           const result = await response.json();
+          console.log('Filters result:', result);
           if (result.data) {
             setFilterOptions({
               cities: result.data.cities || [],
@@ -129,10 +132,12 @@ export default function FindProperty({ site: siteProp, properties: propsProps })
             setFiltersLoaded(true);
           }
         } else {
-          console.error('Failed to fetch filters:', response.status);
+          const errorText = await response.text();
+          console.error('Failed to fetch filters:', response.status, errorText);
           // Fallback to props/context properties
           if (properties && properties.length > 0) {
             setSearchResults(properties);
+            setFiltersLoaded(true); // Still mark as loaded to trigger search
           }
         }
       } catch (err) {
@@ -140,6 +145,7 @@ export default function FindProperty({ site: siteProp, properties: propsProps })
         // Fallback to props/context properties
         if (properties && properties.length > 0) {
           setSearchResults(properties);
+          setFiltersLoaded(true); // Still mark as loaded to trigger search
         }
       }
     }
@@ -151,11 +157,12 @@ export default function FindProperty({ site: siteProp, properties: propsProps })
   // Initial load - perform search after filters are loaded or use props
   useEffect(() => {
     if (tenantDb && filtersLoaded) {
-      // Filters loaded, perform initial search
+      // Filters loaded, perform initial search to show all properties
       performSearch();
     } else if (!tenantDb && properties && properties.length > 0) {
       // No tenantDb, use properties from props/context
       setSearchResults(properties);
+      setFiltersLoaded(true);
     } else if (!tenantDb) {
       // No tenantDb and no props, try to search anyway
       performSearch();
@@ -196,13 +203,19 @@ export default function FindProperty({ site: siteProp, properties: propsProps })
       
       const headers = { 'x-tenant-db': tenantDb };
       const apiUrl = apiBase ? `${apiBase}/api/properties/search` : '/api/properties/search';
-      const response = await fetch(`${apiUrl}?${params.toString()}`, { headers });
+      const fullUrl = `${apiUrl}?${params.toString()}`;
+      console.log('Searching properties:', fullUrl, 'with tenant:', tenantDb);
+      
+      const response = await fetch(fullUrl, { headers });
+      console.log('Search response status:', response.status, response.statusText);
       
       if (response.ok) {
         const result = await response.json();
+        console.log('Search result count:', result.data?.length || 0);
         setSearchResults(result.data || []);
       } else {
-        console.error('Search failed:', response.status);
+        const errorText = await response.text();
+        console.error('Search failed:', response.status, errorText);
         // Fallback to props/context properties
         if (properties && properties.length > 0) {
           setSearchResults(properties);
@@ -220,47 +233,8 @@ export default function FindProperty({ site: siteProp, properties: propsProps })
   };
 
   const handleFilterChange = (name, value) => {
-    setFilters(prev => {
-      const updated = { ...prev, [name]: value };
-      
-      // Clear existing timeout
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
-      
-      // Auto-search when filters change (debounce)
-      if (tenantDb && filtersLoaded) {
-        searchTimeoutRef.current = setTimeout(() => {
-          // Use updated filters for search
-          const searchParams = new URLSearchParams();
-          if (updated.property_for) searchParams.append('property_for', updated.property_for);
-          if (updated.property_type) searchParams.append('property_type', updated.property_type);
-          if (updated.city) searchParams.append('city', updated.city);
-          if (updated.locality) searchParams.append('locality', updated.locality);
-          if (updated.min_price_lacs) {
-            const minPrice = parseFloat(updated.min_price_lacs) * 100000;
-            if (!isNaN(minPrice) && minPrice > 0) searchParams.append('min_price', minPrice);
-          }
-          if (updated.max_price_lacs) {
-            const maxPrice = parseFloat(updated.max_price_lacs) * 100000;
-            if (!isNaN(maxPrice) && maxPrice > 0) searchParams.append('max_price', maxPrice);
-          }
-          
-          const headers = { 'x-tenant-db': tenantDb };
-          const apiUrl = apiBase ? `${apiBase}/api/properties/search` : '/api/properties/search';
-          fetch(`${apiUrl}?${searchParams.toString()}`, { headers })
-            .then(res => res.ok ? res.json() : null)
-            .then(result => {
-              if (result && result.data) {
-                setSearchResults(result.data || []);
-              }
-            })
-            .catch(err => console.error('Auto-search error:', err));
-        }, 500);
-      }
-      
-      return updated;
-    });
+    // Just update the filter state, don't auto-search
+    setFilters(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSearch = (e) => {
@@ -291,9 +265,7 @@ export default function FindProperty({ site: siteProp, properties: propsProps })
             className={`pc-find-city-tab ${filters.city === city.value ? 'active' : ''}`}
             onClick={() => {
               setFilters(prev => ({ ...prev, city: city.value }));
-              if (tenantDb && filtersLoaded) {
-                setTimeout(() => performSearch(), 100);
-              }
+              // Don't auto-search, user needs to click SEARCH button
             }}
           >
             Property in {city.label} ({city.count})

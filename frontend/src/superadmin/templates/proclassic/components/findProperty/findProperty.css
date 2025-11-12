@@ -41,13 +41,16 @@
   padding: 20px;
   border-radius: 8px;
   margin-bottom: 30px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .pc-find-search-form {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 12px;
   align-items: end;
+  width: 100%;
 }
 
 .pc-find-select,
@@ -58,6 +61,9 @@
   font-size: 14px;
   font-family: inherit;
   background: #fff;
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .pc-find-select:focus,
@@ -70,10 +76,13 @@
 .pc-find-budget {
   display: flex;
   gap: 8px;
+  width: 100%;
+  min-width: 0;
 }
 
 .pc-find-input--small {
   flex: 1;
+  min-width: 0;
 }
 
 .pc-find-search-btn {
@@ -86,6 +95,8 @@
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
+  white-space: nowrap;
+  min-width: 100px;
 }
 
 .pc-find-search-btn:hover:not(:disabled) {
@@ -391,9 +402,19 @@
 }
 
 /* Responsive */
+@media (max-width: 1200px) {
+  .pc-find-search-form {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  }
+}
+
 @media (max-width: 768px) {
   .pc-find-search-form {
     grid-template-columns: 1fr;
+  }
+  
+  .pc-find-budget {
+    flex-direction: column;
   }
   
   .pc-find-grid {
@@ -403,6 +424,20 @@
   .pc-find-city-tabs {
     overflow-x: auto;
     flex-wrap: nowrap;
+  }
+  
+  .pc-find-search-btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .pc-find-property {
+    padding: 12px;
+  }
+  
+  .pc-find-search {
+    padding: 16px;
   }
 }
 
