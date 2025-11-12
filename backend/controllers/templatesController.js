@@ -447,19 +447,51 @@ export async function serveSiteBySlug(req, res) {
     let properties = [];
     try {
       if (ownerType === 'company') {
-        const [rows] = await pool.query('SELECT id, name, email, phone, photo, tenant_db FROM companies WHERE id = ? LIMIT 1', [site.companyId]);
+        const [rows] = await pool.query('SELECT id, full_name, name, email, phone, photo, tenant_db, location, address, store_name, company_name, instagram, facebook, linkedin, youtube, whatsapp_number FROM companies WHERE id = ? LIMIT 1', [site.companyId]);
         const row = rows?.[0];
         if (row) {
-          owner = { id: row.id, full_name: row.name || owner.full_name, email: row.email, phone: row.phone, photo: row.photo, tenant_db: row.tenant_db };
+          owner = { 
+            id: row.id, 
+            full_name: row.full_name || row.name || owner.full_name, 
+            email: row.email, 
+            phone: row.phone, 
+            photo: row.photo, 
+            tenant_db: row.tenant_db,
+            location: row.location,
+            address: row.address,
+            store_name: row.store_name,
+            company_name: row.company_name,
+            instagram: row.instagram,
+            facebook: row.facebook,
+            linkedin: row.linkedin,
+            youtube: row.youtube,
+            whatsapp_number: row.whatsapp_number
+          };
           if (row.tenant_db) {
             properties = await fetchBrokerAndProperties(row.tenant_db, req);
           }
         }
       } else {
-        const [rows] = await pool.query('SELECT id, full_name, email, phone, photo, tenant_db FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
+        const [rows] = await pool.query('SELECT id, full_name, email, phone, photo, tenant_db, location, address, store_name, company_name, instagram, facebook, linkedin, youtube, whatsapp_number FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
         const row = rows?.[0];
         if (row) {
-          owner = { id: row.id, full_name: row.full_name || owner.full_name, email: row.email, phone: row.phone, photo: row.photo, tenant_db: row.tenant_db };
+          owner = { 
+            id: row.id, 
+            full_name: row.full_name || owner.full_name, 
+            email: row.email, 
+            phone: row.phone, 
+            photo: row.photo, 
+            tenant_db: row.tenant_db,
+            location: row.location,
+            address: row.address,
+            store_name: row.store_name,
+            company_name: row.company_name,
+            instagram: row.instagram,
+            facebook: row.facebook,
+            linkedin: row.linkedin,
+            youtube: row.youtube,
+            whatsapp_number: row.whatsapp_number
+          };
           if (row.tenant_db) {
             properties = await fetchBrokerAndProperties(row.tenant_db, req);
           }
@@ -490,20 +522,52 @@ export async function getSiteContext(req, res) {
     
     try {
       if (ownerType === 'company') {
-        const [rows] = await pool.query('SELECT id, name, email, phone, photo, tenant_db FROM companies WHERE id = ? LIMIT 1', [site.companyId]);
+        const [rows] = await pool.query('SELECT id, full_name, name, email, phone, photo, tenant_db, location, address, store_name, company_name, instagram, facebook, linkedin, youtube, whatsapp_number FROM companies WHERE id = ? LIMIT 1', [site.companyId]);
         const row = rows?.[0];
         if (row) {
-          owner = { id: row.id, full_name: row.name || owner.full_name, email: row.email, phone: row.phone, photo: row.photo, tenant_db: row.tenant_db };
+          owner = { 
+            id: row.id, 
+            full_name: row.full_name || row.name || owner.full_name, 
+            email: row.email, 
+            phone: row.phone, 
+            photo: row.photo, 
+            tenant_db: row.tenant_db,
+            location: row.location,
+            address: row.address,
+            store_name: row.store_name,
+            company_name: row.company_name,
+            instagram: row.instagram,
+            facebook: row.facebook,
+            linkedin: row.linkedin,
+            youtube: row.youtube,
+            whatsapp_number: row.whatsapp_number
+          };
           tenantDb = row.tenant_db;
           if (row.tenant_db) {
             properties = await fetchBrokerAndProperties(row.tenant_db, req);
           }
         }
       } else {
-        const [rows] = await pool.query('SELECT id, full_name, email, phone, photo, tenant_db FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
+        const [rows] = await pool.query('SELECT id, full_name, email, phone, photo, tenant_db, location, address, store_name, company_name, instagram, facebook, linkedin, youtube, whatsapp_number FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
         const row = rows?.[0];
         if (row) {
-          owner = { id: row.id, full_name: row.full_name || owner.full_name, email: row.email, phone: row.phone, photo: row.photo, tenant_db: row.tenant_db };
+          owner = { 
+            id: row.id, 
+            full_name: row.full_name || owner.full_name, 
+            email: row.email, 
+            phone: row.phone, 
+            photo: row.photo, 
+            tenant_db: row.tenant_db,
+            location: row.location,
+            address: row.address,
+            store_name: row.store_name,
+            company_name: row.company_name,
+            instagram: row.instagram,
+            facebook: row.facebook,
+            linkedin: row.linkedin,
+            youtube: row.youtube,
+            whatsapp_number: row.whatsapp_number
+          };
           tenantDb = row.tenant_db;
           if (row.tenant_db) {
             properties = await fetchBrokerAndProperties(row.tenant_db, req);
@@ -543,20 +607,52 @@ export async function getDomainSiteContext(req, res) {
     
     try {
       if (ownerType === 'company') {
-        const [rows] = await pool.query('SELECT id, name, email, phone, photo, tenant_db FROM companies WHERE id = ? LIMIT 1', [site.companyId]);
+        const [rows] = await pool.query('SELECT id, full_name, name, email, phone, photo, tenant_db, location, address, store_name, company_name, instagram, facebook, linkedin, youtube, whatsapp_number FROM companies WHERE id = ? LIMIT 1', [site.companyId]);
         const row = rows?.[0];
         if (row) {
-          owner = { id: row.id, full_name: row.name || owner.full_name, email: row.email, phone: row.phone, photo: row.photo, tenant_db: row.tenant_db };
+          owner = { 
+            id: row.id, 
+            full_name: row.full_name || row.name || owner.full_name, 
+            email: row.email, 
+            phone: row.phone, 
+            photo: row.photo, 
+            tenant_db: row.tenant_db,
+            location: row.location,
+            address: row.address,
+            store_name: row.store_name,
+            company_name: row.company_name,
+            instagram: row.instagram,
+            facebook: row.facebook,
+            linkedin: row.linkedin,
+            youtube: row.youtube,
+            whatsapp_number: row.whatsapp_number
+          };
           tenantDb = row.tenant_db;
           if (row.tenant_db) {
             properties = await fetchBrokerAndProperties(row.tenant_db, req);
           }
         }
       } else {
-        const [rows] = await pool.query('SELECT id, full_name, email, phone, photo, tenant_db FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
+        const [rows] = await pool.query('SELECT id, full_name, email, phone, photo, tenant_db, location, address, store_name, company_name, instagram, facebook, linkedin, youtube, whatsapp_number FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
         const row = rows?.[0];
         if (row) {
-          owner = { id: row.id, full_name: row.full_name || owner.full_name, email: row.email, phone: row.phone, photo: row.photo, tenant_db: row.tenant_db };
+          owner = { 
+            id: row.id, 
+            full_name: row.full_name || owner.full_name, 
+            email: row.email, 
+            phone: row.phone, 
+            photo: row.photo, 
+            tenant_db: row.tenant_db,
+            location: row.location,
+            address: row.address,
+            store_name: row.store_name,
+            company_name: row.company_name,
+            instagram: row.instagram,
+            facebook: row.facebook,
+            linkedin: row.linkedin,
+            youtube: row.youtube,
+            whatsapp_number: row.whatsapp_number
+          };
           tenantDb = row.tenant_db;
           if (row.tenant_db) {
             properties = await fetchBrokerAndProperties(row.tenant_db, req);

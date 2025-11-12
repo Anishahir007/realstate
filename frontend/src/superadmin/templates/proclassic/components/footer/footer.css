@@ -1,0 +1,131 @@
+/* ProClassic Footer Styles */
+.pc-footer {
+  background: #1a1a2e;
+  color: #ffffff;
+  padding: 40px 20px 20px;
+  margin-top: 60px;
+}
+
+.pc-footer-container {
+  max-width: 90%;
+  margin: 0 auto;
+}
+
+.pc-footer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 40px;
+  margin-bottom: 30px;
+}
+
+.pc-footer-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pc-footer-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 16px 0;
+  color: #ffffff;
+  border-bottom: 2px solid #2d3561;
+  padding-bottom: 8px;
+}
+
+.pc-footer-item {
+  font-size: 14px;
+  color: #b8b8b8;
+  line-height: 1.6;
+}
+
+.pc-footer-link {
+  color: #b8b8b8;
+  text-decoration: none;
+  transition: color 0.2s;
+  display: inline-block;
+}
+
+.pc-footer-link:hover {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+.pc-footer-links {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pc-footer-social {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.pc-footer-social-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  color: #ffffff;
+  transition: all 0.3s;
+  text-decoration: none;
+}
+
+.pc-footer-social-link:hover {
+  background: #2d3561;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.pc-footer-social-link svg {
+  width: 20px;
+  height: 20px;
+}
+
+.pc-footer-bottom {
+  border-top: 1px solid #2d3561;
+  padding-top: 20px;
+  margin-top: 20px;
+  text-align: center;
+}
+
+.pc-footer-copyright {
+  font-size: 13px;
+  color: #8a8a8a;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .pc-footer {
+    padding: 30px 16px 16px;
+  }
+
+  .pc-footer-grid {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+
+  .pc-footer-social {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .pc-footer {
+    padding: 24px 12px 12px;
+  }
+
+  .pc-footer-title {
+    font-size: 16px;
+  }
+
+  .pc-footer-item {
+    font-size: 13px;
+  }
+}
+
