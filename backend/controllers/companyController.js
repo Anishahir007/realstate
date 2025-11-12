@@ -17,10 +17,17 @@ function mapCompanyRow(row) {
     portalRole: row.portal_role,
     companyName: row.company_name,
     location: row.location,
+    address: row.address,
+    storeName: row.store_name,
     tenantDb: row.tenant_db,
     documentType: row.document_type,
     documentFront: row.document_front,
     documentBack: row.document_back,
+    instagram: row.instagram,
+    facebook: row.facebook,
+    linkedin: row.linkedin,
+    youtube: row.youtube,
+    whatsappNumber: row.whatsapp_number,
     createdByAdminId: row.created_by_admin_id,
     lastLoginAt: row.last_login_at,
     createdAt: row.created_at,
@@ -80,7 +87,7 @@ export async function getMyCompanyProfile(req, res) {
     if (!companyId) return res.status(401).json({ message: 'Unauthorized' });
 
     const [rows] = await pool.query(
-      'SELECT id, full_name, email, phone, photo, portal_role, company_name, location, tenant_db, document_type, document_front, document_back, status, created_by_admin_id, last_login_at, created_at FROM companies WHERE id = ? LIMIT 1',
+      'SELECT id, full_name, email, phone, photo, portal_role, company_name, location, address, store_name, tenant_db, document_type, document_front, document_back, instagram, facebook, linkedin, youtube, whatsapp_number, status, created_by_admin_id, last_login_at, created_at FROM companies WHERE id = ? LIMIT 1',
       [companyId]
     );
     const row = rows[0];
@@ -98,7 +105,7 @@ export async function getCompanyById(req, res) {
     if (!id) return res.status(400).json({ message: 'Invalid id' });
 
     const [rows] = await pool.query(
-      'SELECT id, full_name, email, phone, photo, portal_role, company_name, location, tenant_db, document_type, document_front, document_back, status, created_by_admin_id, last_login_at, created_at FROM companies WHERE id = ? LIMIT 1',
+      'SELECT id, full_name, email, phone, photo, portal_role, company_name, location, address, store_name, tenant_db, document_type, document_front, document_back, instagram, facebook, linkedin, youtube, whatsapp_number, status, created_by_admin_id, last_login_at, created_at FROM companies WHERE id = ? LIMIT 1',
       [id]
     );
     const row = rows[0];
@@ -112,7 +119,7 @@ export async function getCompanyById(req, res) {
 
 export async function createCompany(req, res) {
   try {
-    const { full_name, email, phone, password, company_name, location, portal_role, status } = req.body || {};
+    const { full_name, email, phone, password, company_name, location, address, store_name, portal_role, status, instagram, facebook, linkedin, youtube, whatsapp_number } = req.body || {};
     if (!isNonEmptyString(full_name) || !validateEmail(email) || !validatePassword(password) || !isNonEmptyString(company_name)) {
       return res.status(400).json({ message: 'Invalid input' });
     }
@@ -153,12 +160,12 @@ export async function createCompany(req, res) {
 
     const normalizedStatus = (status && ['active', 'suspended'].includes(String(status).toLowerCase())) ? String(status).toLowerCase() : undefined;
     const [result] = await pool.query(
-      `INSERT INTO companies (full_name, email, phone, photo, password_hash, portal_role, company_name, location, tenant_db, document_type, document_front, document_back, created_by_admin_id${normalizedStatus ? ', status' : ''}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?${normalizedStatus ? ', ?' : ''})`,
-      [safeName, email, phone || null, photoPath, password_hash, portalRole, company_name, location || null, tenant_db, documentType, documentFront, documentBack, req.user?.id || null, ...(normalizedStatus ? [normalizedStatus] : [])]
+      `INSERT INTO companies (full_name, email, phone, photo, password_hash, portal_role, company_name, location, address, store_name, tenant_db, document_type, document_front, document_back, instagram, facebook, linkedin, youtube, whatsapp_number, created_by_admin_id${normalizedStatus ? ', status' : ''}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?${normalizedStatus ? ', ?' : ''})`,
+      [safeName, email, phone || null, photoPath, password_hash, portalRole, company_name, location || null, address || null, store_name || null, tenant_db, documentType, documentFront, documentBack, instagram || null, facebook || null, linkedin || null, youtube || null, whatsapp_number || null, req.user?.id || null, ...(normalizedStatus ? [normalizedStatus] : [])]
     );
     const id = result.insertId;
     const [rows] = await pool.query(
-      'SELECT id, full_name, email, phone, photo, portal_role, company_name, location, tenant_db, document_type, document_front, document_back, status, created_by_admin_id, last_login_at FROM companies WHERE id = ? LIMIT 1',
+      'SELECT id, full_name, email, phone, photo, portal_role, company_name, location, address, store_name, tenant_db, document_type, document_front, document_back, instagram, facebook, linkedin, youtube, whatsapp_number, status, created_by_admin_id, last_login_at FROM companies WHERE id = ? LIMIT 1',
       [id]
     );
     // Notify super admin - company created
@@ -187,7 +194,7 @@ export async function updateCompany(req, res) {
     const id = parseInt(req.params.id, 10);
     if (!id) return res.status(400).json({ message: 'Invalid id' });
 
-    const { full_name, email, phone, company_name, location, portal_role, status } = req.body || {};
+    const { full_name, email, phone, company_name, location, address, store_name, portal_role, status, instagram, facebook, linkedin, youtube, whatsapp_number } = req.body || {};
     const updates = [];
     const params = [];
 
@@ -216,10 +223,38 @@ export async function updateCompany(req, res) {
       updates.push('location = ?');
       params.push(isNonEmptyString(location) ? location : null);
     }
+    if (address !== undefined) {
+      updates.push('address = ?');
+      params.push(isNonEmptyString(address) ? address : null);
+    }
+    if (store_name !== undefined) {
+      updates.push('store_name = ?');
+      params.push(isNonEmptyString(store_name) ? store_name : null);
+    }
     if (portal_role !== undefined) {
       const portalRole = normalizePortalRole(portal_role);
       updates.push('portal_role = ?');
       params.push(portalRole);
+    }
+    if (instagram !== undefined) {
+      updates.push('instagram = ?');
+      params.push(isNonEmptyString(instagram) ? instagram : null);
+    }
+    if (facebook !== undefined) {
+      updates.push('facebook = ?');
+      params.push(isNonEmptyString(facebook) ? facebook : null);
+    }
+    if (linkedin !== undefined) {
+      updates.push('linkedin = ?');
+      params.push(isNonEmptyString(linkedin) ? linkedin : null);
+    }
+    if (youtube !== undefined) {
+      updates.push('youtube = ?');
+      params.push(isNonEmptyString(youtube) ? youtube : null);
+    }
+    if (whatsapp_number !== undefined) {
+      updates.push('whatsapp_number = ?');
+      params.push(isNonEmptyString(whatsapp_number) ? whatsapp_number : null);
     }
     // photo from multipart
     if (req.files) {
@@ -277,7 +312,7 @@ export async function updateCompany(req, res) {
     await pool.query(`UPDATE companies SET ${updates.join(', ')} WHERE id = ?`, params);
 
     const [rows] = await pool.query(
-      'SELECT id, full_name, email, phone, photo, portal_role, company_name, location, tenant_db, document_type, document_front, document_back, created_by_admin_id, last_login_at FROM companies WHERE id = ? LIMIT 1',
+      'SELECT id, full_name, email, phone, photo, portal_role, company_name, location, address, store_name, tenant_db, document_type, document_front, document_back, instagram, facebook, linkedin, youtube, whatsapp_number, created_by_admin_id, last_login_at FROM companies WHERE id = ? LIMIT 1',
       [id]
     );
     if (!rows[0]) return res.status(404).json({ message: 'Not found' });

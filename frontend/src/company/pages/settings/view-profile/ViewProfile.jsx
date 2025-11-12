@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useCompany } from '../../../../context/CompanyContext.jsx';
 import './companyviewprofile.css';
 import EditProfileModal from '../../../../company/profile/EditProfileModal.jsx';
@@ -13,7 +13,23 @@ const ViewProfile = () => {
     if (!company?.name || !company?.email) {
       company?.refreshProfile?.();
     }
-  }, [company]);
+  }, [company?.name, company?.email, company]);
+
+  // Refresh profile when edit modal closes
+  const prevEditOpen = useRef(isEditOpen);
+  const prevPhotoOpen = useRef(isPhotoOpen);
+  
+  useEffect(() => {
+    // Only refresh when modal transitions from open to closed
+    if (prevEditOpen.current && !isEditOpen) {
+      company?.refreshProfile?.();
+    }
+    if (prevPhotoOpen.current && !isPhotoOpen) {
+      company?.refreshProfile?.();
+    }
+    prevEditOpen.current = isEditOpen;
+    prevPhotoOpen.current = isPhotoOpen;
+  }, [isEditOpen, isPhotoOpen, company]);
 
   return (
     <div className="companyviewprofile-root">
@@ -41,16 +57,74 @@ const ViewProfile = () => {
         <div className="companyviewprofile-label">Role</div>
         <div>company</div>
         <div className="companyviewprofile-label">Phone</div>
-        <div>{company?.phone}</div>
+        <div>{company?.phone || '-'}</div>
         <div className="companyviewprofile-label">Company Name</div>
         <div>{company?.companyName || '-'}</div>
         <div className="companyviewprofile-label">Location</div>
         <div>{company?.location || '-'}</div>
+        <div className="companyviewprofile-label">Address</div>
+        <div>{company?.address || '-'}</div>
+        <div className="companyviewprofile-label">Store Name</div>
+        <div>{company?.storeName || '-'}</div>
         <div className="companyviewprofile-label">Document Type</div>
         <div>{company?.documentType ? company.documentType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : '-'}</div>
         <div className="companyviewprofile-label">Last Login</div>
-        <div>{company?.lastLoginAt ? new Date(company.lastLoginAt).toLocaleString() : ''}</div>
+        <div>{company?.lastLoginAt ? new Date(company.lastLoginAt).toLocaleString() : '-'}</div>
       </div>
+
+      {(company?.instagram || company?.facebook || company?.linkedin || company?.youtube || company?.whatsappNumber) && (
+        <div className="companyviewprofile-section">
+          <h3 className="companyviewprofile-section-title">Social Media</h3>
+          <div className="companyviewprofile-grid">
+            {company?.instagram && (
+              <>
+                <div className="companyviewprofile-label">Instagram</div>
+                <div>
+                  <a href={company.instagram} target="_blank" rel="noopener noreferrer" className="companyviewprofile-link">
+                    {company.instagram}
+                  </a>
+                </div>
+              </>
+            )}
+            {company?.facebook && (
+              <>
+                <div className="companyviewprofile-label">Facebook</div>
+                <div>
+                  <a href={company.facebook} target="_blank" rel="noopener noreferrer" className="companyviewprofile-link">
+                    {company.facebook}
+                  </a>
+                </div>
+              </>
+            )}
+            {company?.linkedin && (
+              <>
+                <div className="companyviewprofile-label">LinkedIn</div>
+                <div>
+                  <a href={company.linkedin} target="_blank" rel="noopener noreferrer" className="companyviewprofile-link">
+                    {company.linkedin}
+                  </a>
+                </div>
+              </>
+            )}
+            {company?.youtube && (
+              <>
+                <div className="companyviewprofile-label">YouTube</div>
+                <div>
+                  <a href={company.youtube} target="_blank" rel="noopener noreferrer" className="companyviewprofile-link">
+                    {company.youtube}
+                  </a>
+                </div>
+              </>
+            )}
+            {company?.whatsappNumber && (
+              <>
+                <div className="companyviewprofile-label">WhatsApp Number</div>
+                <div>{company.whatsappNumber}</div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {(company?.documentFront || company?.documentBack) && (
         <div className="companyviewprofile-documents">

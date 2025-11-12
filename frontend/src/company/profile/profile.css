@@ -10,12 +10,15 @@
 }
 
 .companypanel-modal {
-  width: 480px;
+  width: 600px;
   max-width: calc(100% - 32px);
+  max-height: calc(100vh - 64px);
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.12);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .companypanel-modal-header {
@@ -44,6 +47,9 @@
   padding: 16px 20px 20px 20px;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .companypanel-modal-error {

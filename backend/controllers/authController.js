@@ -427,7 +427,7 @@ export async function whoami(req, res) {
       let [rows] = [];
       try {
         [rows] = await pool.query(
-          'SELECT id, full_name, email, phone, photo, license_no, location, company_name, tenant_db, document_type, document_front, document_back, created_by_admin_id, last_login_at FROM brokers WHERE id = ? LIMIT 1',
+          'SELECT id, full_name, email, phone, photo, license_no, location, address, store_name, company_name, tenant_db, document_type, document_front, document_back, instagram, facebook, linkedin, youtube, whatsapp_number, created_by_admin_id, last_login_at FROM brokers WHERE id = ? LIMIT 1',
           [id]
         );
       } catch (err) {
@@ -452,10 +452,19 @@ export async function whoami(req, res) {
           phone: row.phone,
           photo: row.photo,
           licenseNo: row.license_no,
+          location: row.location,
+          address: row.address,
+          storeName: row.store_name,
+          companyName: row.company_name,
           tenantDb: row.tenant_db,
           documentType: row.document_type || null,
           documentFront: row.document_front || null,
           documentBack: row.document_back || null,
+          instagram: row.instagram,
+          facebook: row.facebook,
+          linkedin: row.linkedin,
+          youtube: row.youtube,
+          whatsappNumber: row.whatsapp_number,
           createdByAdminId: row.created_by_admin_id,
           lastLoginAt: row.last_login_at,
         },
@@ -466,7 +475,7 @@ export async function whoami(req, res) {
       let [rows] = [];
       try {
         [rows] = await pool.query(
-          'SELECT id, full_name, email, phone, photo, portal_role, company_name, location, tenant_db, document_type, document_front, document_back, created_by_admin_id, last_login_at FROM companies WHERE id = ? LIMIT 1',
+          'SELECT id, full_name, email, phone, photo, portal_role, company_name, location, address, store_name, tenant_db, document_type, document_front, document_back, instagram, facebook, linkedin, youtube, whatsapp_number, created_by_admin_id, last_login_at FROM companies WHERE id = ? LIMIT 1',
           [id]
         );
       } catch (err) {
@@ -492,10 +501,17 @@ export async function whoami(req, res) {
           portalRole: row.portal_role,
           companyName: row.company_name,
           location: row.location,
+          address: row.address,
+          storeName: row.store_name,
           tenantDb: row.tenant_db,
           documentType: row.document_type || null,
           documentFront: row.document_front || null,
           documentBack: row.document_back || null,
+          instagram: row.instagram,
+          facebook: row.facebook,
+          linkedin: row.linkedin,
+          youtube: row.youtube,
+          whatsappNumber: row.whatsapp_number,
           createdByAdminId: row.created_by_admin_id,
           lastLoginAt: row.last_login_at,
         },
@@ -621,7 +637,7 @@ export async function updateBrokerProfile(req, res) {
       return res.status(403).json({ message: 'Forbidden' });
     }
 
-    const { full_name, email, phone, license_no } = req.body || {};
+    const { full_name, email, phone, license_no, location, address, store_name, company_name, instagram, facebook, linkedin, youtube, whatsapp_number } = req.body || {};
     // If file upload present, map to photo URL
     let photo = undefined;
     if (req.files) {
@@ -701,6 +717,51 @@ export async function updateBrokerProfile(req, res) {
       params.push(documentType);
     }
 
+    if (address !== undefined) {
+      updates.push('address = ?');
+      params.push(isNonEmptyString(address) ? address : null);
+    }
+
+    if (store_name !== undefined) {
+      updates.push('store_name = ?');
+      params.push(isNonEmptyString(store_name) ? store_name : null);
+    }
+
+    if (location !== undefined) {
+      updates.push('location = ?');
+      params.push(isNonEmptyString(location) ? location : null);
+    }
+
+    if (company_name !== undefined) {
+      updates.push('company_name = ?');
+      params.push(isNonEmptyString(company_name) ? company_name : null);
+    }
+
+    if (instagram !== undefined) {
+      updates.push('instagram = ?');
+      params.push(isNonEmptyString(instagram) ? instagram : null);
+    }
+
+    if (facebook !== undefined) {
+      updates.push('facebook = ?');
+      params.push(isNonEmptyString(facebook) ? facebook : null);
+    }
+
+    if (linkedin !== undefined) {
+      updates.push('linkedin = ?');
+      params.push(isNonEmptyString(linkedin) ? linkedin : null);
+    }
+
+    if (youtube !== undefined) {
+      updates.push('youtube = ?');
+      params.push(isNonEmptyString(youtube) ? youtube : null);
+    }
+
+    if (whatsapp_number !== undefined) {
+      updates.push('whatsapp_number = ?');
+      params.push(isNonEmptyString(whatsapp_number) ? whatsapp_number : null);
+    }
+
     if (updates.length === 0) {
       return res.status(400).json({ message: 'No fields to update' });
     }
@@ -709,7 +770,7 @@ export async function updateBrokerProfile(req, res) {
     await pool.query(`UPDATE brokers SET ${updates.join(', ')} WHERE id = ?`, params);
 
       const [rows] = await pool.query(
-        'SELECT id, full_name, email, phone, photo, license_no, location, company_name, tenant_db, document_type, document_front, document_back, created_by_admin_id, last_login_at FROM brokers WHERE id = ? LIMIT 1',
+        'SELECT id, full_name, email, phone, photo, license_no, location, address, store_name, company_name, tenant_db, document_type, document_front, document_back, instagram, facebook, linkedin, youtube, whatsapp_number, created_by_admin_id, last_login_at FROM brokers WHERE id = ? LIMIT 1',
       [id]
     );
     const row = rows[0];
@@ -721,13 +782,20 @@ export async function updateBrokerProfile(req, res) {
         email: row.email,
         phone: row.phone,
         photo: row.photo,
-          licenseNo: row.license_no,
-          location: row.location,
-          companyName: row.company_name,
+        licenseNo: row.license_no,
+        location: row.location,
+        address: row.address,
+        storeName: row.store_name,
+        companyName: row.company_name,
         tenantDb: row.tenant_db,
         documentType: row.document_type,
         documentFront: row.document_front,
         documentBack: row.document_back,
+        instagram: row.instagram,
+        facebook: row.facebook,
+        linkedin: row.linkedin,
+        youtube: row.youtube,
+        whatsappNumber: row.whatsapp_number,
         createdByAdminId: row.created_by_admin_id,
         lastLoginAt: row.last_login_at,
       },
@@ -745,7 +813,7 @@ export async function updateCompanyProfile(req, res) {
       return res.status(403).json({ message: 'Forbidden' });
     }
 
-    const { full_name, email, phone } = req.body || {};
+    const { full_name, email, phone, location, address, store_name, instagram, facebook, linkedin, youtube, whatsapp_number } = req.body || {};
     // If file upload present, map to photo URL
     let photo = undefined;
     if (req.files) {
@@ -820,6 +888,46 @@ export async function updateCompanyProfile(req, res) {
       params.push(documentType);
     }
 
+    if (address !== undefined) {
+      updates.push('address = ?');
+      params.push(isNonEmptyString(address) ? address : null);
+    }
+
+    if (store_name !== undefined) {
+      updates.push('store_name = ?');
+      params.push(isNonEmptyString(store_name) ? store_name : null);
+    }
+
+    if (location !== undefined) {
+      updates.push('location = ?');
+      params.push(isNonEmptyString(location) ? location : null);
+    }
+
+    if (instagram !== undefined) {
+      updates.push('instagram = ?');
+      params.push(isNonEmptyString(instagram) ? instagram : null);
+    }
+
+    if (facebook !== undefined) {
+      updates.push('facebook = ?');
+      params.push(isNonEmptyString(facebook) ? facebook : null);
+    }
+
+    if (linkedin !== undefined) {
+      updates.push('linkedin = ?');
+      params.push(isNonEmptyString(linkedin) ? linkedin : null);
+    }
+
+    if (youtube !== undefined) {
+      updates.push('youtube = ?');
+      params.push(isNonEmptyString(youtube) ? youtube : null);
+    }
+
+    if (whatsapp_number !== undefined) {
+      updates.push('whatsapp_number = ?');
+      params.push(isNonEmptyString(whatsapp_number) ? whatsapp_number : null);
+    }
+
     if (updates.length === 0) {
       return res.status(400).json({ message: 'No fields to update' });
     }
@@ -828,10 +936,11 @@ export async function updateCompanyProfile(req, res) {
     await pool.query(`UPDATE companies SET ${updates.join(', ')} WHERE id = ?`, params);
 
     const [rows] = await pool.query(
-      'SELECT id, full_name, email, phone, photo, portal_role, company_name, location, tenant_db, document_type, document_front, document_back, created_by_admin_id, last_login_at FROM companies WHERE id = ? LIMIT 1',
+      'SELECT id, full_name, email, phone, photo, portal_role, company_name, location, address, store_name, tenant_db, document_type, document_front, document_back, instagram, facebook, linkedin, youtube, whatsapp_number, created_by_admin_id, last_login_at FROM companies WHERE id = ? LIMIT 1',
       [id]
     );
     const row = rows[0];
+    if (!row) return res.status(404).json({ message: 'Not found' });
     return res.json({
       data: {
         id: row.id,
@@ -843,10 +952,17 @@ export async function updateCompanyProfile(req, res) {
         portalRole: row.portal_role,
         companyName: row.company_name,
         location: row.location,
+        address: row.address,
+        storeName: row.store_name,
         tenantDb: row.tenant_db,
         documentType: row.document_type,
         documentFront: row.document_front,
         documentBack: row.document_back,
+        instagram: row.instagram,
+        facebook: row.facebook,
+        linkedin: row.linkedin,
+        youtube: row.youtube,
+        whatsappNumber: row.whatsapp_number,
         createdByAdminId: row.created_by_admin_id,
         lastLoginAt: row.last_login_at,
       },

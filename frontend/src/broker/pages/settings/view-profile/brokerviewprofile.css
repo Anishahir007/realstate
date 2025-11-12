@@ -13,6 +13,10 @@
 
 .brokerviewprofile-grid { display: grid; grid-template-columns: 160px 1fr; gap: 10px 16px; background: #fff; border: 1px solid #eef0f2; border-radius: 12px; padding: 14px; margin-bottom: 20px; }
 .brokerviewprofile-label { color: #6b7280; }
+.brokerviewprofile-section { background: #fff; border: 1px solid #eef0f2; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+.brokerviewprofile-section-title { margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: #203048; }
+.brokerviewprofile-link { color: #0066cc; text-decoration: underline; word-break: break-all; }
+.brokerviewprofile-link:hover { color: #0052a3; }
 
 /* Documents Section */
 .brokerviewprofile-documents { background: #fff; border: 1px solid #eef0f2; border-radius: 12px; padding: 20px; }

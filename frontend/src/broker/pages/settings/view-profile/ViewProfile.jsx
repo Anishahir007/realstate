@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useBroker } from '../../../../context/BrokerContext.jsx';
 import './brokerviewprofile.css';
 import EditProfileModal from '../../../../broker/profile/EditProfileModal.jsx';
@@ -13,7 +13,23 @@ const ViewProfile = () => {
     if (!broker?.name || !broker?.email) {
       broker?.refreshProfile?.();
     }
-  }, [broker]);
+  }, [broker?.name, broker?.email, broker]);
+
+  // Refresh profile when edit modal closes
+  const prevEditOpen = useRef(isEditOpen);
+  const prevPhotoOpen = useRef(isPhotoOpen);
+  
+  useEffect(() => {
+    // Only refresh when modal transitions from open to closed
+    if (prevEditOpen.current && !isEditOpen) {
+      broker?.refreshProfile?.();
+    }
+    if (prevPhotoOpen.current && !isPhotoOpen) {
+      broker?.refreshProfile?.();
+    }
+    prevEditOpen.current = isEditOpen;
+    prevPhotoOpen.current = isPhotoOpen;
+  }, [isEditOpen, isPhotoOpen, broker]);
 
   return (
     <div className="brokerviewprofile-root">
@@ -41,14 +57,76 @@ const ViewProfile = () => {
         <div className="brokerviewprofile-label">Role</div>
         <div>broker</div>
         <div className="brokerviewprofile-label">Phone</div>
-        <div>{broker?.phone}</div>
+        <div>{broker?.phone || '-'}</div>
         <div className="brokerviewprofile-label">License No</div>
         <div>{broker?.licenseNo || '-'}</div>
+        <div className="brokerviewprofile-label">Location</div>
+        <div>{broker?.location || '-'}</div>
+        <div className="brokerviewprofile-label">Address</div>
+        <div>{broker?.address || '-'}</div>
+        <div className="brokerviewprofile-label">Store Name</div>
+        <div>{broker?.storeName || '-'}</div>
+        <div className="brokerviewprofile-label">Company Name</div>
+        <div>{broker?.companyName || '-'}</div>
         <div className="brokerviewprofile-label">Document Type</div>
         <div>{broker?.documentType ? broker.documentType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : '-'}</div>
         <div className="brokerviewprofile-label">Last Login</div>
-        <div>{broker?.lastLoginAt ? new Date(broker.lastLoginAt).toLocaleString() : ''}</div>
+        <div>{broker?.lastLoginAt ? new Date(broker.lastLoginAt).toLocaleString() : '-'}</div>
       </div>
+
+      {(broker?.instagram || broker?.facebook || broker?.linkedin || broker?.youtube || broker?.whatsappNumber) && (
+        <div className="brokerviewprofile-section">
+          <h3 className="brokerviewprofile-section-title">Social Media</h3>
+          <div className="brokerviewprofile-grid">
+            {broker?.instagram && (
+              <>
+                <div className="brokerviewprofile-label">Instagram</div>
+                <div>
+                  <a href={broker.instagram} target="_blank" rel="noopener noreferrer" className="brokerviewprofile-link">
+                    {broker.instagram}
+                  </a>
+                </div>
+              </>
+            )}
+            {broker?.facebook && (
+              <>
+                <div className="brokerviewprofile-label">Facebook</div>
+                <div>
+                  <a href={broker.facebook} target="_blank" rel="noopener noreferrer" className="brokerviewprofile-link">
+                    {broker.facebook}
+                  </a>
+                </div>
+              </>
+            )}
+            {broker?.linkedin && (
+              <>
+                <div className="brokerviewprofile-label">LinkedIn</div>
+                <div>
+                  <a href={broker.linkedin} target="_blank" rel="noopener noreferrer" className="brokerviewprofile-link">
+                    {broker.linkedin}
+                  </a>
+                </div>
+              </>
+            )}
+            {broker?.youtube && (
+              <>
+                <div className="brokerviewprofile-label">YouTube</div>
+                <div>
+                  <a href={broker.youtube} target="_blank" rel="noopener noreferrer" className="brokerviewprofile-link">
+                    {broker.youtube}
+                  </a>
+                </div>
+              </>
+            )}
+            {broker?.whatsappNumber && (
+              <>
+                <div className="brokerviewprofile-label">WhatsApp Number</div>
+                <div>{broker.whatsappNumber}</div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {(broker?.documentFront || broker?.documentBack) && (
         <div className="brokerviewprofile-documents">

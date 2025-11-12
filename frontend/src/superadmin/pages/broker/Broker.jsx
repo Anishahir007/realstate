@@ -55,7 +55,14 @@ export default function SuperAdminBroker() {
     password: '',
     license_no: '',
     location: '',
+    address: '',
+    store_name: '',
     company_name: '',
+    instagram: '',
+    facebook: '',
+    linkedin: '',
+    youtube: '',
+    whatsapp_number: '',
     status: 'active',
     photo: null,
     document_type: '',
@@ -69,7 +76,14 @@ export default function SuperAdminBroker() {
     phone: '',
     license_no: '',
     location: '',
+    address: '',
+    store_name: '',
     company_name: '',
+    instagram: '',
+    facebook: '',
+    linkedin: '',
+    youtube: '',
+    whatsapp_number: '',
     status: 'active',
     photo: null,
     document_type: '',
@@ -207,7 +221,7 @@ export default function SuperAdminBroker() {
   }
 
   function openAdd() {
-    setFormAdd({ full_name: '', email: '', phone: '', password: '', license_no: '', location: '', company_name: '', status: 'active', photo: null });
+    setFormAdd({ full_name: '', email: '', phone: '', password: '', license_no: '', location: '', address: '', store_name: '', company_name: '', instagram: '', facebook: '', linkedin: '', youtube: '', whatsapp_number: '', status: 'active', photo: null, document_type: '', document_front: null, document_back: null });
     setShowAdd(true);
   }
 
@@ -223,7 +237,14 @@ export default function SuperAdminBroker() {
       fd.append('password', formAdd.password);
       fd.append('license_no', formAdd.license_no || '');
       fd.append('location', formAdd.location || '');
+      fd.append('address', formAdd.address || '');
+      fd.append('store_name', formAdd.store_name || '');
       fd.append('company_name', formAdd.company_name || '');
+      fd.append('instagram', formAdd.instagram || '');
+      fd.append('facebook', formAdd.facebook || '');
+      fd.append('linkedin', formAdd.linkedin || '');
+      fd.append('youtube', formAdd.youtube || '');
+      fd.append('whatsapp_number', formAdd.whatsapp_number || '');
       fd.append('status', formAdd.status || 'active');
       if (formAdd.photo) fd.append('photo', formAdd.photo);
       if (formAdd.document_type) fd.append('document_type', formAdd.document_type);
@@ -267,7 +288,14 @@ export default function SuperAdminBroker() {
           phone: b.phone || '', 
           license_no: b.licenseNo || '', 
           location: b.location || '', 
+          address: b.address || '',
+          store_name: b.storeName || '',
           company_name: b.companyName || '', 
+          instagram: b.instagram || '',
+          facebook: b.facebook || '',
+          linkedin: b.linkedin || '',
+          youtube: b.youtube || '',
+          whatsapp_number: b.whatsappNumber || '',
           status: b.status || 'active', 
           photo: null,
           document_type: b.documentType || '',
@@ -292,7 +320,14 @@ export default function SuperAdminBroker() {
       fd.append('phone', formEdit.phone || '');
       fd.append('license_no', formEdit.license_no || '');
       fd.append('location', formEdit.location || '');
+      fd.append('address', formEdit.address || '');
+      fd.append('store_name', formEdit.store_name || '');
       fd.append('company_name', formEdit.company_name || '');
+      fd.append('instagram', formEdit.instagram || '');
+      fd.append('facebook', formEdit.facebook || '');
+      fd.append('linkedin', formEdit.linkedin || '');
+      fd.append('youtube', formEdit.youtube || '');
+      fd.append('whatsapp_number', formEdit.whatsapp_number || '');
       fd.append('status', formEdit.status || 'active');
       if (formEdit.photo) fd.append('photo', formEdit.photo);
       if (formEdit.document_type !== undefined) fd.append('document_type', formEdit.document_type || '');
@@ -554,8 +589,44 @@ export default function SuperAdminBroker() {
                 <input value={formAdd.location} onChange={(e) => setFormAdd({ ...formAdd, location: e.target.value })} />
               </div>
               <div className="superadminbroker-formrow">
+                <label>Address</label>
+                <textarea rows={3} value={formAdd.address} onChange={(e) => setFormAdd({ ...formAdd, address: e.target.value })} placeholder="Enter address" />
+              </div>
+              <div className="superadminbroker-formrow">
+                <label>Store Name</label>
+                <input value={formAdd.store_name} onChange={(e) => setFormAdd({ ...formAdd, store_name: e.target.value })} placeholder="Enter store name" />
+              </div>
+              <div className="superadminbroker-formrow">
                 <label>Company Name</label>
                 <input value={formAdd.company_name} onChange={(e) => setFormAdd({ ...formAdd, company_name: e.target.value })} />
+              </div>
+              <div className="superadminbroker-formrow" style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e0e0e0' }}>
+                <h4 style={{ margin: '0 0 12px', fontSize: '16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+                  </svg>
+                  Social Media (Optional)
+                </h4>
+              </div>
+              <div className="superadminbroker-formrow">
+                <label>Instagram</label>
+                <input type="url" value={formAdd.instagram} onChange={(e) => setFormAdd({ ...formAdd, instagram: e.target.value })} placeholder="https://www.instagram.com/yourprofile" />
+              </div>
+              <div className="superadminbroker-formrow">
+                <label>Facebook</label>
+                <input type="url" value={formAdd.facebook} onChange={(e) => setFormAdd({ ...formAdd, facebook: e.target.value })} placeholder="https://www.facebook.com/yourprofile" />
+              </div>
+              <div className="superadminbroker-formrow">
+                <label>LinkedIn</label>
+                <input type="url" value={formAdd.linkedin} onChange={(e) => setFormAdd({ ...formAdd, linkedin: e.target.value })} placeholder="https://linkedin.com/company/yourcompany" />
+              </div>
+              <div className="superadminbroker-formrow">
+                <label>YouTube</label>
+                <input type="url" value={formAdd.youtube} onChange={(e) => setFormAdd({ ...formAdd, youtube: e.target.value })} placeholder="https://www.youtube.com/@yourchannel" />
+              </div>
+              <div className="superadminbroker-formrow">
+                <label>WhatsApp Number</label>
+                <input type="tel" value={formAdd.whatsapp_number} onChange={(e) => setFormAdd({ ...formAdd, whatsapp_number: e.target.value })} placeholder="6377963711" />
               </div>
               <div className="superadminbroker-formrow">
                 <label>Status</label>
@@ -622,9 +693,16 @@ export default function SuperAdminBroker() {
                   <div className="bm-view-item"><div className="bm-view-label">License Number</div><div className="bm-view-value">{selected.licenseNo || '-'}</div></div>
                   <div className="bm-view-item"><div className="bm-view-label">Email Address</div><div className="bm-view-value">{selected.email || '-'}</div></div>
                   <div className="bm-view-item"><div className="bm-view-label">Location</div><div className="bm-view-value">{selected.location || '-'}</div></div>
+                  <div className="bm-view-item"><div className="bm-view-label">Address</div><div className="bm-view-value">{selected.address || '-'}</div></div>
+                  <div className="bm-view-item"><div className="bm-view-label">Store Name</div><div className="bm-view-value">{selected.storeName || '-'}</div></div>
                   <div className="bm-view-item"><div className="bm-view-label">Phone Number</div><div className="bm-view-value">{selected.phone || '-'}</div></div>
                   <div className="bm-view-item"><div className="bm-view-label">Member Since</div><div className="bm-view-value">{memberSince}</div></div>
                   <div className="bm-view-item"><div className="bm-view-label">Company Name</div><div className="bm-view-value">{comp.company}</div></div>
+                  {selected.instagram && <div className="bm-view-item"><div className="bm-view-label">Instagram</div><div className="bm-view-value"><a href={selected.instagram} target="_blank" rel="noopener noreferrer" style={{ color: '#0066cc', textDecoration: 'underline' }}>{selected.instagram}</a></div></div>}
+                  {selected.facebook && <div className="bm-view-item"><div className="bm-view-label">Facebook</div><div className="bm-view-value"><a href={selected.facebook} target="_blank" rel="noopener noreferrer" style={{ color: '#0066cc', textDecoration: 'underline' }}>{selected.facebook}</a></div></div>}
+                  {selected.linkedin && <div className="bm-view-item"><div className="bm-view-label">LinkedIn</div><div className="bm-view-value"><a href={selected.linkedin} target="_blank" rel="noopener noreferrer" style={{ color: '#0066cc', textDecoration: 'underline' }}>{selected.linkedin}</a></div></div>}
+                  {selected.youtube && <div className="bm-view-item"><div className="bm-view-label">YouTube</div><div className="bm-view-value"><a href={selected.youtube} target="_blank" rel="noopener noreferrer" style={{ color: '#0066cc', textDecoration: 'underline' }}>{selected.youtube}</a></div></div>}
+                  {selected.whatsappNumber && <div className="bm-view-item"><div className="bm-view-label">WhatsApp</div><div className="bm-view-value">{selected.whatsappNumber}</div></div>}
                   <div className="bm-view-item"><div className="bm-view-label">Total Leads</div><div className="bm-view-value">{totalLeads}</div></div>
                   <div className="bm-view-item"><div className="bm-view-label">Total Properties</div><div className="bm-view-value">{totalProps}</div></div>
                 </div>
@@ -675,8 +753,44 @@ export default function SuperAdminBroker() {
                 <input value={formEdit.location} onChange={(e) => setFormEdit({ ...formEdit, location: e.target.value })} />
               </div>
               <div className="superadminbroker-formrow">
+                <label>Address</label>
+                <textarea rows={3} value={formEdit.address} onChange={(e) => setFormEdit({ ...formEdit, address: e.target.value })} placeholder="Enter address" />
+              </div>
+              <div className="superadminbroker-formrow">
+                <label>Store Name</label>
+                <input value={formEdit.store_name} onChange={(e) => setFormEdit({ ...formEdit, store_name: e.target.value })} placeholder="Enter store name" />
+              </div>
+              <div className="superadminbroker-formrow">
                 <label>Company Name</label>
                 <input value={formEdit.company_name} onChange={(e) => setFormEdit({ ...formEdit, company_name: e.target.value })} />
+              </div>
+              <div className="superadminbroker-formrow" style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e0e0e0' }}>
+                <h4 style={{ margin: '0 0 12px', fontSize: '16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+                  </svg>
+                  Social Media (Optional)
+                </h4>
+              </div>
+              <div className="superadminbroker-formrow">
+                <label>Instagram</label>
+                <input type="url" value={formEdit.instagram} onChange={(e) => setFormEdit({ ...formEdit, instagram: e.target.value })} placeholder="https://www.instagram.com/yourprofile" />
+              </div>
+              <div className="superadminbroker-formrow">
+                <label>Facebook</label>
+                <input type="url" value={formEdit.facebook} onChange={(e) => setFormEdit({ ...formEdit, facebook: e.target.value })} placeholder="https://www.facebook.com/yourprofile" />
+              </div>
+              <div className="superadminbroker-formrow">
+                <label>LinkedIn</label>
+                <input type="url" value={formEdit.linkedin} onChange={(e) => setFormEdit({ ...formEdit, linkedin: e.target.value })} placeholder="https://linkedin.com/company/yourcompany" />
+              </div>
+              <div className="superadminbroker-formrow">
+                <label>YouTube</label>
+                <input type="url" value={formEdit.youtube} onChange={(e) => setFormEdit({ ...formEdit, youtube: e.target.value })} placeholder="https://www.youtube.com/@yourchannel" />
+              </div>
+              <div className="superadminbroker-formrow">
+                <label>WhatsApp Number</label>
+                <input type="tel" value={formEdit.whatsapp_number} onChange={(e) => setFormEdit({ ...formEdit, whatsapp_number: e.target.value })} placeholder="6377963711" />
               </div>
               <div className="superadminbroker-formrow">
                 <label>Status</label>

@@ -13,6 +13,10 @@
 
 .companyviewprofile-grid { display: grid; grid-template-columns: 160px 1fr; gap: 10px 16px; background: #fff; border: 1px solid #eef0f2; border-radius: 12px; padding: 14px; margin-bottom: 20px; }
 .companyviewprofile-label { color: #6b7280; }
+.companyviewprofile-section { background: #fff; border: 1px solid #eef0f2; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+.companyviewprofile-section-title { margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: #203048; }
+.companyviewprofile-link { color: #0066cc; text-decoration: underline; word-break: break-all; }
+.companyviewprofile-link:hover { color: #0052a3; }
 
 /* Documents Section */
 .companyviewprofile-documents { background: #fff; border: 1px solid #eef0f2; border-radius: 12px; padding: 20px; }
