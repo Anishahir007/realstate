@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { getApiBase } from '../../../../../utils/apiBase.js';
 import './contactus.css';
@@ -21,8 +21,13 @@ export default function ContactUs({ site: siteProp }) {
   const [loading, setLoading] = useState(false);
   const [submitStatus, setSubmitStatus] = useState(null); // 'success' | 'error' | null
   
-  const apiBase = getApiBase() || window.location.origin;
-  const tenantDb = site?.tenant_db || ctx.tenant_db;
+  const apiBase = getApiBase() || '';
+  const tenantDb = site?.tenant_db || ctx.site?.tenant_db || ctx.tenant_db;
+  
+  // Debug log
+  useEffect(() => {
+    console.log('ContactUs - tenantDb:', tenantDb, 'apiBase:', apiBase, 'site:', site);
+  }, [tenantDb, apiBase, site]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -31,19 +36,29 @@ export default function ContactUs({ site: siteProp }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Check if tenantDb is available
+    if (!tenantDb) {
+      setSubmitStatus('error');
+      console.error('ContactUs - tenantDb is missing. Cannot submit lead without tenant database.');
+      return;
+    }
+    
     setLoading(true);
     setSubmitStatus(null);
 
     try {
       const headers = {
         'Content-Type': 'application/json',
+        'x-tenant-db': tenantDb
       };
-      
-      if (tenantDb) {
-        headers['x-tenant-db'] = tenantDb;
-      }
 
-      const response = await fetch(`${apiBase}/api/leads/public`, {
+      // Construct API URL properly
+      const apiUrl = apiBase ? `${apiBase}/api/leads/public` : '/api/leads/public';
+      
+      console.log('Submitting lead to:', apiUrl, 'with tenant:', tenantDb);
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -57,6 +72,7 @@ export default function ContactUs({ site: siteProp }) {
       });
 
       if (response.ok) {
+        const result = await response.json();
         setSubmitStatus('success');
         setFormData({
           full_name: '',
@@ -68,9 +84,23 @@ export default function ContactUs({ site: siteProp }) {
         // Reset status after 5 seconds
         setTimeout(() => setSubmitStatus(null), 5000);
       } else {
-        const error = await response.json();
+        // Try to parse error, but handle HTML responses
+        let errorMessage = 'Failed to submit. Please try again.';
+        try {
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const error = await response.json();
+            errorMessage = error.message || errorMessage;
+          } else {
+            const text = await response.text();
+            console.error('Non-JSON error response:', text.substring(0, 200));
+            errorMessage = `Server error (${response.status}). Please check your connection.`;
+          }
+        } catch (parseErr) {
+          console.error('Error parsing response:', parseErr);
+        }
         setSubmitStatus('error');
-        console.error('Lead submission error:', error);
+        console.error('Lead submission error:', errorMessage);
       }
     } catch (err) {
       setSubmitStatus('error');
