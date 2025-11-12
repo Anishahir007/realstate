@@ -133,17 +133,18 @@ export async function getFeaturedProperties(req, res) {
     const tenantPool = await getTenantPool(tenantDb);
     const baseUrl = process.env.API_BASE_URL || req.protocol + '://' + req.get('host');
 
+    // Fetch properties with highest price (featured = highest priced properties)
     const [rows] = await tenantPool.query(
       `SELECT p.id, p.title, p.city, p.state, p.locality, p.sub_locality, p.address, 
-              p.property_type, p.building_type, p.property_for, p.status, p.is_featured,
+              p.property_type, p.building_type, p.property_for, p.status,
               p.description, p.created_at,
               pf.expected_price, pf.built_up_area, pf.area_unit, pf.carpet_area, pf.carpet_area_unit,
               pf.super_area, pf.super_area_unit, pf.num_bedrooms, pf.num_bathrooms,
               pf.sale_type, pf.availability, pf.furnishing_status, pf.facing
        FROM properties p
        LEFT JOIN property_features pf ON pf.property_id = p.id
-       WHERE p.is_featured = 1 AND p.status = 'active'
-       ORDER BY p.created_at DESC
+       WHERE p.status = 'active' AND pf.expected_price IS NOT NULL AND pf.expected_price > 0
+       ORDER BY pf.expected_price DESC
        LIMIT ?`,
       [limit]
     );

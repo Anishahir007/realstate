@@ -109,22 +109,28 @@ export function FeaturedPropertiesGrid({ properties: propsProps, title = 'Featur
   
   useEffect(() => {
     async function fetchFeaturedProperties() {
-      // First, try filtering from passed properties
-      const filtered = properties.filter(p => 
-        p.is_featured === true || 
-        p.is_featured === 1 || 
-        p.featured === true || 
-        p.featured === 1 ||
-        p.isFeatured === true
-      );
-      
-      if (filtered.length > 0) {
-        setFeaturedProps(filtered);
-        setLoading(false);
-        return;
+      // First, try filtering from passed properties - get highest priced properties
+      if (properties.length > 0) {
+        const withPrice = properties
+          .filter(p => {
+            const price = p.expected_price || p.price || 0;
+            return price > 0 && (p.status === 'active' || !p.status);
+          })
+          .sort((a, b) => {
+            const priceA = a.expected_price || a.price || 0;
+            const priceB = b.expected_price || b.price || 0;
+            return priceB - priceA;
+          })
+          .slice(0, 8);
+        
+        if (withPrice.length > 0) {
+          setFeaturedProps(withPrice);
+          setLoading(false);
+          return;
+        }
       }
       
-      // If no featured properties in props, try fetching from API
+      // If no properties with price in props, try fetching from API
       try {
         // Get tenant_db from context or try to determine from slug/domain
         const tenantDb = ctx.site?.tenant_db || ctx.tenant_db;

@@ -1,8 +1,11 @@
 import { Router } from 'express';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { listAdminLeads, createAdminLead, updateAdminLead, listBrokerLeads, createBrokerLead, updateBrokerLead, listCompanyLeads, createCompanyLead, updateCompanyLead, listAllSourcesLeads } from '../controllers/leadsController.js';
+import { listAdminLeads, createAdminLead, updateAdminLead, listBrokerLeads, createBrokerLead, updateBrokerLead, listCompanyLeads, createCompanyLead, updateCompanyLead, listAllSourcesLeads, createPublicLead } from '../controllers/leadsController.js';
 
 const router = Router();
+
+// Public lead creation (for broker/company websites - uses x-tenant-db header)
+router.post('/public', createPublicLead);
 
 // Admin-scoped leads (main website leads only)
 // GET /api/leads/admin -> list admin leads

@@ -3,6 +3,13 @@ import { getTenantPool, ensureTenantLeadsTableExists } from '../utils/tenant.js'
 import { isNonEmptyString, validateEmail } from '../utils/validation.js';
 import { notifySuperAdmin, notifyBroker, notifyCompany } from '../utils/notifications.js';
 
+function getTenantDbFromHeader(req) {
+  const fromUser = req.user && req.user.tenant_db ? req.user.tenant_db : null;
+  const header = req.headers['x-tenant-db'] || req.headers['x-tenant'] || null;
+  const tenantDb = (fromUser || header || '').toString();
+  return tenantDb || null;
+}
+
 async function getTenantLeadColumns(tenantPool, dbName) {
   const [rows] = await tenantPool.query(
     `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'leads'`,
@@ -29,6 +36,82 @@ async function ensureTenantLeadsSchema(tenantPool, dbName) {
     } catch (e) {
       // ignore if concurrent or insufficient rights; we'll still try to select safely
     }
+  }
+}
+
+// Public lead creation (for broker/company websites - uses x-tenant-db header)
+export async function createPublicLead(req, res) {
+  try {
+    const tenantDb = getTenantDbFromHeader(req);
+    if (!tenantDb) return res.status(400).json({ message: 'Missing tenant. Please provide x-tenant-db header.' });
+    
+    const { full_name, email, phone, city, property_interest, source, message } = req.body || {};
+    if (!isNonEmptyString(full_name) || !validateEmail(email) || !isNonEmptyString(phone)) {
+      return res.status(400).json({ message: 'Invalid input. Name, email, and phone are required.' });
+    }
+    
+    const tenantPool = await getTenantPool(tenantDb);
+    await ensureTenantLeadsTableExists(tenantPool);
+    await ensureTenantLeadsSchema(tenantPool, tenantDb);
+    const cols = await getTenantLeadColumns(tenantPool, tenantDb);
+    
+    // Build insert dynamically based on available columns
+    const insertCols = ['full_name','email','phone'];
+    const insertVals = [full_name, email, phone];
+    if (cols.has('city')) { insertCols.push('city'); insertVals.push(city || null); }
+    if (cols.has('property_interest')) { insertCols.push('property_interest'); insertVals.push(property_interest || null); }
+    if (cols.has('source')) { insertCols.push('source'); insertVals.push(source || 'website'); }
+    if (cols.has('status')) { insertCols.push('status'); insertVals.push('new'); }
+    if (cols.has('message')) { insertCols.push('message'); insertVals.push(message || null); }
+    
+    const placeholders = insertCols.map(() => '?').join(', ');
+    const [result] = await tenantPool.query(
+      `INSERT INTO leads (${insertCols.join(', ')}) VALUES (${placeholders})`,
+      insertVals
+    );
+    
+    // Notify super admin
+    try {
+      await notifySuperAdmin({
+        type: 'public_lead_created',
+        title: 'New public website lead',
+        message: `${full_name} (${email}) from ${tenantDb}`,
+      });
+    } catch (notifyErr) {
+      // Non-blocking
+    }
+    
+    // Try to notify broker/company if we can identify them
+    try {
+      // Try to find broker by tenant_db
+      const [brokers] = await pool.query('SELECT id, full_name, email FROM brokers WHERE tenant_db = ? LIMIT 1', [tenantDb]);
+      if (brokers && brokers.length > 0) {
+        await notifyBroker({
+          tenantDb,
+          type: 'lead_created',
+          title: 'New Lead Created',
+          message: `New lead "${full_name}" (${email}) has been added to your CRM`,
+        });
+      } else {
+        // Try company
+        const [companies] = await pool.query('SELECT id, full_name, email FROM companies WHERE tenant_db = ? LIMIT 1', [tenantDb]);
+        if (companies && companies.length > 0) {
+          await notifyCompany({
+            tenantDb,
+            type: 'lead_created',
+            title: 'New Lead Created',
+            message: `New lead "${full_name}" (${email}) has been added to your CRM`,
+          });
+        }
+      }
+    } catch (notifyErr) {
+      // Non-blocking
+    }
+    
+    return res.status(201).json({ id: result.insertId, message: 'Lead created successfully' });
+  } catch (err) {
+    console.error('createPublicLead error:', err?.code || err?.message || err);
+    return res.status(500).json({ message: 'Failed to create lead' });
   }
 }
 
