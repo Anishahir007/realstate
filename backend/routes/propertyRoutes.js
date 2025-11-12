@@ -21,6 +21,8 @@ import {
   getSuperAdminPropertyStats,
   getBrokerPropertyStats,
   getFeaturedProperties,
+  getPropertyFilters,
+  searchPropertiesPublic,
 } from '../controllers/propertyController.js';
 
 const router = Router();
@@ -31,6 +33,8 @@ const router = Router();
 router.get('/listproperty', requireAuth, requireRole('broker', 'company'), listProperties);
 router.get('/getproperty/:id', requireAuth, requireRole('broker', 'company'), getPropertyById);
 router.get('/featured', getFeaturedProperties); // Public route for featured properties (uses x-tenant-db header)
+router.get('/filters', getPropertyFilters); // Public route for filter options (uses x-tenant-db header)
+router.get('/search', searchPropertiesPublic); // Public route for property search (uses x-tenant-db header)
 router.post('/createproperty', requireAuth, requireRole('broker', 'company'), createProperty);
 // One-shot creation of property + features + tags
 router.post('/createproperty/full', requireAuth, requireRole('broker', 'company'), createPropertyFull);

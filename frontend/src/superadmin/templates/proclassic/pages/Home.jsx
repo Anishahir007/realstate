@@ -3,7 +3,7 @@ import { useOutletContext } from 'react-router-dom';
 import Hero from '../components/hero/Hero.jsx';
 import { PropertiesGrid } from '../components/property/PropertyCard.jsx';
 import { FeaturedPropertiesGrid } from '../components/featuredProperties/FeaturedProperties.jsx';
-import ContactUs from '../components/contactus/ContactUs.jsx';
+import { ContactForm } from '../components/contactus/ContactForm.jsx';
 import '../components/property/property.css';
 import '../components/featuredProperties/featuredProperties.css';
 import '../components/contactus/contactus.css';
@@ -17,7 +17,9 @@ export default function ProClassicHome({ site: siteProp, properties: propsProps 
       <Hero />
       <FeaturedPropertiesGrid properties={properties} />
       <PropertiesGrid properties={properties} />
-      <ContactUs site={site} />
+      <div className="pc-contact-home">
+        <ContactForm site={site} showTitle={true} compact={true} />
+      </div>
     </div>
   );
 }

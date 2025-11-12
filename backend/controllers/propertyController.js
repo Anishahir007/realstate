@@ -207,6 +207,178 @@ export async function getFeaturedProperties(req, res) {
   }
 }
 
+export async function getPropertyFilters(req, res) {
+  try {
+    const tenantDb = getTenantDb(req);
+    if (!tenantDb) return res.status(400).json({ message: 'Missing tenant' });
+
+    const tenantPool = await getTenantPool(tenantDb);
+
+    // Get unique cities with count
+    const [cities] = await tenantPool.query(
+      `SELECT city, COUNT(*) as count 
+       FROM properties 
+       WHERE status = 'active' AND city IS NOT NULL AND city != ''
+       GROUP BY city 
+       ORDER BY count DESC, city ASC`
+    );
+
+    // Get unique property types with count
+    const [propertyTypes] = await tenantPool.query(
+      `SELECT property_type, COUNT(*) as count 
+       FROM properties 
+       WHERE status = 'active' AND property_type IS NOT NULL AND property_type != ''
+       GROUP BY property_type 
+       ORDER BY count DESC, property_type ASC`
+    );
+
+    // Get unique localities with count
+    const [localities] = await tenantPool.query(
+      `SELECT locality, COUNT(*) as count 
+       FROM properties 
+       WHERE status = 'active' AND locality IS NOT NULL AND locality != ''
+       GROUP BY locality 
+       ORDER BY count DESC, locality ASC
+       LIMIT 100`
+    );
+
+    return res.json({
+      data: {
+        cities: cities.map(c => ({ value: c.city, label: c.city, count: c.count })),
+        propertyTypes: propertyTypes.map(pt => ({ 
+          value: pt.property_type, 
+          label: pt.property_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+          count: pt.count 
+        })),
+        localities: localities.map(l => ({ value: l.locality, label: l.locality, count: l.count }))
+      }
+    });
+  } catch (err) {
+    const isProd = process.env.NODE_ENV === 'production';
+    return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
+  }
+}
+
+export async function searchPropertiesPublic(req, res) {
+  try {
+    const tenantDb = getTenantDb(req);
+    if (!tenantDb) return res.status(400).json({ message: 'Missing tenant' });
+
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+    const offset = (page - 1) * limit;
+
+    const where = ['p.status = ?'];
+    const params = ['active'];
+
+    // Filters
+    const property_for = (req.query.property_for || '').toString();
+    if (property_for) { where.push('p.property_for = ?'); params.push(property_for); }
+
+    const property_type = (req.query.property_type || '').toString();
+    if (property_type) { where.push('p.property_type = ?'); params.push(property_type); }
+
+    const city = (req.query.city || '').toString();
+    if (city) { where.push('p.city = ?'); params.push(city); }
+
+    const locality = (req.query.locality || '').toString();
+    if (locality) { where.push('p.locality LIKE ?'); params.push(`%${locality}%`); }
+
+    const minPrice = parseFloat(req.query.min_price);
+    if (!isNaN(minPrice) && minPrice > 0) { 
+      where.push('pf.expected_price >= ?'); 
+      params.push(minPrice); 
+    }
+
+    const maxPrice = parseFloat(req.query.max_price);
+    if (!isNaN(maxPrice) && maxPrice > 0) { 
+      where.push('pf.expected_price <= ?'); 
+      params.push(maxPrice); 
+    }
+
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+    const tenantPool = await getTenantPool(tenantDb);
+    const baseUrl = process.env.API_BASE_URL || req.protocol + '://' + req.get('host');
+
+    const [rows] = await tenantPool.query(
+      `SELECT p.id, p.title, p.city, p.state, p.locality, p.sub_locality, p.address, 
+              p.property_type, p.building_type, p.property_for, p.status,
+              p.description, p.created_at,
+              pf.expected_price, pf.built_up_area, pf.area_unit, pf.carpet_area, pf.carpet_area_unit,
+              pf.super_area, pf.super_area_unit, pf.num_bedrooms, pf.num_bathrooms,
+              pf.sale_type, pf.availability, pf.furnishing_status, pf.facing
+       FROM properties p
+       LEFT JOIN property_features pf ON pf.property_id = p.id
+       ${whereSql}
+       ORDER BY p.id DESC
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
+
+    const [countRows] = await tenantPool.query(`SELECT COUNT(*) as total FROM properties p LEFT JOIN property_features pf ON pf.property_id = p.id ${whereSql}`, params);
+
+    // Fetch media for each property
+    const propertiesWithMedia = await Promise.all(
+      rows.map(async (r) => {
+        let image_url = null;
+        let primary_image = null;
+        let media = [];
+        
+        try {
+          const [mediaRows] = await tenantPool.query(
+            'SELECT id, file_url, is_primary, category, media_type FROM property_media WHERE property_id = ? ORDER BY is_primary DESC, id ASC',
+            [r.id]
+          );
+          
+          if (mediaRows && mediaRows.length > 0) {
+            media = mediaRows.map(m => {
+              const fileUrl = m.file_url || '';
+              const fullUrl = fileUrl.startsWith('http') ? fileUrl : (fileUrl.startsWith('/') ? `${baseUrl}${fileUrl}` : `${baseUrl}/${fileUrl}`);
+              return {
+                id: m.id,
+                file_url: fullUrl,
+                url: fullUrl,
+                is_primary: Boolean(m.is_primary),
+                category: m.category,
+                media_type: m.media_type
+              };
+            });
+            
+            const primary = media.find(m => m.is_primary) || media[0];
+            if (primary) {
+              image_url = primary.file_url;
+              primary_image = primary.file_url;
+            }
+          }
+        } catch (mediaErr) {
+          console.error(`Error fetching media for property ${r.id}:`, mediaErr);
+        }
+
+        return {
+          ...r,
+          image_url,
+          primary_image,
+          image: image_url,
+          media,
+          price: r.expected_price,
+          area: r.built_up_area,
+          areaUnit: r.area_unit,
+          type: r.property_type
+        };
+      })
+    );
+
+    return res.json({ 
+      data: propertiesWithMedia, 
+      meta: { page, limit, total: countRows[0]?.total || 0 } 
+    });
+  } catch (err) {
+    const isProd = process.env.NODE_ENV === 'production';
+    return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
+  }
+}
+
 export async function createProperty(req, res) {
   try {
     const tenantDb = getTenantDb(req);
@@ -683,7 +855,6 @@ export async function deleteProperty(req, res) {
     return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
   }
 }
-
 // ========== Super Admin: cross-tenant property listing ==========
 export async function listAllBrokerPropertiesAdmin(req, res) {
   try {
@@ -1247,3 +1418,4 @@ export async function getBrokerPropertyStats(req, res) {
     return res.status(500).json({ message: 'Server error' });
   }
 }
+
