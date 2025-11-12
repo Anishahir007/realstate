@@ -482,15 +482,19 @@ export async function getSiteContext(req, res) {
     const slug = (req.params.slug || '').toString();
     const site = getSiteBySlug(slug);
     if (!site) return res.status(404).json({ message: 'Site not found' });
-    const ownerType = site.ownerType || 'broker'; // default to broker for backward compatibility
+    
+    const ownerType = site.ownerType || 'broker';
     let owner = { id: ownerType === 'company' ? site.companyId : site.brokerId, full_name: site.siteTitle || (ownerType === 'company' ? 'Company Site' : 'Broker Site') };
     let properties = [];
+    let tenantDb = null;
+    
     try {
       if (ownerType === 'company') {
         const [rows] = await pool.query('SELECT id, name, email, phone, photo, tenant_db FROM companies WHERE id = ? LIMIT 1', [site.companyId]);
         const row = rows?.[0];
         if (row) {
           owner = { id: row.id, full_name: row.name || owner.full_name, email: row.email, phone: row.phone, photo: row.photo, tenant_db: row.tenant_db };
+          tenantDb = row.tenant_db;
           if (row.tenant_db) {
             properties = await fetchBrokerAndProperties(row.tenant_db, req);
           }
@@ -500,18 +504,30 @@ export async function getSiteContext(req, res) {
         const row = rows?.[0];
         if (row) {
           owner = { id: row.id, full_name: row.full_name || owner.full_name, email: row.email, phone: row.phone, photo: row.photo, tenant_db: row.tenant_db };
+          tenantDb = row.tenant_db;
           if (row.tenant_db) {
             properties = await fetchBrokerAndProperties(row.tenant_db, req);
           }
         }
       }
-    } catch {}
-    return res.json({ site: { broker: owner, title: owner?.full_name ? `${owner.full_name} Real Estate` : 'Real Estate' }, properties, template: site.template });
+    } catch (err) {
+      console.error('getSiteContext error fetching owner:', err);
+    }
+    
+    return res.json({ 
+      site: { 
+        ...site, 
+        broker: owner, 
+        tenant_db: tenantDb 
+      }, 
+      properties 
+    });
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';
     return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
   }
 }
+
 
 // Site context by custom domain (Host header) for SPA clean URLs
 export async function getDomainSiteContext(req, res) {
@@ -520,19 +536,48 @@ export async function getDomainSiteContext(req, res) {
     const host = (override || req.headers['x-forwarded-host'] || req.headers.host || '').toString().split(',')[0].trim();
     const site = getSiteByDomain(host);
     if (!site) return res.status(404).json({ message: 'Site not found' });
-    let broker = { id: site.brokerId, full_name: site.siteTitle || 'Broker Site' };
+    const ownerType = site.ownerType || 'broker';
+    let owner = { id: ownerType === 'company' ? site.companyId : site.brokerId, full_name: site.siteTitle || (ownerType === 'company' ? 'Company Site' : 'Broker Site') };
     let properties = [];
+    let tenantDb = null;
+    
     try {
-      const [rows] = await pool.query('SELECT id, full_name, email, phone, photo, tenant_db FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
-      const row = rows?.[0];
-      if (row) {
-        broker = { id: row.id, full_name: row.full_name || broker.full_name, email: row.email, phone: row.phone, photo: row.photo, tenant_db: row.tenant_db };
-        if (row.tenant_db) {
-          properties = await fetchBrokerAndProperties(row.tenant_db, req);
+      if (ownerType === 'company') {
+        const [rows] = await pool.query('SELECT id, name, email, phone, photo, tenant_db FROM companies WHERE id = ? LIMIT 1', [site.companyId]);
+        const row = rows?.[0];
+        if (row) {
+          owner = { id: row.id, full_name: row.name || owner.full_name, email: row.email, phone: row.phone, photo: row.photo, tenant_db: row.tenant_db };
+          tenantDb = row.tenant_db;
+          if (row.tenant_db) {
+            properties = await fetchBrokerAndProperties(row.tenant_db, req);
+          }
+        }
+      } else {
+        const [rows] = await pool.query('SELECT id, full_name, email, phone, photo, tenant_db FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
+        const row = rows?.[0];
+        if (row) {
+          owner = { id: row.id, full_name: row.full_name || owner.full_name, email: row.email, phone: row.phone, photo: row.photo, tenant_db: row.tenant_db };
+          tenantDb = row.tenant_db;
+          if (row.tenant_db) {
+            properties = await fetchBrokerAndProperties(row.tenant_db, req);
+          }
         }
       }
-    } catch {}
-    return res.json({ site: { broker, title: broker?.full_name ? `${broker.full_name} Real Estate` : 'Real Estate' }, properties, slug: site.slug, template: site.template });
+    } catch (err) {
+      console.error('getDomainSiteContext error fetching owner:', err);
+    }
+    
+    return res.json({ 
+      site: { 
+        ...site, 
+        broker: owner, 
+        tenant_db: tenantDb,
+        title: owner?.full_name ? `${owner.full_name} Real Estate` : 'Real Estate' 
+      }, 
+      properties, 
+      slug: site.slug, 
+      template: site.template 
+    });
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';
     return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });

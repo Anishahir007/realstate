@@ -15,19 +15,31 @@ export default function ContactUs({ site: siteProp }) {
     full_name: '',
     email: '',
     phone: '',
-    property_interest: 'Buy a Property',
+    property_interest: '',
+    city: '',
     message: ''
   });
   const [loading, setLoading] = useState(false);
   const [submitStatus, setSubmitStatus] = useState(null); // 'success' | 'error' | null
   
   const apiBase = getApiBase() || '';
-  const tenantDb = site?.tenant_db || ctx.site?.tenant_db || ctx.tenant_db;
+  // Try multiple ways to get tenant_db
+  const tenantDb = site?.tenant_db || 
+                   site?.broker?.tenant_db || 
+                   ctx.site?.tenant_db || 
+                   ctx.site?.broker?.tenant_db ||
+                   ctx.tenant_db;
   
   // Debug log
   useEffect(() => {
-    console.log('ContactUs - tenantDb:', tenantDb, 'apiBase:', apiBase, 'site:', site);
-  }, [tenantDb, apiBase, site]);
+    console.log('ContactUs Debug:', {
+      tenantDb,
+      apiBase,
+      site: site ? { ...site, broker: site.broker ? 'exists' : 'missing' } : 'missing',
+      ctxSite: ctx.site ? { ...ctx.site, broker: ctx.site.broker ? 'exists' : 'missing' } : 'missing',
+      ctxTenantDb: ctx.tenant_db
+    });
+  }, [tenantDb, apiBase, site, ctx]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -66,6 +78,7 @@ export default function ContactUs({ site: siteProp }) {
           email: formData.email,
           phone: formData.phone,
           property_interest: formData.property_interest,
+          city: formData.city,
           message: formData.message,
           source: 'website'
         })
@@ -78,7 +91,8 @@ export default function ContactUs({ site: siteProp }) {
           full_name: '',
           email: '',
           phone: '',
-          property_interest: 'Buy a Property',
+          property_interest: '',
+          city: '',
           message: ''
         });
         // Reset status after 5 seconds
@@ -165,16 +179,20 @@ export default function ContactUs({ site: siteProp }) {
               onChange={handleChange}
               required
             />
-            <select
+            <input
               className="pc-input"
               name="property_interest"
+              placeholder="Property Interest (e.g., Buy a Property, Sell a Property, General Query)"
               value={formData.property_interest}
               onChange={handleChange}
-            >
-              <option>Buy a Property</option>
-              <option>Sell a Property</option>
-              <option>General Query</option>
-            </select>
+            />
+            <input
+              className="pc-input"
+              name="city"
+              placeholder="Location / City"
+              value={formData.city}
+              onChange={handleChange}
+            />
             <textarea
               className="pc-textarea"
               name="message"
@@ -200,7 +218,8 @@ export default function ContactUs({ site: siteProp }) {
                     full_name: '',
                     email: '',
                     phone: '',
-                    property_interest: 'Buy a Property',
+                    property_interest: '',
+                    city: '',
                     message: ''
                   });
                   setSubmitStatus(null);
