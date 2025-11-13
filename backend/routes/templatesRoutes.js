@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { listTemplates, previewTemplate, publishTemplateAsSite, listMySites, serveSiteBySlug, getSiteContext, getPreviewContext, connectCustomDomain, checkCustomDomain, getDomainSiteContext } from '../controllers/templatesController.js';
 import { getHeroBanners, uploadHeroBanner, updateHeroBannerPosition, updateHeroBannerDimensions, deleteHeroBanner, getPublicHeroBanners, getSiteLogo, uploadSiteLogo, updateLogoDimensions, deleteSiteLogo } from '../controllers/heroBannerController.js';
+import { getAboutUs, updateAboutUs, uploadAboutUsImage, updateAboutUsImagePosition, updateAboutUsImageCaption, deleteAboutUsImage, getPublicAboutUs } from '../controllers/aboutUsController.js';
 import { upload } from '../middleware/multer.js';
 
 const router = Router();
@@ -52,6 +53,23 @@ router.delete('/logo/:slug', requireAuth, requireRole('broker', 'company'), dele
 
 // Public endpoint for logo (for website display)
 router.get('/site/:slug/logo', getSiteLogo);
+
+// About Us management (authenticated)
+router.get('/about-us', requireAuth, requireRole('broker', 'company'), getAboutUs);
+router.get('/about-us/:slug', requireAuth, requireRole('broker', 'company'), getAboutUs);
+router.put('/about-us', requireAuth, requireRole('broker', 'company'), updateAboutUs);
+router.put('/about-us/:slug', requireAuth, requireRole('broker', 'company'), updateAboutUs);
+router.post('/about-us/images', requireAuth, requireRole('broker', 'company'), upload.single('file', 'about-us'), uploadAboutUsImage);
+router.post('/about-us/images/:slug', requireAuth, requireRole('broker', 'company'), upload.single('file', 'about-us'), uploadAboutUsImage);
+router.put('/about-us/images/:imageId/position', requireAuth, requireRole('broker', 'company'), updateAboutUsImagePosition);
+router.put('/about-us/images/:slug/:imageId/position', requireAuth, requireRole('broker', 'company'), updateAboutUsImagePosition);
+router.put('/about-us/images/:imageId/caption', requireAuth, requireRole('broker', 'company'), updateAboutUsImageCaption);
+router.put('/about-us/images/:slug/:imageId/caption', requireAuth, requireRole('broker', 'company'), updateAboutUsImageCaption);
+router.delete('/about-us/images/:imageId', requireAuth, requireRole('broker', 'company'), deleteAboutUsImage);
+router.delete('/about-us/images/:slug/:imageId', requireAuth, requireRole('broker', 'company'), deleteAboutUsImage);
+
+// Public endpoint for About Us (for website display)
+router.get('/site/:slug/about-us', getPublicAboutUs);
 
 export default router;
 

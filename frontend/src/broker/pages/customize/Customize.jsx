@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useBroker } from '../../../context/BrokerContext.jsx';
 import axios from 'axios';
-import { FiUpload, FiTrash2, FiEdit2, FiArrowUp, FiArrowDown, FiImage, FiX } from 'react-icons/fi';
+import { FiUpload, FiTrash2, FiEdit2, FiArrowUp, FiArrowDown, FiImage, FiX, FiEye, FiChevronDown, FiChevronUp, FiSun, FiTarget, FiAward } from 'react-icons/fi';
 import './customize.css';
+import '../../../superadmin/templates/proclassic/pages/about.css';
 
 export default function Customize() {
   const broker = useBroker();
@@ -21,6 +22,13 @@ export default function Customize() {
   const [showLogoPreview, setShowLogoPreview] = useState(false);
   const [logoWidth, setLogoWidth] = useState('');
   const [logoHeight, setLogoHeight] = useState('');
+  const [aboutUs, setAboutUs] = useState(null);
+  const [aboutUsLoading, setAboutUsLoading] = useState(true);
+  const [aboutUsSaving, setAboutUsSaving] = useState(false);
+  const [showAboutUsPreview, setShowAboutUsPreview] = useState(false);
+  const [showAboutUsSection, setShowAboutUsSection] = useState(false);
+  const [showLogoSection, setShowLogoSection] = useState(false);
+  const [showBannerSection, setShowBannerSection] = useState(false);
 
   // Get site slug
   useEffect(() => {
@@ -99,6 +107,30 @@ export default function Customize() {
     }
     if (broker?.token) {
       fetchLogo();
+    }
+  }, [siteSlug, broker?.token, apiBase]);
+
+  // Fetch About Us
+  useEffect(() => {
+    async function fetchAboutUs() {
+      if (!broker?.token) return;
+      try {
+        setAboutUsLoading(true);
+        const getEndpoint = siteSlug ? `${apiBase}/api/templates/about-us/${siteSlug}` : `${apiBase}/api/templates/about-us`;
+        const { data } = await axios.get(getEndpoint, {
+          headers: { Authorization: `Bearer ${broker?.token}` }
+        });
+        if (data?.data) {
+          setAboutUs(data.data);
+        }
+      } catch (err) {
+        console.error('Error fetching About Us:', err);
+      } finally {
+        setAboutUsLoading(false);
+      }
+    }
+    if (broker?.token) {
+      fetchAboutUs();
     }
   }, [siteSlug, broker?.token, apiBase]);
 
@@ -320,6 +352,42 @@ export default function Customize() {
     }
   };
 
+  // About Us handlers
+  const handleAboutUsSave = async () => {
+    if (!aboutUs) {
+      alert('No content to save');
+      return;
+    }
+
+    try {
+      setAboutUsSaving(true);
+      const updateEndpoint = siteSlug 
+        ? `${apiBase}/api/templates/about-us/${siteSlug}` 
+        : `${apiBase}/api/templates/about-us`;
+      const updateData = {
+        title: aboutUs.title || null,
+        subtitle: aboutUs.subtitle || null,
+        description: aboutUs.description || null,
+        mission: aboutUs.mission || null,
+        vision: aboutUs.vision || null,
+        values: aboutUs.values || null
+      };
+      const { data } = await axios.put(updateEndpoint, updateData, {
+        headers: { Authorization: `Bearer ${broker?.token}` }
+      });
+      if (data?.data) {
+        setAboutUs(data.data);
+        alert('About Us content saved successfully!');
+      }
+    } catch (err) {
+      console.error('Error saving About Us:', err);
+      alert(err.response?.data?.message || 'Failed to save About Us');
+    } finally {
+      setAboutUsSaving(false);
+    }
+  };
+
+
   const handleLogoResize = async () => {
     if (!logo) return;
     try {
@@ -361,10 +429,263 @@ export default function Customize() {
     <div className="customize-root">
       <h2 className="customize-title">Website Customization</h2>
       <div className="customize-content">
+        {/* About Us Section */}
+        <div className="customize-dropdown-section">
+          <div 
+            className="customize-dropdown-header"
+            onClick={() => setShowAboutUsSection(!showAboutUsSection)}
+          >
+            <h3>About Us</h3>
+            {showAboutUsSection ? <FiChevronUp /> : <FiChevronDown />}
+          </div>
+          {showAboutUsSection && (
+            <div className="customize-dropdown-content">
+              <div className="customize-section">
+                <div className="customize-section-header">
+                  <h3>About Us Content</h3>
+                  <button
+                    className="customize-btn customize-btn-secondary"
+                    onClick={() => setShowAboutUsPreview(!showAboutUsPreview)}
+                    title="Toggle Preview"
+                  >
+                    <FiEye /> {showAboutUsPreview ? 'Hide Preview' : 'Show Preview'}
+                  </button>
+                </div>
+                {showAboutUsPreview && (
+                  <div className="customize-about-us-preview">
+                    <div className="customize-preview-header">
+                      <h4>Preview - How your About Us page will look:</h4>
+                      <button
+                        className="customize-preview-close"
+                        onClick={() => setShowAboutUsPreview(false)}
+                      >
+                        <FiX />
+                      </button>
+                    </div>
+                    <div className="customize-preview-content">
+                      {aboutUs?.title && (
+                        <h1 className="pc-about-title">{aboutUs.title}</h1>
+                      )}
+                      {aboutUs?.subtitle && (
+                        <p className="pc-about-subtitle">{aboutUs.subtitle}</p>
+                      )}
+                      
+                      {aboutUs?.description && (
+                        <div className="pc-about-section">
+                          <h2 className="pc-about-section-title">Our Story</h2>
+                          <p className="pc-about-text">{aboutUs.description}</p>
+                        </div>
+                      )}
+
+                      {(aboutUs?.mission || aboutUs?.vision || aboutUs?.values) && (
+                        <div className="pc-about-vmv">
+                          {aboutUs.vision && (
+                            <div className="pc-about-vmv-card pc-about-vision-card">
+                              <div className="pc-about-vmv-header">
+                                <div className="pc-about-vmv-icon pc-about-vision-icon">
+                                  <FiSun />
+                                </div>
+                                <h3 className="pc-about-vmv-title">Our Vision</h3>
+                              </div>
+                              <div className="pc-about-vmv-content">
+                                <blockquote className="pc-about-vision-quote">{aboutUs.vision}</blockquote>
+                              </div>
+                            </div>
+                          )}
+                          {aboutUs.mission && (
+                            <div className="pc-about-vmv-card pc-about-mission-card">
+                              <div className="pc-about-vmv-header">
+                                <div className="pc-about-vmv-icon pc-about-mission-icon">
+                                  <FiTarget />
+                                </div>
+                                <h3 className="pc-about-vmv-title">Our Mission</h3>
+                              </div>
+                              <div className="pc-about-vmv-content">
+                                <div className="pc-about-mission-list">
+                                  {aboutUs.mission.split('\n').filter(line => line.trim()).map((line, index) => (
+                                    <div key={index} className="pc-about-mission-item">
+                                      <span className="pc-about-mission-bullet">•</span>
+                                      <span>{line.trim()}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          {aboutUs.values && (
+                            <div className="pc-about-vmv-card pc-about-values-card">
+                              <div className="pc-about-vmv-header">
+                                <div className="pc-about-vmv-icon pc-about-values-icon">
+                                  <FiAward />
+                                </div>
+                                <h3 className="pc-about-vmv-title">Our Core Values</h3>
+                              </div>
+                              <div className="pc-about-vmv-content">
+                                <div className="pc-about-values-list">
+                                  {aboutUs.values.split('\n').filter(line => line.trim()).map((line, index) => {
+                                    const match = line.trim().match(/^(\d+)\.\s*(.+?)(?:\s*:\s*(.+))?$/);
+                                    if (match) {
+                                      const [, num, name, desc] = match;
+                                      return (
+                                        <div key={index} className="pc-about-value-item">
+                                          <div className="pc-about-value-number">{num}</div>
+                                          <div className="pc-about-value-content">
+                                            <strong className="pc-about-value-name">{name}</strong>
+                                            {desc && <span className="pc-about-value-desc">: {desc}</span>}
+                                          </div>
+                                        </div>
+                                      );
+                                    }
+                                    return (
+                                      <div key={index} className="pc-about-value-item">
+                                        <div className="pc-about-value-number">{index + 1}</div>
+                                        <div className="pc-about-value-content">
+                                          <span>{line.trim()}</span>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {(!aboutUs || (!aboutUs.title && !aboutUs.description)) && (
+                        <div className="customize-preview-empty">
+                          <p>No content added yet. Start adding content above to see the preview.</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {aboutUsLoading ? (
+                  <p>Loading...</p>
+                ) : (
+                  <div style={{ marginTop: '24px' }}>
+                    <div className="customize-about-us-form">
+                      <div className="customize-form-group">
+                        <label>
+                          Title:
+                          <input
+                            type="text"
+                            value={aboutUs?.title || ''}
+                            onChange={(e) => {
+                              const updated = { ...aboutUs, title: e.target.value };
+                              setAboutUs(updated);
+                            }}
+                            placeholder="Enter About Us title"
+                            className="customize-text-input"
+                          />
+                        </label>
+                      </div>
+                      <div className="customize-form-group">
+                        <label>
+                          Subtitle:
+                          <input
+                            type="text"
+                            value={aboutUs?.subtitle || ''}
+                            onChange={(e) => {
+                              const updated = { ...aboutUs, subtitle: e.target.value };
+                              setAboutUs(updated);
+                            }}
+                            placeholder="Enter subtitle"
+                            className="customize-text-input"
+                          />
+                        </label>
+                      </div>
+                      <div className="customize-form-group">
+                        <label>
+                          Description:
+                          <textarea
+                            value={aboutUs?.description || ''}
+                            onChange={(e) => {
+                              const updated = { ...aboutUs, description: e.target.value };
+                              setAboutUs(updated);
+                            }}
+                            placeholder="Enter main description about your company/brokerage"
+                            className="customize-textarea"
+                            rows="5"
+                          />
+                        </label>
+                      </div>
+                      <div className="customize-form-group">
+                        <label>
+                          Mission:
+                          <textarea
+                            value={aboutUs?.mission || ''}
+                            onChange={(e) => {
+                              const updated = { ...aboutUs, mission: e.target.value };
+                              setAboutUs(updated);
+                            }}
+                            placeholder="Enter your mission statement"
+                            className="customize-textarea"
+                            rows="3"
+                          />
+                        </label>
+                      </div>
+                      <div className="customize-form-group">
+                        <label>
+                          Vision:
+                          <textarea
+                            value={aboutUs?.vision || ''}
+                            onChange={(e) => {
+                              const updated = { ...aboutUs, vision: e.target.value };
+                              setAboutUs(updated);
+                            }}
+                            placeholder="Enter your vision statement"
+                            className="customize-textarea"
+                            rows="3"
+                          />
+                        </label>
+                      </div>
+                      <div className="customize-form-group">
+                        <label>
+                          Values:
+                          <textarea
+                            value={aboutUs?.values || ''}
+                            onChange={(e) => {
+                              const updated = { ...aboutUs, values: e.target.value };
+                              setAboutUs(updated);
+                            }}
+                            placeholder="Enter your core values"
+                            className="customize-textarea"
+                            rows="3"
+                          />
+                        </label>
+                      </div>
+                    </div>
+                    <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
+                      <button
+                        className="customize-btn customize-btn-primary"
+                        onClick={handleAboutUsSave}
+                        disabled={aboutUsSaving}
+                      >
+                        {aboutUsSaving ? 'Saving...' : (aboutUs?.title || aboutUs?.description ? 'Update About Us' : 'Save About Us')}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Logo Section */}
-        <div className="customize-section">
-          <div className="customize-section-header">
+        <div className="customize-dropdown-section">
+          <div 
+            className="customize-dropdown-header"
+            onClick={() => setShowLogoSection(!showLogoSection)}
+          >
             <h3>Website Logo</h3>
+            {showLogoSection ? <FiChevronUp /> : <FiChevronDown />}
+          </div>
+          {showLogoSection && (
+            <div className="customize-dropdown-content">
+              <div className="customize-section">
+                <div className="customize-section-header">
+                  <h3>Website Logo</h3>
             <label className="customize-upload-btn" htmlFor="logo-upload">
               <FiUpload /> {logo ? 'Update Logo' : 'Upload Logo'}
               <input
@@ -475,10 +796,23 @@ export default function Customize() {
               <p>No logo uploaded. Upload a logo to display it in the website navbar.</p>
             </div>
           )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Hero Banners Section */}
-        <div className="customize-section">
+        <div className="customize-dropdown-section">
+          <div 
+            className="customize-dropdown-header"
+            onClick={() => setShowBannerSection(!showBannerSection)}
+          >
+            <h3>Hero Banners</h3>
+            {showBannerSection ? <FiChevronUp /> : <FiChevronDown />}
+          </div>
+          {showBannerSection && (
+            <div className="customize-dropdown-content">
+              <div className="customize-section">
           <div className="customize-section-header">
             <h3>Upload Hero Banner</h3>
             <label className="customize-upload-btn" htmlFor="banner-upload">
@@ -633,6 +967,9 @@ export default function Customize() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+              </div>
             </div>
           )}
         </div>

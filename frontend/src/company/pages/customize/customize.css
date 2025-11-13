@@ -390,3 +390,206 @@
   margin: 0;
 }
 
+/* About Us Form Styles */
+.customize-about-us-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-top: 16px;
+}
+
+.customize-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.customize-form-group label {
+  font-weight: 500;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+.customize-text-input {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s;
+}
+
+.customize-text-input:focus {
+  outline: none;
+  border-color: #333;
+}
+
+.customize-textarea {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  resize: vertical;
+  transition: border-color 0.2s;
+}
+
+.customize-textarea:focus {
+  outline: none;
+  border-color: #333;
+}
+
+.customize-banner-caption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.customize-banner-caption p {
+  flex: 1;
+  margin: 0;
+  font-size: 0.875rem;
+  color: #666;
+  font-style: italic;
+}
+
+.customize-caption-edit {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0;
+  align-items: center;
+}
+
+.customize-caption-input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.875rem;
+}
+
+.customize-caption-input:focus {
+  outline: none;
+  border-color: #333;
+}
+
+/* Dropdown Section Styles */
+.customize-dropdown-section {
+  margin-bottom: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.customize-dropdown-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: #f9fafb;
+  cursor: pointer;
+  transition: background 0.2s;
+  user-select: none;
+}
+
+.customize-dropdown-header:hover {
+  background: #f3f4f6;
+}
+
+.customize-dropdown-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.customize-dropdown-header svg {
+  font-size: 1.25rem;
+  color: #666;
+  transition: transform 0.2s;
+}
+
+.customize-dropdown-content {
+  padding: 20px;
+  border-top: 1px solid #e5e7eb;
+  background: #ffffff;
+}
+
+/* About Us Preview Styles */
+.customize-about-us-preview {
+  margin-top: 24px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.customize-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.customize-preview-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.customize-preview-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  transition: color 0.2s;
+}
+
+.customize-preview-close:hover {
+  color: #333;
+}
+
+.customize-preview-content {
+  padding: 40px 20px;
+  max-height: 600px;
+  overflow-y: auto;
+  background: #ffffff;
+}
+
+.customize-preview-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: #999;
+  font-style: italic;
+}
+
+.customize-btn-secondary {
+  background: #6b7280;
+  color: #ffffff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.2s;
+}
+
+.customize-btn-secondary:hover {
+  background: #4b5563;
+}
+
+.customize-btn-secondary:active {
+  background: #374151;
+}
+

@@ -316,6 +316,13 @@ export async function searchPropertiesPublic(req, res) {
     const locality = (req.query.locality || '').toString();
     if (locality) { where.push('p.locality LIKE ?'); params.push(`%${locality}%`); }
 
+    // General text search query parameter (searches across title, city, locality, address, state)
+    const q = (req.query.q || '').toString().trim();
+    if (q) {
+      where.push('(p.title LIKE ? OR p.city LIKE ? OR p.locality LIKE ? OR p.sub_locality LIKE ? OR p.address LIKE ? OR p.state LIKE ?)');
+      params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
+    }
+
     const minPrice = parseFloat(req.query.min_price);
     if (!isNaN(minPrice) && minPrice > 0) { 
       where.push('pf.expected_price >= ?'); 

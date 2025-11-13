@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useOutletContext, Link } from 'react-router-dom';
+import { useOutletContext, Link, useSearchParams } from 'react-router-dom';
 import { getApiBase } from '../../../../../utils/apiBase.js';
 import EnquiryModal from './EnquiryModal.jsx';
 import './findProperty.css';
@@ -62,12 +62,16 @@ export default function FindProperty({ site: siteProp, properties: propsProps })
   const ctx = useOutletContext?.() || {};
   const site = siteProp || ctx.site || {};
   const properties = propsProps || ctx.properties || [];
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  // Get initial search query from URL
+  const initialQuery = searchParams.get('q') || '';
   
   const [filters, setFilters] = useState({
     property_for: '',
     property_type: '',
     city: '',
-    locality: '',
+    locality: initialQuery, // Set locality from URL query
     min_price_lacs: '',
     max_price_lacs: ''
   });
@@ -154,6 +158,35 @@ export default function FindProperty({ site: siteProp, properties: propsProps })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantDb, apiBase]);
 
+  // Handle URL query parameter changes
+  useEffect(() => {
+    const urlQuery = searchParams.get('q') || '';
+    if (urlQuery !== filters.locality) {
+      setFilters(prev => ({ ...prev, locality: urlQuery }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  // Trigger search when filters change and we have a query from URL
+  useEffect(() => {
+    const urlQuery = searchParams.get('q') || '';
+    if (urlQuery && filtersLoaded) {
+      if (tenantDb) {
+        performSearch();
+      } else if (properties && properties.length > 0) {
+        // Filter by query
+        const filtered = properties.filter(p => 
+          (p.title && p.title.toLowerCase().includes(urlQuery.toLowerCase())) ||
+          (p.city && p.city.toLowerCase().includes(urlQuery.toLowerCase())) ||
+          (p.locality && p.locality.toLowerCase().includes(urlQuery.toLowerCase())) ||
+          (p.address && p.address.toLowerCase().includes(urlQuery.toLowerCase()))
+        );
+        setSearchResults(filtered);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.locality, filtersLoaded, searchParams]);
+
   // Initial load - perform search after filters are loaded or use props
   useEffect(() => {
     if (tenantDb && filtersLoaded) {
@@ -161,20 +194,44 @@ export default function FindProperty({ site: siteProp, properties: propsProps })
       performSearch();
     } else if (!tenantDb && properties && properties.length > 0) {
       // No tenantDb, use properties from props/context
-      setSearchResults(properties);
+      const urlQuery = searchParams.get('q') || '';
+      if (urlQuery) {
+        // Filter by query if available
+        const filtered = properties.filter(p => 
+          (p.title && p.title.toLowerCase().includes(urlQuery.toLowerCase())) ||
+          (p.city && p.city.toLowerCase().includes(urlQuery.toLowerCase())) ||
+          (p.locality && p.locality.toLowerCase().includes(urlQuery.toLowerCase())) ||
+          (p.address && p.address.toLowerCase().includes(urlQuery.toLowerCase()))
+        );
+        setSearchResults(filtered);
+      } else {
+        setSearchResults(properties);
+      }
       setFiltersLoaded(true);
     } else if (!tenantDb) {
       // No tenantDb and no props, try to search anyway
       performSearch();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtersLoaded, tenantDb]);
+  }, [filtersLoaded, tenantDb, searchParams]);
 
   const performSearch = async () => {
     if (!tenantDb) {
       // Fallback to props/context properties if no tenantDb
       if (properties && properties.length > 0) {
-        setSearchResults(properties);
+        // Filter by query if available
+        const query = filters.locality || initialQuery;
+        if (query) {
+          const filtered = properties.filter(p => 
+            (p.title && p.title.toLowerCase().includes(query.toLowerCase())) ||
+            (p.city && p.city.toLowerCase().includes(query.toLowerCase())) ||
+            (p.locality && p.locality.toLowerCase().includes(query.toLowerCase())) ||
+            (p.address && p.address.toLowerCase().includes(query.toLowerCase()))
+          );
+          setSearchResults(filtered);
+        } else {
+          setSearchResults(properties);
+        }
       }
       return;
     }
@@ -186,6 +243,9 @@ export default function FindProperty({ site: siteProp, properties: propsProps })
       if (filters.property_type) params.append('property_type', filters.property_type);
       if (filters.city) params.append('city', filters.city);
       if (filters.locality) params.append('locality', filters.locality);
+      // Add text search query parameter
+      const searchQuery = filters.locality || initialQuery;
+      if (searchQuery) params.append('q', searchQuery);
       
       // Convert lacs to rupees for API
       if (filters.min_price_lacs) {
@@ -239,6 +299,12 @@ export default function FindProperty({ site: siteProp, properties: propsProps })
 
   const handleSearch = (e) => {
     e.preventDefault();
+    // Update URL with search query if locality is set
+    if (filters.locality) {
+      setSearchParams({ q: filters.locality });
+    } else {
+      setSearchParams({});
+    }
     performSearch();
   };
 

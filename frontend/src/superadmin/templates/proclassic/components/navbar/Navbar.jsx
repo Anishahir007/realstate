@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { NavLink, Link, useParams, useOutletContext } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { NavLink, Link, useParams, useOutletContext, useNavigate } from 'react-router-dom';
 import './navbar.css';
 import { getApiBase } from '../../../../../utils/apiBase.js';
 
@@ -9,7 +9,20 @@ export default function Navbar({ site: siteProp }) {
   const ctx = useOutletContext?.() || {};
   const site = siteProp || ctx.site || {};
   const [logoData, setLogoData] = useState(null);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const searchInputRef = useRef(null);
+  const searchTimeoutRef = useRef(null);
+  const navigate = useNavigate();
   const apiBase = getApiBase() || '';
+  
+  const tenantDb = site?.tenant_db || 
+                   site?.broker?.tenant_db || 
+                   ctx.site?.tenant_db || 
+                   ctx.site?.broker?.tenant_db ||
+                   ctx.tenant_db;
 
   const name = site?.broker?.full_name || site?.company?.name || 'Real Estate';
   
@@ -53,6 +66,123 @@ export default function Navbar({ site: siteProp }) {
   const logoWidth = site?.logo?.width || logoData?.width || null;
   const logoHeight = site?.logo?.height || logoData?.height || null;
 
+  // Focus search input when it opens
+  useEffect(() => {
+    if (showSearch && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [showSearch]);
+
+  // Real-time search as user types
+  useEffect(() => {
+    // Clear previous timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    // If query is empty, clear results
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    // Debounce search - wait 300ms after user stops typing
+    searchTimeoutRef.current = setTimeout(async () => {
+      if (!searchQuery.trim() || !tenantDb) {
+        setSearchResults([]);
+        return;
+      }
+
+      setSearchLoading(true);
+      try {
+        const headers = { 'x-tenant-db': tenantDb };
+        // Use search endpoint with q parameter for general text search
+        const params = new URLSearchParams({ 
+          q: searchQuery.trim(), 
+          limit: '5',
+          page: '1'
+        });
+        const apiUrl = apiBase ? `${apiBase}/api/properties/search` : '/api/properties/search';
+        const response = await fetch(`${apiUrl}?${params.toString()}`, { headers });
+        
+        if (response.ok) {
+          const result = await response.json();
+          setSearchResults(result.data || []);
+        } else {
+          setSearchResults([]);
+        }
+      } catch (err) {
+        console.error('Error searching properties:', err);
+        setSearchResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchQuery, tenantDb, apiBase]);
+
+  // Format price
+  const formatPrice = (price) => {
+    if (!price || price === 0) return 'Price on Request';
+    if (price >= 10000000) return `₹ ${(price / 10000000).toFixed(2)} Cr.`;
+    if (price >= 100000) return `₹ ${(price / 100000).toFixed(2)} Lac`;
+    return `₹ ${price.toLocaleString('en-IN')}`;
+  };
+
+  // Handle search toggle
+  const handleSearchToggle = () => {
+    setShowSearch(!showSearch);
+    if (!showSearch) {
+      setSearchQuery('');
+      setSearchResults([]);
+    }
+  };
+
+  // Handle property click from search results
+  const handlePropertyClick = (propertyId) => {
+    navigate(`${base}/property/${propertyId}`);
+    setShowSearch(false);
+    setSearchQuery('');
+    setSearchResults([]);
+  };
+
+  // Handle search submit
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`${base}/properties?q=${encodeURIComponent(searchQuery.trim())}`);
+      setShowSearch(false);
+      setSearchQuery('');
+    }
+  };
+
+  // Close search on outside click
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showSearch && searchInputRef.current && !searchInputRef.current.contains(event.target)) {
+        const searchContainer = event.target.closest('.pc-search-container');
+        const searchButton = event.target.closest('.pc-search');
+        const searchResultItem = event.target.closest('.pc-search-result-item');
+        const searchResultMore = event.target.closest('.pc-search-result-more');
+        if (!searchContainer && !searchButton && !searchResultItem && !searchResultMore) {
+          setShowSearch(false);
+          setSearchQuery('');
+          setSearchResults([]);
+        }
+      }
+    };
+
+    if (showSearch) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showSearch]);
+
   return (
     <div className="pc-nav-root">
       <div className="pc-nav-strip" />
@@ -89,7 +219,88 @@ export default function Navbar({ site: siteProp }) {
           <NavLink to={`${base}/privacy`} className={({ isActive }) => `pc-link ${isActive ? 'active' : ''}`}>Privacy</NavLink>
           <NavLink to={`${base}/privacy`} className={({ isActive }) => `pc-link ${isActive ? 'active' : ''}`}>Terms</NavLink>
         </nav>
-        <button className="pc-search" aria-label="Search">🔍</button>
+        <div className="pc-search-wrapper">
+          {showSearch && (
+            <div className="pc-search-container" ref={searchInputRef}>
+              <form onSubmit={handleSearchSubmit} className="pc-search-form">
+                <input
+                  type="text"
+                  className="pc-search-input"
+                  placeholder="Search properties by title, city, locality..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  autoFocus
+                />
+                <button type="submit" className="pc-search-submit" aria-label="Submit Search">
+                  🔍
+                </button>
+                <button
+                  type="button"
+                  className="pc-search-close"
+                  onClick={handleSearchToggle}
+                  aria-label="Close Search"
+                >
+                  ✕
+                </button>
+              </form>
+              
+              {/* Search Results Dropdown */}
+              {searchQuery.trim() && (
+                <div className="pc-search-results">
+                  {searchLoading ? (
+                    <div className="pc-search-loading">Searching...</div>
+                  ) : searchResults.length > 0 ? (
+                    <div className="pc-search-results-list">
+                      {searchResults.map((property) => {
+                        const imageUrl = property.primary_image || property.image_url || property.image || '/assets/images/default-property.jpg';
+                        const fullImageUrl = imageUrl?.startsWith('http') ? imageUrl : `${apiBase}${imageUrl?.startsWith('/') ? imageUrl : `/${imageUrl}`}`;
+                        const price = formatPrice(property.expected_price || property.price);
+                        const location = [property.locality, property.city, property.state].filter(Boolean).join(', ') || 'Location not specified';
+                        
+                        return (
+                          <div
+                            key={property.id}
+                            className="pc-search-result-item"
+                            onClick={() => handlePropertyClick(property.id)}
+                          >
+                            <div className="pc-search-result-image">
+                              <img
+                                src={fullImageUrl}
+                                alt={property.title || 'Property'}
+                                onError={(e) => {
+                                  e.target.src = '/assets/images/default-property.jpg';
+                                }}
+                              />
+                            </div>
+                            <div className="pc-search-result-content">
+                              <div className="pc-search-result-title">{property.title || 'Property'}</div>
+                              <div className="pc-search-result-location">{location}</div>
+                              <div className="pc-search-result-price">{price}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {searchResults.length >= 5 && (
+                        <div className="pc-search-result-more" onClick={handleSearchSubmit}>
+                          View all results →
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="pc-search-no-results">No properties found</div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+          <button 
+            className="pc-search" 
+            onClick={handleSearchToggle}
+            aria-label="Search"
+          >
+            🔍
+          </button>
+        </div>
       </div>
     </div>
   );
