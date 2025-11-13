@@ -1,13 +1,82 @@
-.pc-nav-root{position:sticky;top:0;z-index:40}
-.pc-nav-strip{height:16px;background:#d4a135}
-.pc-nav{display:flex;align-items:center;justify-content:space-between;background:#fff;border-bottom:1px solid #eee;padding:10px 20px}
-.pc-brand{display:flex;align-items:center;gap:10px;text-decoration:none}
-.pc-brand-logo{width:36px;height:36px;border-radius:6px;object-fit:cover;border:1px solid #ddd}
-.pc-brand-fallback{display:flex;align-items:center;justify-content:center;background:#1e293b;color:#fff;font-weight:700}
-.pc-brand-text{font-size:22px;font-weight:700;color:#1f2937;font-family:Georgia,serif}
-.pc-links{display:flex;gap:24px}
-.pc-link{color:#111;text-decoration:none;position:relative;padding:6px 0}
-.pc-link.active{color:#b7791f}
-.pc-link.active::after{content:'';position:absolute;left:0;right:0;bottom:-8px;height:3px;background:#d4a135;border-radius:2px}
-.pc-search{background:#d4a135;border:none;border-radius:999px;color:#fff;width:34px;height:34px;cursor:pointer}
-
+.pc-nav-root {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+.pc-nav-strip {
+  height: 16px;
+  background: #d4a135;
+}
+.pc-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  border-bottom: 1px solid #eee;
+  padding: 0 20px;
+}
+.pc-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+.pc-brand-logo {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+/* Allow inline styles to override default dimensions */
+.pc-brand-logo[style*="width"] {
+  max-width: none;
+}
+.pc-brand-logo[style*="height"] {
+  max-height: none;
+}
+.pc-brand-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1e293b;
+  color: #fff;
+  font-weight: 700;
+}
+.pc-brand-text {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1f2937;
+  font-family: Georgia, serif;
+}
+.pc-links {
+  display: flex;
+  gap: 24px;
+}
+.pc-link {
+  color: #111;
+  text-decoration: none;
+  position: relative;
+  padding: 6px 0;
+}
+.pc-link.active {
+  color: #b7791f;
+}
+.pc-link.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -8px;
+  height: 3px;
+  background: #d4a135;
+  border-radius: 2px;
+}
+.pc-search {
+  background: #d4a135;
+  border: none;
+  border-radius: 999px;
+  color: #fff;
+  width: 34px;
+  height: 34px;
+  cursor: pointer;
+}

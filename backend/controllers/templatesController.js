@@ -600,9 +600,22 @@ export async function getSiteContext(req, res) {
       console.error('getSiteContext error fetching owner:', err);
     }
     
+    // Construct logo URL if logo exists
+    const baseUrl = process.env.API_BASE_URL || req.protocol + '://' + req.get('host');
+    let logoData = null;
+    if (site.logo) {
+      logoData = {
+        ...site.logo,
+        image_url: site.logo.image_url?.startsWith('http') 
+          ? site.logo.image_url 
+          : `${baseUrl}${site.logo.image_url?.startsWith('/') ? site.logo.image_url : `/${site.logo.image_url}`}`
+      };
+    }
+    
     return res.json({ 
       site: { 
         ...site, 
+        logo: logoData,
         broker: owner, 
         tenant_db: tenantDb 
       }, 
@@ -707,9 +720,22 @@ export async function getDomainSiteContext(req, res) {
       console.error('getDomainSiteContext error fetching owner:', err);
     }
     
+    // Construct logo URL if logo exists
+    const baseUrl = process.env.API_BASE_URL || req.protocol + '://' + req.get('host');
+    let logoData = null;
+    if (site.logo) {
+      logoData = {
+        ...site.logo,
+        image_url: site.logo.image_url?.startsWith('http') 
+          ? site.logo.image_url 
+          : `${baseUrl}${site.logo.image_url?.startsWith('/') ? site.logo.image_url : `/${site.logo.image_url}`}`
+      };
+    }
+    
     return res.json({ 
       site: { 
         ...site, 
+        logo: logoData,
         broker: owner, 
         tenant_db: tenantDb,
         title: owner?.full_name ? `${owner.full_name} Real Estate` : 'Real Estate' 

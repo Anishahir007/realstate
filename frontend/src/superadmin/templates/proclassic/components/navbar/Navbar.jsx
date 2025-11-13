@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, Link, useParams, useOutletContext } from 'react-router-dom';
 import './navbar.css';
 import { getApiBase } from '../../../../../utils/apiBase.js';
@@ -8,13 +8,50 @@ export default function Navbar({ site: siteProp }) {
   const base = slug ? `/site/${slug}` : '';
   const ctx = useOutletContext?.() || {};
   const site = siteProp || ctx.site || {};
+  const [logoData, setLogoData] = useState(null);
+  const apiBase = getApiBase() || '';
 
-  const name = site?.broker?.full_name || 'Real Estate';
-  let logo = site?.broker?.photo || '';
-  if (logo && !(logo.startsWith('http://') || logo.startsWith('https://'))) {
-    const api = getApiBase();
-    logo = `${api}${logo.startsWith('/') ? logo : `/${logo}`}`;
+  const name = site?.broker?.full_name || site?.company?.name || 'Real Estate';
+  
+  // Fetch logo from API if slug is available
+  useEffect(() => {
+    async function fetchLogo() {
+      if (!slug) return;
+      try {
+        const response = await fetch(`${apiBase}/api/templates/site/${slug}/logo`);
+        if (response.ok) {
+          const result = await response.json();
+          if (result.data) {
+            setLogoData(result.data);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching logo:', err);
+      }
+    }
+    fetchLogo();
+  }, [slug, apiBase]);
+
+  // Determine logo URL: priority: site.logo > logoData from API > broker.photo > company.photo
+  let logo = '';
+  if (site?.logo?.image_url) {
+    logo = site.logo.image_url;
+  } else if (logoData?.image_url) {
+    logo = logoData.image_url;
+  } else if (site?.broker?.photo) {
+    logo = site.broker.photo;
+  } else if (site?.company?.photo) {
+    logo = site.company.photo;
   }
+
+  // Construct full URL if needed
+  if (logo && !(logo.startsWith('http://') || logo.startsWith('https://'))) {
+    logo = `${apiBase}${logo.startsWith('/') ? logo : `/${logo}`}`;
+  }
+
+  // Get logo dimensions
+  const logoWidth = site?.logo?.width || logoData?.width || null;
+  const logoHeight = site?.logo?.height || logoData?.height || null;
 
   return (
     <div className="pc-nav-root">
@@ -22,11 +59,27 @@ export default function Navbar({ site: siteProp }) {
       <div className="pc-nav">
         <Link to={base || '/'} className="pc-brand">
           {logo ? (
-            <img className="pc-brand-logo" src={logo} alt={name} />
-          ) : (
+            <img 
+              className="pc-brand-logo" 
+              src={logo} 
+              alt={name}
+              style={{
+                ...(logoWidth ? { width: `${logoWidth}px` } : {}),
+                ...(logoHeight ? { height: `${logoHeight}px` } : {}),
+                objectFit: 'contain',
+                display: 'block'
+              }}
+              onError={(e) => {
+                // Fallback to initial if logo fails to load
+                e.target.style.display = 'none';
+                const fallback = e.target.nextElementSibling;
+                if (fallback) fallback.style.display = 'flex';
+              }}
+            />
+          ) : null}
+          {!logo && (
             <div className="pc-brand-logo pc-brand-fallback">{(name || 'R')[0]}</div>
           )}
-          <div className="pc-brand-text">{name}</div>
         </Link>
         <nav className="pc-links">
           <NavLink to={`${base || '/'}`} end className={({ isActive }) => `pc-link ${isActive ? 'active' : ''}`}>Home</NavLink>

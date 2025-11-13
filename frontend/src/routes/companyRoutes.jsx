@@ -11,6 +11,7 @@ import CompanyPropertiesList from '../company/pages/properties/PropertiesList.js
 import CompanyTemplates from '../company/pages/templates/Templates.jsx';
 import CompanyNewProperty from '../company/pages/properties/NewProperty.jsx';
 import CompanyViewProfile from '../company/pages/settings/view-profile/ViewProfile.jsx';
+import CompanyCustomize from '../company/pages/customize/Customize.jsx';
 import CompanySearchResults from '../company/pages/search/SearchResults.jsx';
 
 export function CompanyRoutes() {
@@ -35,6 +36,7 @@ export function CompanyRoutes() {
         <Route path="properties" element={<CompanyPropertiesList />} />
         <Route path="properties/new" element={<CompanyNewProperty />} />
         <Route path="settings/view-profile" element={<CompanyViewProfile />} />
+        <Route path="settings/customize" element={<CompanyCustomize />} />
         <Route path="templates" element={<CompanyTemplates />} />
         <Route path="search" element={<CompanySearchResults />} />
       </Route>

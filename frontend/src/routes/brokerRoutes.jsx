@@ -7,6 +7,7 @@ import BrokerLayout from '../broker/components/Layout.jsx';
 import BrokerPanelBrokercrm from '../broker/pages/crm/Brokercrm.jsx';
 import BrokerLeadDetail from '../broker/pages/crm/LeadDetail.jsx';
 import BrokerViewProfile from '../broker/pages/settings/view-profile/ViewProfile.jsx';
+import BrokerCustomize from '../broker/pages/customize/Customize.jsx';
 import PropertiesList from '../broker/pages/properties/PropertiesList.jsx';
 import NewProperty from '../broker/pages/properties/NewProperty.jsx';
 import Templates from '../broker/pages/templates/Templates.jsx';
@@ -35,6 +36,7 @@ export function BrokerRoutes() {
         <Route path="properties" element={<PropertiesList />} />
         <Route path="properties/new" element={<NewProperty />} />
         <Route path="settings/view-profile" element={<BrokerViewProfile />} />
+        <Route path="settings/customize" element={<BrokerCustomize />} />
         <Route path="templates" element={<Templates />} />
         <Route path="search" element={<BrokerSearchResults />} />
       </Route>

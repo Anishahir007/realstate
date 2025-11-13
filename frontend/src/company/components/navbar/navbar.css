@@ -64,6 +64,57 @@
   align-items: center;
 }
 
+.companypanelnavbar-item-wrapper {
+  position: relative;
+}
+
+.companypanelnavbar-link {
+  cursor: pointer;
+  position: relative;
+}
+
+.companypanelnavbar-dropdown-arrow {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+
+/* Dropdown styles */
+.companypanelnavbar-dropdown {
+  margin-left: 24px;
+  margin-top: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 6px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.companypanelnavbar-dropdown-item {
+  color: rgba(255, 255, 255, 0.9);
+  text-decoration: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.companypanelnavbar-dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+}
+
+.companypanelnavbar-dropdown-item-active {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
 .companypanelnavbar-profile {
   padding: 20px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
