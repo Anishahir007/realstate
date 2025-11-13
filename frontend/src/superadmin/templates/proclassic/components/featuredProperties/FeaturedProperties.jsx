@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams, useOutletContext } from 'react-router-dom';
 import { getApiBase } from '../../../../../utils/apiBase.js';
+import EnquiryModal from '../findProperty/EnquiryModal.jsx';
 import './featuredProperties.css';
 
 function formatPriceINR(num) {
@@ -11,13 +12,20 @@ function formatPriceINR(num) {
   return `₹ ${n.toLocaleString('en-IN')}`;
 }
 
-export default function FeaturedPropertyCard({ property }) {
+export default function FeaturedPropertyCard({ property, site, tenantDb, onEnquiry }) {
   const { slug } = useParams();
   
   const to = `property/${property.id}`;
   
   // Get API base URL (for constructing full image URLs)
   const apiBase = getApiBase() || window.location.origin;
+  
+  const handleEnquiryClick = (e) => {
+    e.preventDefault();
+    if (onEnquiry) {
+      onEnquiry(property);
+    }
+  };
   
   // Get image from multiple possible fields
   let img = undefined;
@@ -89,9 +97,12 @@ export default function FeaturedPropertyCard({ property }) {
         <Link to={to} state={{ property }} className="pc-featured-btn pc-featured-btn-primary">
           View Details
         </Link>
-        <Link to="/contact" state={{ property }} className="pc-featured-btn pc-featured-btn-secondary">
+        <button 
+          onClick={handleEnquiryClick}
+          className="pc-featured-btn pc-featured-btn-secondary"
+        >
           Send Enquiry
-        </Link>
+        </button>
       </div>
     </div>
   );
@@ -100,12 +111,31 @@ export default function FeaturedPropertyCard({ property }) {
 export function FeaturedPropertiesGrid({ properties: propsProps, title = 'Featured Properties' }) {
   const [featuredProps, setFeaturedProps] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedProperty, setSelectedProperty] = useState(null);
+  const [showEnquiryModal, setShowEnquiryModal] = useState(false);
   const ctx = useOutletContext?.() || {};
+  const site = ctx.site || {};
   const properties = propsProps || ctx.properties || [];
   
   // Try to get tenant_db from context or URL
   const { slug } = useParams();
   const apiBase = getApiBase() || window.location.origin;
+  
+  const tenantDb = site?.tenant_db || 
+                   site?.broker?.tenant_db || 
+                   ctx.site?.tenant_db || 
+                   ctx.site?.broker?.tenant_db ||
+                   ctx.tenant_db;
+  
+  const handleEnquiry = (property) => {
+    setSelectedProperty(property);
+    setShowEnquiryModal(true);
+  };
+
+  const handleCloseEnquiry = () => {
+    setShowEnquiryModal(false);
+    setSelectedProperty(null);
+  };
   
   useEffect(() => {
     async function fetchFeaturedProperties() {
@@ -199,8 +229,26 @@ export function FeaturedPropertiesGrid({ properties: propsProps, title = 'Featur
         <div className="pc-featured-empty">No featured properties yet. Please check back soon.</div>
       ) : (
         <div className="pc-featured-grid">
-          {featuredProps.map((p) => (<FeaturedPropertyCard key={p.id} property={p} />))}
+          {featuredProps.map((p) => (
+            <FeaturedPropertyCard 
+              key={p.id} 
+              property={p} 
+              site={site}
+              tenantDb={tenantDb}
+              onEnquiry={handleEnquiry}
+            />
+          ))}
         </div>
+      )}
+      
+      {/* Enquiry Modal */}
+      {showEnquiryModal && selectedProperty && (
+        <EnquiryModal
+          property={selectedProperty}
+          site={site}
+          tenantDb={tenantDb}
+          onClose={handleCloseEnquiry}
+        />
       )}
     </>
   );

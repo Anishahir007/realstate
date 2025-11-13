@@ -159,6 +159,9 @@
   text-align: center;
   transition: all 0.2s;
   flex: 1;
+  cursor: pointer;
+  border: 1px solid transparent;
+  font-family: inherit;
 }
 
 .pc-featured-btn-primary {

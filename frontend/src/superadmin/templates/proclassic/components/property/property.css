@@ -76,6 +76,8 @@
 .pc-prop-actions {
   padding: 12px;
   border-top: 1px solid #f1f5f9;
+  display: flex;
+  gap: 8px;
 }
 .pc-prop-btn {
   display: inline-block;
@@ -85,6 +87,25 @@
   text-decoration: none;
   padding: 8px 12px;
   border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex: 1;
+}
+.pc-prop-btn:hover {
+  background: #b88a2a;
+  border-color: #b88a2a;
+}
+.pc-prop-btn-enquiry {
+  background: transparent;
+  border: 1px solid #d4a135;
+  color: #d4a135;
+}
+.pc-prop-btn-enquiry:hover {
+  background: #d4a135;
+  color: #111;
 }
 
 @media (max-width: 768px) {
