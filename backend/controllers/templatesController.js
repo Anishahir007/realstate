@@ -522,7 +522,18 @@ export async function getSiteContext(req, res) {
     
     try {
       if (ownerType === 'company') {
-        const [rows] = await pool.query('SELECT id, full_name, name, email, phone, photo, tenant_db, location, address, store_name, company_name, instagram, facebook, linkedin, youtube, whatsapp_number FROM companies WHERE id = ? LIMIT 1', [site.companyId]);
+        // Try to select all columns first, fallback to base columns if migration not run
+        let rows;
+        try {
+          [rows] = await pool.query('SELECT id, full_name, name, email, phone, photo, tenant_db, location, address, store_name, company_name, instagram, facebook, linkedin, youtube, whatsapp_number FROM companies WHERE id = ? LIMIT 1', [site.companyId]);
+        } catch (colErr) {
+          // If columns don't exist, use base query without optional columns
+          if (colErr.code === 'ER_BAD_FIELD_ERROR') {
+            [rows] = await pool.query('SELECT id, full_name, name, email, phone, photo, tenant_db, location, company_name FROM companies WHERE id = ? LIMIT 1', [site.companyId]);
+          } else {
+            throw colErr;
+          }
+        }
         const row = rows?.[0];
         if (row) {
           owner = { 
@@ -532,15 +543,15 @@ export async function getSiteContext(req, res) {
             phone: row.phone, 
             photo: row.photo, 
             tenant_db: row.tenant_db,
-            location: row.location,
-            address: row.address,
-            store_name: row.store_name,
-            company_name: row.company_name,
-            instagram: row.instagram,
-            facebook: row.facebook,
-            linkedin: row.linkedin,
-            youtube: row.youtube,
-            whatsapp_number: row.whatsapp_number
+            location: row.location || null,
+            address: row.address || null,
+            store_name: row.store_name || null,
+            company_name: row.company_name || null,
+            instagram: row.instagram || null,
+            facebook: row.facebook || null,
+            linkedin: row.linkedin || null,
+            youtube: row.youtube || null,
+            whatsapp_number: row.whatsapp_number || null
           };
           tenantDb = row.tenant_db;
           if (row.tenant_db) {
@@ -548,7 +559,18 @@ export async function getSiteContext(req, res) {
           }
         }
       } else {
-        const [rows] = await pool.query('SELECT id, full_name, email, phone, photo, tenant_db, location, address, store_name, company_name, instagram, facebook, linkedin, youtube, whatsapp_number FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
+        // Try to select all columns first, fallback to base columns if migration not run
+        let rows;
+        try {
+          [rows] = await pool.query('SELECT id, full_name, email, phone, photo, tenant_db, location, address, store_name, company_name, instagram, facebook, linkedin, youtube, whatsapp_number FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
+        } catch (colErr) {
+          // If columns don't exist, use base query without optional columns
+          if (colErr.code === 'ER_BAD_FIELD_ERROR') {
+            [rows] = await pool.query('SELECT id, full_name, email, phone, photo, tenant_db, location, company_name FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
+          } else {
+            throw colErr;
+          }
+        }
         const row = rows?.[0];
         if (row) {
           owner = { 
@@ -558,15 +580,15 @@ export async function getSiteContext(req, res) {
             phone: row.phone, 
             photo: row.photo, 
             tenant_db: row.tenant_db,
-            location: row.location,
-            address: row.address,
-            store_name: row.store_name,
-            company_name: row.company_name,
-            instagram: row.instagram,
-            facebook: row.facebook,
-            linkedin: row.linkedin,
-            youtube: row.youtube,
-            whatsapp_number: row.whatsapp_number
+            location: row.location || null,
+            address: row.address || null,
+            store_name: row.store_name || null,
+            company_name: row.company_name || null,
+            instagram: row.instagram || null,
+            facebook: row.facebook || null,
+            linkedin: row.linkedin || null,
+            youtube: row.youtube || null,
+            whatsapp_number: row.whatsapp_number || null
           };
           tenantDb = row.tenant_db;
           if (row.tenant_db) {
@@ -607,7 +629,18 @@ export async function getDomainSiteContext(req, res) {
     
     try {
       if (ownerType === 'company') {
-        const [rows] = await pool.query('SELECT id, full_name, name, email, phone, photo, tenant_db, location, address, store_name, company_name, instagram, facebook, linkedin, youtube, whatsapp_number FROM companies WHERE id = ? LIMIT 1', [site.companyId]);
+        // Try to select all columns first, fallback to base columns if migration not run
+        let rows;
+        try {
+          [rows] = await pool.query('SELECT id, full_name, name, email, phone, photo, tenant_db, location, address, store_name, company_name, instagram, facebook, linkedin, youtube, whatsapp_number FROM companies WHERE id = ? LIMIT 1', [site.companyId]);
+        } catch (colErr) {
+          // If columns don't exist, use base query without optional columns
+          if (colErr.code === 'ER_BAD_FIELD_ERROR') {
+            [rows] = await pool.query('SELECT id, full_name, name, email, phone, photo, tenant_db, location, company_name FROM companies WHERE id = ? LIMIT 1', [site.companyId]);
+          } else {
+            throw colErr;
+          }
+        }
         const row = rows?.[0];
         if (row) {
           owner = { 
@@ -617,15 +650,15 @@ export async function getDomainSiteContext(req, res) {
             phone: row.phone, 
             photo: row.photo, 
             tenant_db: row.tenant_db,
-            location: row.location,
-            address: row.address,
-            store_name: row.store_name,
-            company_name: row.company_name,
-            instagram: row.instagram,
-            facebook: row.facebook,
-            linkedin: row.linkedin,
-            youtube: row.youtube,
-            whatsapp_number: row.whatsapp_number
+            location: row.location || null,
+            address: row.address || null,
+            store_name: row.store_name || null,
+            company_name: row.company_name || null,
+            instagram: row.instagram || null,
+            facebook: row.facebook || null,
+            linkedin: row.linkedin || null,
+            youtube: row.youtube || null,
+            whatsapp_number: row.whatsapp_number || null
           };
           tenantDb = row.tenant_db;
           if (row.tenant_db) {
@@ -633,7 +666,18 @@ export async function getDomainSiteContext(req, res) {
           }
         }
       } else {
-        const [rows] = await pool.query('SELECT id, full_name, email, phone, photo, tenant_db, location, address, store_name, company_name, instagram, facebook, linkedin, youtube, whatsapp_number FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
+        // Try to select all columns first, fallback to base columns if migration not run
+        let rows;
+        try {
+          [rows] = await pool.query('SELECT id, full_name, email, phone, photo, tenant_db, location, address, store_name, company_name, instagram, facebook, linkedin, youtube, whatsapp_number FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
+        } catch (colErr) {
+          // If columns don't exist, use base query without optional columns
+          if (colErr.code === 'ER_BAD_FIELD_ERROR') {
+            [rows] = await pool.query('SELECT id, full_name, email, phone, photo, tenant_db, location, company_name FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
+          } else {
+            throw colErr;
+          }
+        }
         const row = rows?.[0];
         if (row) {
           owner = { 
@@ -643,15 +687,15 @@ export async function getDomainSiteContext(req, res) {
             phone: row.phone, 
             photo: row.photo, 
             tenant_db: row.tenant_db,
-            location: row.location,
-            address: row.address,
-            store_name: row.store_name,
-            company_name: row.company_name,
-            instagram: row.instagram,
-            facebook: row.facebook,
-            linkedin: row.linkedin,
-            youtube: row.youtube,
-            whatsapp_number: row.whatsapp_number
+            location: row.location || null,
+            address: row.address || null,
+            store_name: row.store_name || null,
+            company_name: row.company_name || null,
+            instagram: row.instagram || null,
+            facebook: row.facebook || null,
+            linkedin: row.linkedin || null,
+            youtube: row.youtube || null,
+            whatsapp_number: row.whatsapp_number || null
           };
           tenantDb = row.tenant_db;
           if (row.tenant_db) {

@@ -134,20 +134,32 @@ export function FeaturedPropertiesGrid({ properties: propsProps, title = 'Featur
       try {
         // Get tenant_db from context or try to determine from slug/domain
         const tenantDb = ctx.site?.tenant_db || ctx.tenant_db;
-        const headers = {};
-        if (tenantDb) {
-          headers['x-tenant-db'] = tenantDb;
+        
+        // Only make API request if tenant_db is available
+        if (!tenantDb) {
+          console.warn('FeaturedProperties: tenant_db not available in context, skipping API request');
+          setLoading(false);
+          return;
         }
+        
+        const headers = {
+          'x-tenant-db': tenantDb
+        };
         
         const response = await fetch(`${apiBase}/api/properties/featured?limit=8`, {
           headers
         });
         
-        if (response.ok) {
-          const result = await response.json();
-          if (result.data && result.data.length > 0) {
-            setFeaturedProps(result.data);
-          }
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Error fetching featured properties:', response.status, errorData.message || 'Unknown error');
+          setLoading(false);
+          return;
+        }
+        
+        const result = await response.json();
+        if (result.data && result.data.length > 0) {
+          setFeaturedProps(result.data);
         }
       } catch (err) {
         console.error('Error fetching featured properties:', err);

@@ -127,7 +127,11 @@ export async function getPropertyById(req, res) {
 export async function getFeaturedProperties(req, res) {
   try {
     const tenantDb = getTenantDb(req);
-    if (!tenantDb) return res.status(400).json({ message: 'Missing tenant' });
+    if (!tenantDb) {
+      return res.status(400).json({ 
+        message: 'Missing tenant database identifier. Please provide x-tenant-db header or ensure you are authenticated.' 
+      });
+    }
 
     const limit = Math.min(20, Math.max(1, parseInt(req.query.limit, 10) || 8));
     const tenantPool = await getTenantPool(tenantDb);
