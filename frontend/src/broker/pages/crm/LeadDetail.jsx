@@ -19,7 +19,23 @@ import {
   MdHome,
   MdAdd,
   MdStickyNote2,
+  MdBusiness,
+  MdClose,
 } from 'react-icons/md';
+import {
+  labelize,
+  buildActivityLog,
+  buildSourceBreakdown,
+  buildHoursInsight,
+  getNotesStorageKey,
+  loadStoredNotes,
+  saveStoredNotes,
+  buildInitialNotes,
+  createNoteEntry,
+  formatRelativeTime,
+  loadTimeTracking,
+  recordTimeTracking,
+} from '../../../utils/leadInsights.js';
 
 // Calculate lead score based on multiple factors
 function calculateLeadScore(lead) {
@@ -66,11 +82,6 @@ function calculateLeadScore(lead) {
   return Math.min(100, Math.max(0, score));
 }
 
-function labelize(v) {
-  if (!v) return '-';
-  return String(v).replace(/_/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase());
-}
-
 function initials(name) {
   const parts = String(name || '').trim().split(/\s+/).slice(0, 2);
   return parts.map((p) => p[0]?.toUpperCase?.() || '').join('') || 'NA';
@@ -84,6 +95,10 @@ export default function LeadDetail() {
   const [loading, setLoading] = React.useState(true);
   const [lead, setLead] = React.useState(null);
   const [error, setError] = React.useState('');
+  const [notes, setNotes] = React.useState([]);
+  const [isNoteModalOpen, setIsNoteModalOpen] = React.useState(false);
+  const [noteDraft, setNoteDraft] = React.useState('');
+  const [timeTracking, setTimeTracking] = React.useState({ totalMinutes: 0, daily: {} });
 
   React.useEffect(() => {
     async function loadLead() {
@@ -109,91 +124,107 @@ export default function LeadDetail() {
     loadLead();
   }, [id, token, apiBase]);
 
-  if (loading) {
-    return (
-      <div className="brokerleaddetail-root">
-        <div className="brokerleaddetail-loading">Loading lead details...</div>
-      </div>
-    );
-  }
+  const notesStorageKey = React.useMemo(
+    () => (lead ? getNotesStorageKey('broker', lead.id) : null),
+    [lead?.id]
+  );
 
-  if (error || !lead) {
-    return (
-      <div className="brokerleaddetail-root">
-        <div className="brokerleaddetail-error">
-          {error || 'Lead not found'}
-          <button onClick={() => navigate('/broker/crm')} style={{ marginTop: '12px' }}>
-            Back to CRM
-          </button>
-        </div>
-      </div>
-    );
-  }
+  React.useEffect(() => {
+    if (!lead || !notesStorageKey) return;
+    const stored = loadStoredNotes(notesStorageKey);
+    if (stored.length) {
+      setNotes(stored);
+      return;
+    }
+    const initial = buildInitialNotes(lead);
+    setNotes(initial);
+    if (initial.length) saveStoredNotes(notesStorageKey, initial);
+  }, [lead, notesStorageKey]);
 
-  const leadScore = lead.lead_score || calculateLeadScore(lead);
+  const safeLead = lead || {};
+  const leadScore = safeLead.lead_score || calculateLeadScore(safeLead);
   const now = new Date();
-  const created = lead.created_at ? new Date(lead.created_at) : now;
+  const created = safeLead.created_at ? new Date(safeLead.created_at) : now;
   const daysActive = Math.floor((now - created) / (1000 * 60 * 60 * 24));
-  
-  // Mock data for activities (in real app, fetch from API)
-  const activities = [
-    { 
-      type: 'login', 
-      message: `${lead.full_name} logged in on 24th Oct 2025, 10:42 AM`, 
-      date: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000), 
-      icon: MdPerson,
-      color: '#ef4444' 
-    },
-    { 
-      type: 'email', 
-      message: 'Email address verified successfully on 25th October 2025', 
-      date: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000), 
-      icon: MdCheckCircle,
-      color: '#f59e0b'
-    },
-    { 
-      type: 'view', 
-      message: 'Viewed property listing "Skyline Residency - Tower B, Flat 1203" on 25th October 2025, 11:37 AM', 
-      date: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000), 
-      icon: MdVisibility,
-      color: '#3b82f6'
-    },
-    { 
-      type: 'visit', 
-      message: 'Scheduled a site visit for "Skyline Residency" on 27th October 2025, 02:00 PM', 
-      date: new Date(now.getTime() - 0.5 * 24 * 60 * 60 * 1000), 
-      icon: MdCalendarMonth,
-      color: '#f97316'
-    },
-  ];
+  React.useEffect(() => {
+    if (!lead?.id) return;
+    setTimeTracking(loadTimeTracking('broker', lead.id));
+  }, [lead?.id]);
 
-  // Mock data for notes (in real app, fetch from API)
-  const notes = [
-    { text: 'Client is very interested in the property. Scheduling property visit for this weekend.', time: '2 hours ago' },
-    { text: 'Initial contact made via website form. High engagement potential.', time: '1 day ago' },
-    { text: 'Meeting today at 02:00 PM', time: '2 days ago' },
-  ];
+  React.useEffect(() => {
+    if (typeof window === 'undefined' || typeof document === 'undefined' || !lead?.id) return undefined;
+
+    let sessionStart = Date.now();
+    let isActive = document.visibilityState !== 'hidden';
+
+    const commit = () => {
+      if (!isActive) return;
+      const minutes = (Date.now() - sessionStart) / 60000;
+      if (minutes <= 0.01) return;
+      const updated = recordTimeTracking('broker', lead.id, minutes);
+      setTimeTracking(updated);
+      sessionStart = Date.now();
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        commit();
+        isActive = false;
+      } else {
+        sessionStart = Date.now();
+        isActive = true;
+      }
+    };
+
+    const interval = window.setInterval(commit, 60000);
+    window.addEventListener('beforeunload', commit);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      commit();
+      window.removeEventListener('beforeunload', commit);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.clearInterval(interval);
+    };
+  }, [lead?.id]);
+
+  const activities = React.useMemo(() => (lead ? buildActivityLog(lead) : []), [lead]);
+  const hoursInsight = React.useMemo(
+    () => buildHoursInsight(timeTracking),
+    [timeTracking]
+  );
+  const hoursSeries = hoursInsight.series || Array(7).fill(0);
+  const hoursMax = Math.max(hoursInsight.peakHours || 0, 1);
+  const avgHoursValue = hoursInsight.averageHours || 0;
+  const avgHoursWhole = Math.floor(avgHoursValue);
+  const avgHoursMinutes = Math.round((avgHoursValue - avgHoursWhole) * 60);
+  const sourceData = React.useMemo(() => buildSourceBreakdown(lead), [lead]);
+  const primarySourceLabel = sourceData[0]?.label || labelize(safeLead.source || 'website');
+  const activityIconMap = React.useMemo(() => ({
+    created: { icon: MdPerson, color: '#ef4444' },
+    status: { icon: MdCheckCircle, color: '#f59e0b' },
+    property: { icon: MdVisibility, color: '#3b82f6' },
+    note: { icon: MdCalendarMonth, color: '#f97316' },
+    assignment: { icon: MdBusiness, color: '#0ea5e9' },
+  }), []);
+  const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const hoursYAxis = React.useMemo(() => {
+    const ceilMax = Math.ceil(Math.max(1, hoursMax));
+    const step = Math.max(1, Math.ceil(ceilMax / 4));
+    const labels = [];
+    for (let value = ceilMax; value >= 0; value -= step) {
+      labels.push(value);
+    }
+    if (labels[labels.length - 1] !== 0) labels.push(0);
+    return labels;
+  }, [hoursMax]);
 
   // Lead stages
   const stages = ['New Lead', 'Contacted', 'Qualified', 'Consideration', 'Negotiation', 'Won'];
   const currentStageIndex = Math.min(
-    stages.findIndex(s => s.toLowerCase().includes((lead.status || 'new').toLowerCase())),
+    stages.findIndex(s => s.toLowerCase().includes((safeLead.status || 'new').toLowerCase())),
     stages.length - 1
   );
-
-  // Mock hours data - matching image (Mon ~2, Tue ~5, Wed ~6, Thu ~8, Fri ~5, Sat ~3, Sun ~7)
-  const weeklyHours = [2, 5, 6, 8, 5, 3, 7];
-  const maxHours = Math.max(...weeklyHours);
-  const avgHours = 6.5; // 6 hours 30 minutes
-  
-  // Mock source distribution - matching image
-  const sourceData = [
-    { label: 'Website', value: 25, color: '#3b82f6' },
-    { label: 'WhatsApp', value: 15, color: '#10b981' },
-    { label: 'Social Media', value: 20, color: '#8b5cf6' },
-    { label: 'Referral', value: 10, color: '#f59e0b' },
-    { label: 'Direct', value: 20, color: '#60a5fa' },
-  ];
 
   const formatDate = (date) => {
     if (!date) return '';
@@ -216,7 +247,39 @@ export default function LeadDetail() {
     return s[(v - 20) % 10] || s[v] || s[0];
   };
 
+  const handleSaveNote = () => {
+    if (!noteDraft.trim()) return;
+    const entry = createNoteEntry(noteDraft.trim());
+    const updated = [entry, ...notes];
+    setNotes(updated);
+    if (notesStorageKey) saveStoredNotes(notesStorageKey, updated);
+    setNoteDraft('');
+    setIsNoteModalOpen(false);
+  };
+
+  if (loading) {
+    return (
+      <div className="brokerleaddetail-root">
+        <div className="brokerleaddetail-loading">Loading lead details...</div>
+      </div>
+    );
+  }
+
+  if (error || !lead) {
+    return (
+      <div className="brokerleaddetail-root">
+        <div className="brokerleaddetail-error">
+          {error || 'Lead not found'}
+          <button onClick={() => navigate('/broker/crm')} style={{ marginTop: '12px' }}>
+            Back to CRM
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
+    <>
     <div className="brokerleaddetail-root">
       {/* Back Button */}
       <div className="brokerleaddetail-top-bar">
@@ -370,50 +433,56 @@ export default function LeadDetail() {
           <div className="brokerleaddetail-section">
             <h3 className="brokerleaddetail-section-title">Activity log</h3>
             <p className="brokerleaddetail-section-subtitle">Chronological view of all activities</p>
+            {activities.length === 0 ? (
+              <div className="brokerleaddetail-empty">No activity recorded yet.</div>
+            ) : (
             <div className="brokerleaddetail-activity-list">
               {activities.map((activity, idx) => {
-                const IconComponent = activity.icon;
+                  const iconMeta = activityIconMap[activity.type] || activityIconMap.created;
+                  const IconComponent = iconMeta.icon;
                 return (
-                  <div key={idx} className="brokerleaddetail-activity-item">
+                    <div key={`${activity.type}-${idx}`} className="brokerleaddetail-activity-item">
                     <div className="brokerleaddetail-activity-timeline">
-                      <div className="brokerleaddetail-activity-icon-wrapper" style={{ background: activity.color }}>
+                        <div className="brokerleaddetail-activity-icon-wrapper" style={{ background: iconMeta.color }}>
                         <IconComponent className="brokerleaddetail-activity-icon" />
                       </div>
                       {idx < activities.length - 1 && <div className="brokerleaddetail-activity-line" />}
                     </div>
                     <div className="brokerleaddetail-activity-content">
-                      <div className="brokerleaddetail-activity-message">{activity.message}</div>
+                        <div className="brokerleaddetail-activity-message">{activity.description}</div>
                       <div className="brokerleaddetail-activity-date">{formatDate(activity.date)}</div>
                     </div>
                   </div>
                 );
               })}
             </div>
+            )}
           </div>
 
           {/* Hours Spent */}
           <div className="brokerleaddetail-section">
             <h3 className="brokerleaddetail-section-title">Hours Spent</h3>
-            <div className="brokerleaddetail-chart-value-small">{Math.floor(avgHours)} Hours {Math.round((avgHours % 1) * 60)} minutes</div>
+            <div className="brokerleaddetail-chart-value-small">
+              {avgHoursWhole} Hours {avgHoursMinutes} minutes
+            </div>
             <div className="brokerleaddetail-chart-subtitle">(average)</div>
             <div className="brokerleaddetail-hours-tabs">
               <button className="brokerleaddetail-tab active">Daily</button>
-              <button className="brokerleaddetail-tab">Weekly</button>
+              <button className="brokerleaddetail-tab" disabled>Weekly</button>
             </div>
             <div className="brokerleaddetail-bar-chart">
               <div className="brokerleaddetail-bar-chart-yaxis">
-                {[8, 6, 4, 2, 0].map((val) => (
+                {hoursYAxis.map((val) => (
                   <div key={val} className="brokerleaddetail-yaxis-label">{val}</div>
                 ))}
               </div>
               <div className="brokerleaddetail-bar-chart-bars">
-                {weeklyHours.map((hours, idx) => {
-                  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-                  const percentage = (hours / maxHours) * 100;
+                {hoursSeries.map((hours, idx) => {
+                  const percentage = hoursMax ? (hours / hoursMax) * 100 : 0;
                   return (
                     <div key={idx} className="brokerleaddetail-bar-item">
                       <div className="brokerleaddetail-bar" style={{ height: `${percentage}%` }} />
-                      <div className="brokerleaddetail-bar-label">{days[idx]}</div>
+                      <div className="brokerleaddetail-bar-label">{dayLabels[idx % dayLabels.length]}</div>
                     </div>
                   );
                 })}
@@ -421,8 +490,8 @@ export default function LeadDetail() {
             </div>
             <div className="brokerleaddetail-chart-legend">
               <div className="brokerleaddetail-legend-indicator" style={{ background: '#2563eb' }}></div>
-              <span>8 hours</span>
-              <span className="brokerleaddetail-legend-small">+1 hour from yesterday</span>
+              <span>{hoursMax.toFixed(hoursMax >= 10 ? 0 : 1)} hours peak</span>
+              <span className="brokerleaddetail-legend-small">Auto-generated from your recent activity</span>
             </div>
           </div>
         </div>
@@ -475,30 +544,35 @@ export default function LeadDetail() {
           <div className="brokerleaddetail-section">
             <div className="brokerleaddetail-section-header">
               <h3 className="brokerleaddetail-section-title">Notes</h3>
-              <button className="brokerleaddetail-add-note-btn">
+              <button className="brokerleaddetail-add-note-btn" onClick={() => setIsNoteModalOpen(true)}>
                 <MdAdd style={{ marginRight: '4px', fontSize: '18px' }} />
                 Add Note
               </button>
             </div>
             <p className="brokerleaddetail-section-subtitle">Internal notes on this lead</p>
+            {notes.length === 0 ? (
+              <div className="brokerleaddetail-empty">No notes yet. Capture your next action with “Add Note”.</div>
+            ) : (
             <div className="brokerleaddetail-notes-list">
-              {notes.map((note, idx) => (
-                <div key={idx} className="brokerleaddetail-note-item">
+                {notes.map((note) => (
+                  <div key={note.id} className="brokerleaddetail-note-item">
                   <div className="brokerleaddetail-note-icon-wrapper">
                     <MdStickyNote2 className="brokerleaddetail-note-icon" />
                   </div>
                   <div className="brokerleaddetail-note-content">
                     <div className="brokerleaddetail-note-text">{note.text}</div>
-                    <div className="brokerleaddetail-note-time">{note.time}</div>
-                  </div>
+                      <div className="brokerleaddetail-note-time">{formatRelativeTime(note.timestamp)}</div>
+                    </div>
                 </div>
               ))}
             </div>
+            )}
           </div>
 
           {/* Lead Sources */}
           <div className="brokerleaddetail-section">
             <h3 className="brokerleaddetail-section-title">Lead Sources</h3>
+            <p className="brokerleaddetail-section-subtitle">Primary source: {primarySourceLabel}</p>
             <div className="brokerleaddetail-donut-wrapper">
               <div className="brokerleaddetail-donut-chart">
                 <svg width="200" height="200" viewBox="0 0 200 200">
@@ -530,7 +604,10 @@ export default function LeadDetail() {
               </div>
               <div className="brokerleaddetail-source-legend">
                 {sourceData.map((item, idx) => (
-                  <div key={idx} className="brokerleaddetail-legend-item">
+                  <div
+                    key={idx}
+                    className={`brokerleaddetail-legend-item ${item.label === primarySourceLabel ? 'active' : ''}`}
+                  >
                     <div className="brokerleaddetail-legend-color" style={{ background: item.color }} />
                     <span>{item.label}: {item.value}%</span>
                   </div>
@@ -541,6 +618,54 @@ export default function LeadDetail() {
         </div>
       </div>
     </div>
+
+      {isNoteModalOpen && (
+        <div className="brokerleaddetail-note-modal">
+          <div className="brokerleaddetail-note-modal-content">
+            <div className="brokerleaddetail-note-modal-head">
+              <h4>Add Note</h4>
+              <button
+                type="button"
+                className="brokerleaddetail-note-modal-close"
+                onClick={() => {
+                  setIsNoteModalOpen(false);
+                  setNoteDraft('');
+                }}
+              >
+                <MdClose />
+              </button>
+            </div>
+            <textarea
+              className="brokerleaddetail-note-modal-textarea"
+              placeholder="Write an update for this lead..."
+              value={noteDraft}
+              onChange={(event) => setNoteDraft(event.target.value)}
+              rows={4}
+            />
+            <div className="brokerleaddetail-note-modal-actions">
+              <button
+                type="button"
+                className="btn-light"
+                onClick={() => {
+                  setIsNoteModalOpen(false);
+                  setNoteDraft('');
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-dark"
+                onClick={handleSaveNote}
+                disabled={!noteDraft.trim()}
+              >
+                Save Note
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
