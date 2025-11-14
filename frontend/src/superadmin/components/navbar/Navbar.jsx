@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { FiGrid, FiUsers, FiHome, FiGlobe, FiBarChart2, FiBell, FiSettings, FiClipboard, FiShield } from 'react-icons/fi';
+import { FiGrid, FiUsers, FiHome, FiGlobe, FiBarChart2, FiBell, FiSettings, FiClipboard, FiShield, FiBriefcase } from 'react-icons/fi';
 import './navbar.css';
 import { useSuperAdmin } from '../../../context/SuperAdminContext.jsx';
 
@@ -17,6 +17,13 @@ const NAV_ITEMS = [
     to: '/superadmin/brokers',
     label: 'Brokers',
     icon: <FiUsers />,
+    roles: ['super_admin'],
+  },
+  {
+    key: 'companies',
+    to: '/superadmin/companies',
+    label: 'Companies',
+    icon: <FiBriefcase />,
     roles: ['super_admin'],
   },
   {

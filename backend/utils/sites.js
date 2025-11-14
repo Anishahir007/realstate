@@ -110,7 +110,7 @@ export function publishSite({ slug, brokerId, companyId, ownerType, template, si
 
 export function listPublishedSitesForBroker(brokerId) {
   const map = loadSitesMap();
-  return Object.values(map).filter((s) => (s.ownerType !== 'company' && !s.ownerType) && String(s.brokerId) === String(brokerId));
+  return Object.values(map).filter((s) => (s.ownerType === 'broker' || !s.ownerType) && String(s.brokerId) === String(brokerId));
 }
 
 export function listPublishedSitesForCompany(companyId) {
