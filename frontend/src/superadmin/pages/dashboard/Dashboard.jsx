@@ -21,6 +21,7 @@ const MONTH_NAMES = ['January','February','March','April','May','June','July','A
 const DATE_DISPLAY = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 const INITIAL_COUNTS = {
   totalBrokers: 0,
+  totalCompanies: 0,
   totalLeads: 0,
   activeProperties: 0,
   totalProperties: 0,
@@ -228,6 +229,13 @@ function formatPrice(value) {
   return `₹${abs.toLocaleString('en-IN')}`;
 }
 
+const truncateTitle = (title, maxWords = 20) => {
+  if (!title) return 'Untitled property';
+  const words = title.trim().split(/\s+/);
+  if (words.length <= maxWords) return title;
+  return words.slice(0, maxWords).join(' ') + '...';
+};
+
 function formatArea(value, unit) {
   const num = Number(value);
   if (!Number.isFinite(num) || num <= 0) return null;
@@ -246,6 +254,9 @@ export default function Dashboard() {
   const [sys, setSys] = useState({ serverUptimePct: 99.9, dbPerformancePct: 95.5, apiResponseMs: 150, storageUsagePct: 60 });
   const [counts, setCounts] = useState(() => ({ ...INITIAL_COUNTS }));
   const [brokerTrend, setBrokerTrend] = useState(() => (
+    ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sept','Oct','Nov','Dec'].map((m) => ({ m, a: 0, b: 0 }))
+  ));
+  const [companyTrend, setCompanyTrend] = useState(() => (
     ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sept','Oct','Nov','Dec'].map((m) => ({ m, a: 0, b: 0 }))
   ));
   const [filter, setFilter] = useState(() => createPresetFilter('all'));
@@ -466,6 +477,7 @@ export default function Dashboard() {
         const payload = json?.data || {};
         setCounts({
           totalBrokers: Number(payload.totalBrokers || 0),
+          totalCompanies: Number(payload.totalCompanies || 0),
           totalLeads: Number(payload.totalLeads || 0),
           activeProperties: Number(payload.activeProperties ?? payload.totalProperties ?? 0),
           totalProperties: Number(payload.totalProperties || 0),
@@ -486,7 +498,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     let cancelled = false;
-    async function loadTrends() {
+    async function loadBrokerTrends() {
       if (!superAdmin?.token) return;
       try {
         const params = new URLSearchParams({ year: String(trendYear) });
@@ -509,7 +521,36 @@ export default function Dashboard() {
         if (!cancelled) setBrokerTrend((prev) => prev.map(x => ({ ...x, a: 0, b: 0 })));
       }
     }
-    loadTrends();
+    loadBrokerTrends();
+    return () => { cancelled = true; };
+  }, [superAdmin?.token, superAdmin?.apiBase, trendYear, filter.key, filter.from, filter.to, filter.monthValue, filter.yearValue]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadCompanyTrends() {
+      if (!superAdmin?.token) return;
+      try {
+        const params = new URLSearchParams({ year: String(trendYear) });
+        if (filter.key && filter.key !== 'all') params.set('range', filter.key);
+        if (filter.from) params.set('from', filter.from);
+        if (filter.to) params.set('to', filter.to);
+        if (filter.key === 'month' && filter.monthValue) params.set('month', filter.monthValue);
+        if (filter.key === 'year' && filter.yearValue) params.set('year', filter.yearValue);
+        const { data: json } = await axios.get(`${superAdmin.apiBase}/api/company/monthly-trends?${params.toString()}` ,{
+          headers: { Authorization: `Bearer ${superAdmin.token}` },
+        });
+        const rows = Array.isArray(json?.data) ? json.data : [];
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sept','Oct','Nov','Dec'];
+        const normalized = months.map((label) => {
+          const r = rows.find(x => x.month === label) || { active: 0, suspended: 0 };
+          return { m: label, a: Number(r.active || 0), b: Number(r.suspended || 0) };
+        });
+        if (!cancelled) setCompanyTrend(normalized);
+      } catch {
+        if (!cancelled) setCompanyTrend((prev) => prev.map(x => ({ ...x, a: 0, b: 0 })));
+      }
+    }
+    loadCompanyTrends();
     return () => { cancelled = true; };
   }, [superAdmin?.token, superAdmin?.apiBase, trendYear, filter.key, filter.from, filter.to, filter.monthValue, filter.yearValue]);
 
@@ -563,6 +604,7 @@ export default function Dashboard() {
         return parts.length ? parts.join(', ') : '';
       }).filter(Boolean))].sort(),
       broker: [...new Set(recentProperties.map(x => x.brokerName).filter(Boolean))].sort(),
+      company: [...new Set(recentProperties.map(x => x.companyName).filter(Boolean))].sort(),
       status: [...new Set(recentProperties.map(x => x.status).filter(Boolean))].sort(),
       price: [], // Range filter would be complex, skip for now
     };
@@ -588,6 +630,7 @@ export default function Dashboard() {
         return parts.length ? parts.join(', ') : '';
       }
       case 'broker': return p.brokerName;
+      case 'company': return p.companyName;
       case 'status': return p.status;
       default: return null;
     }
@@ -625,14 +668,15 @@ export default function Dashboard() {
 
   const visibleColumns = useMemo(() => COLUMN_OPTIONS.filter((col) => visibleColumnIds.includes(col.id)), [visibleColumnIds]);
 
-  const data = brokerTrend;
-  const labels = data.map(d => d.m);
-  const chartData = {
+  const brokerData = brokerTrend;
+  const companyData = companyTrend;
+  const labels = brokerData.map(d => d.m);
+  const brokerChartData = {
     labels,
     datasets: [
       {
         label: 'Onboarded',
-        data: data.map(d => d.a),
+        data: brokerData.map(d => d.a),
         borderColor: '#2563eb',
         backgroundColor: 'rgba(37, 99, 235, 0.08)',
         pointRadius: 0,
@@ -641,7 +685,30 @@ export default function Dashboard() {
       },
       {
         label: 'Deactivated',
-        data: data.map(d => d.b),
+        data: brokerData.map(d => d.b),
+        borderColor: '#ef4444',
+        backgroundColor: 'rgba(239, 68, 68, 0.08)',
+        pointRadius: 0,
+        tension: 0.35,
+        fill: false,
+      },
+    ],
+  };
+  const companyChartData = {
+    labels,
+    datasets: [
+      {
+        label: 'Onboarded',
+        data: companyData.map(d => d.a),
+        borderColor: '#2563eb',
+        backgroundColor: 'rgba(37, 99, 235, 0.08)',
+        pointRadius: 0,
+        tension: 0.35,
+        fill: false,
+      },
+      {
+        label: 'Deactivated',
+        data: companyData.map(d => d.b),
         borderColor: '#ef4444',
         backgroundColor: 'rgba(239, 68, 68, 0.08)',
         pointRadius: 0,
@@ -802,6 +869,20 @@ export default function Dashboard() {
 
           <div className="superadmindashboard-card">
             <div className="superadmindashboard-card-head">
+              <div className="superadmindashboard-icon superadmindashboard-icon-blue" aria-hidden>
+                {/* Building / Company */}
+                <svg viewBox="0 0 24 24">
+                  <path fill="currentColor" d="M4 20V6l8-3 8 3v14h-5v-4H9v4H4zM9 9h2v2H9V9zm4 0h2v2h-2V9zM9 13h2v2H9v-2zm4 0h2v2h-2v-2z"/>
+                </svg>
+              </div>
+              <div className="superadmindashboard-card-title">Total Companies</div>
+            </div>
+            <div className="superadmindashboard-metric">{formatNumber(counts.totalCompanies)}</div>
+            <div className="superadmindashboard-delta superadmindashboard-delta-up">All statuses included</div>
+          </div>
+
+          <div className="superadmindashboard-card">
+            <div className="superadmindashboard-card-head">
               <div className="superadmindashboard-icon superadmindashboard-icon-orange" aria-hidden>
                 {/* Building */}
                 <svg viewBox="0 0 24 24">
@@ -854,7 +935,7 @@ export default function Dashboard() {
               <div className="superadmindashboard-card-title">Total Leads</div>
             </div>
             <div className="superadmindashboard-metric">{formatNumber(counts.totalLeads)}</div>
-            <div className="superadmindashboard-delta superadmindashboard-delta-up">Admin + broker sources</div>
+            <div className="superadmindashboard-delta superadmindashboard-delta-up">Admin + broker + company sources</div>
           </div>
         </section>
 
@@ -869,7 +950,22 @@ export default function Dashboard() {
 
             <div className="trend-chart" role="img" aria-label="Broker trends line chart">
               <div className="trend-plot" style={{ height: 260 }}>
-                <Line data={chartData} options={chartOptions} />
+                <Line data={brokerChartData} options={chartOptions} />
+              </div>
+            </div>
+          </div>
+
+          <div className="superadmindashboard-panel trend-card">
+            <div className="trend-head">
+              <div className="trend-head-left">
+                <h2 className="trend-title">Company Trends</h2>
+                <div className="trend-sub">Monthly company onboarding vs deactivated metrics.</div>
+              </div>
+            </div>
+
+            <div className="trend-chart" role="img" aria-label="Company trends line chart">
+              <div className="trend-plot" style={{ height: 260 }}>
+                <Line data={companyChartData} options={chartOptions} />
               </div>
             </div>
           </div>
@@ -1116,6 +1212,7 @@ export default function Dashboard() {
                     const areaText = formatArea(row.builtArea || row.area, row.areaUnit || row.builtAreaUnit);
                     const dateLabel = row.createdAt ? DATE_DISPLAY.format(new Date(row.createdAt)) : '—';
                     const brokerLabel = row.brokerName || '—';
+                    const companyLabel = row.companyName || '—';
                     const locationParts = [row.city, row.state].filter(Boolean);
                     const location = locationParts.length ? locationParts.join(', ') : row.locality || '—';
                     const priceLabel = formatPrice(row.price);
@@ -1136,7 +1233,7 @@ export default function Dashboard() {
                               <img src={imageSrc} alt="" />
                             </div>
                             <div className="property-meta">
-                              <div className="property-title">{row.title || 'Untitled property'}</div>
+                              <div className="property-title">{truncateTitle(row.title)}</div>
                               {areaText ? <div className="property-sub">{areaText}</div> : null}
                               {propertyMeta ? <div className="property-sub alt">{propertyMeta}</div> : null}
                             </div>
@@ -1180,6 +1277,7 @@ export default function Dashboard() {
                           if (key === 'possessionBy') return <td key={key} className={`col-${key}`}>{row.possessionBy || '—'}</td>;
                           if (key === 'location') return <td key={key} className={`col-${key}`}>{location}</td>;
                           if (key === 'broker') return <td key={key} className={`col-${key}`}>{brokerLabel}</td>;
+                          if (key === 'company') return <td key={key} className={`col-${key}`}>{companyLabel}</td>;
                           if (key === 'date') return <td key={key} className={`col-${key}`}>{dateLabel}</td>;
                           return <td key={key} className={`col-${key}`}>—</td>;
                         })}

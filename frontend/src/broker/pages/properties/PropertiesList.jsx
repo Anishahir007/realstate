@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useBroker } from '../../../context/BrokerContext.jsx';
 import './propertiesList.css';
@@ -59,6 +60,7 @@ const statusColorClass = (status) => {
 
 export default function PropertiesList() {
   const { token, apiBase } = useBroker();
+  const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -413,6 +415,14 @@ export default function PropertiesList() {
         </div>
         <div className="brokerproperties-actions">
           <div className="brokerproperties-tableactions">
+            <button
+              type="button"
+              className="brokerproperties-post-btn"
+              onClick={() => navigate('/broker/properties/new')}
+            >
+              <span aria-hidden>➕</span>
+              <span>Post Property</span>
+            </button>
             <button
               type="button"
               ref={columnButtonRef}

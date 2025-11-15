@@ -225,6 +225,117 @@ export async function loginBroker(req, res) {
   }
 }
 
+export async function signupCompany(req, res) {
+  try {
+    const { full_name, email, phone, photo, password, company_name, location, portal_role, created_by_admin_id, otpId, otpCode } = req.body || {};
+    if (!isNonEmptyString(full_name) || !validateEmail(email) || !validatePassword(password) || !isNonEmptyString(phone) || !isNonEmptyString(company_name)) {
+      const pwdErr = getPasswordValidationError(password);
+      return res.status(400).json({ message: 'Invalid input', errors: { password: pwdErr || 'Invalid password', email: validateEmail(email) ? undefined : 'Invalid email', full_name: isNonEmptyString(full_name) ? undefined : 'Name is required', phone: isNonEmptyString(phone) ? undefined : 'Phone is required', company_name: isNonEmptyString(company_name) ? undefined : 'Company name is required' } });
+    }
+    const existsAnywhere = await emailExistsAnywhere(email);
+    if (existsAnywhere.exists) return res.status(409).json({ message: 'Email already in use' });
+    
+    // Step 1: Send OTP if otpId/otpCode not provided
+    if (!otpId || !otpCode) {
+      console.log('[signupCompany] Sending OTP to', phone);
+      const { otpId: createdOtpId } = await sendSignupOtp({
+        phone,
+        purpose: 'company_signup',
+        meta: { full_name, email, phone, photo: photo || null, password, company_name, location: location || null, portal_role: portal_role || 'company_admin', created_by_admin_id: created_by_admin_id ?? null },
+      });
+      return res.status(202).json({ otpId: createdOtpId, message: 'OTP sent to phone' });
+    }
+
+    // Step 2: Verify OTP and create company
+    const verification = await verifySignupOtp({ otpId, code: otpCode, expectedPurpose: 'company_signup' });
+    console.log('[signupCompany] OTP verify result', verification);
+    if (!verification.ok) return res.status(400).json({ message: 'OTP verification failed', reason: verification.reason });
+    const meta = verification.meta || {};
+    const merged = {
+      full_name: req.body?.full_name ?? meta.full_name,
+      email: req.body?.email ?? meta.email,
+      phone: req.body?.phone ?? meta.phone ?? verification.phone,
+      photo: req.body?.photo ?? meta.photo,
+      password: req.body?.password ?? meta.password,
+      company_name: req.body?.company_name ?? meta.company_name,
+      location: req.body?.location ?? meta.location,
+      portal_role: req.body?.portal_role ?? meta.portal_role ?? 'company_admin',
+      created_by_admin_id: req.body?.created_by_admin_id ?? meta.created_by_admin_id,
+    };
+    if (!isNonEmptyString(merged.full_name) || !validateEmail(merged.email) || !validatePassword(merged.password) || !isNonEmptyString(merged.phone) || !isNonEmptyString(merged.company_name)) {
+      const pwdErr = getPasswordValidationError(merged.password);
+      return res.status(400).json({ message: 'Invalid input', errors: { password: pwdErr || 'Invalid password', email: validateEmail(merged.email) ? undefined : 'Invalid email', full_name: isNonEmptyString(merged.full_name) ? undefined : 'Name is required', phone: isNonEmptyString(merged.phone) ? undefined : 'Phone is required', company_name: isNonEmptyString(merged.company_name) ? undefined : 'Company name is required' } });
+    }
+
+    let adminIdToUse = null;
+    if (meta.created_by_admin_id !== undefined && meta.created_by_admin_id !== null && meta.created_by_admin_id !== '') {
+      const [adminRows] = await pool.query('SELECT id FROM super_admins WHERE id = ? LIMIT 1', [meta.created_by_admin_id]);
+      if (!adminRows[0]) {
+        return res.status(400).json({ message: 'Invalid created_by_admin_id (super admin not found)' });
+      }
+      adminIdToUse = meta.created_by_admin_id;
+    }
+
+    const password_hash = await hashPassword(merged.password);
+    const safeName = sanitizeName(merged.full_name);
+    const tenant_db = toSafeDbName(`company_${safeName}_${Date.now()}`);
+    const portalRole = normalizePortalRole(merged.portal_role || 'company_admin');
+
+    await createBrokerDatabaseIfNotExists(tenant_db);
+
+    const [result] = await pool.query(
+      `INSERT INTO companies (full_name, email, phone, photo, password_hash, portal_role, company_name, location, tenant_db, created_by_admin_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [safeName, merged.email, merged.phone || null, merged.photo || null, password_hash, portalRole, merged.company_name, merged.location || null, tenant_db, adminIdToUse]
+    );
+    const id = result.insertId;
+    try {
+      await pool.query(
+        `INSERT INTO super_admin_notifications (type, title, message, actor_broker_id, actor_broker_name, actor_broker_email)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          'company_signup',
+          'New company signup',
+          `${merged.company_name} has signed up as a company`,
+          id,
+          safeName,
+          merged.email,
+        ]
+      );
+    } catch (e) {
+    }
+    await consumeOtp(otpId);
+    const token = signJwt({ role: 'company', id, email: meta.email, tenant_db });
+    return res.status(201).json({ id, tenant_db, token });
+  } catch (err) {
+    console.error('signupCompany error:', err);
+    const isProd = process.env.NODE_ENV === 'production';
+    return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err), stack: isProd ? undefined : err?.stack });
+  }
+}
+
+export async function loginCompany(req, res) {
+  try {
+    const { email, password } = req.body || {};
+    if (!validateEmail(email) || !isNonEmptyString(password)) {
+      return res.status(400).json({ message: 'Invalid input' });
+    }
+    const company = await findUserByEmail('companies', email);
+    if (!company) return res.status(401).json({ message: 'Invalid credentials' });
+    const ok = await comparePassword(password, company.password_hash);
+    if (!ok) return res.status(401).json({ message: 'Invalid credentials' });
+    // Block login for suspended companies
+    if (company.status && company.status === 'suspended') {
+      return res.status(403).json({ message: 'Your account is suspended. Please contact customer support.' });
+    }
+    await pool.query('UPDATE companies SET last_login_at = NOW() WHERE id = ?', [company.id]);
+    const token = signJwt({ role: 'company', id: company.id, email: company.email, tenant_db: company.tenant_db });
+    return res.json({ token, tenant_db: company.tenant_db });
+  } catch (err) {
+    const isProd = process.env.NODE_ENV === 'production';
+    return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
+  }
+}
+
 export async function signupUser(req, res) {
   try {
     const { full_name, email, phone, photo, password, broker_id, otpId, otpCode } = req.body || {};
@@ -316,7 +427,7 @@ export async function whoami(req, res) {
       let [rows] = [];
       try {
         [rows] = await pool.query(
-          'SELECT id, full_name, email, phone, photo, license_no, location, company_name, tenant_db, document_type, document_front, document_back, created_by_admin_id, last_login_at FROM brokers WHERE id = ? LIMIT 1',
+          'SELECT id, full_name, email, phone, photo, license_no, location, address, store_name, company_name, tenant_db, document_type, document_front, document_back, instagram, facebook, linkedin, youtube, whatsapp_number, created_by_admin_id, last_login_at FROM brokers WHERE id = ? LIMIT 1',
           [id]
         );
       } catch (err) {
@@ -341,10 +452,66 @@ export async function whoami(req, res) {
           phone: row.phone,
           photo: row.photo,
           licenseNo: row.license_no,
+          location: row.location,
+          address: row.address,
+          storeName: row.store_name,
+          companyName: row.company_name,
           tenantDb: row.tenant_db,
           documentType: row.document_type || null,
           documentFront: row.document_front || null,
           documentBack: row.document_back || null,
+          instagram: row.instagram,
+          facebook: row.facebook,
+          linkedin: row.linkedin,
+          youtube: row.youtube,
+          whatsappNumber: row.whatsapp_number,
+          createdByAdminId: row.created_by_admin_id,
+          lastLoginAt: row.last_login_at,
+        },
+      });
+    }
+
+    if (role === 'company') {
+      let [rows] = [];
+      try {
+        [rows] = await pool.query(
+          'SELECT id, full_name, email, phone, photo, portal_role, company_name, location, address, store_name, tenant_db, document_type, document_front, document_back, instagram, facebook, linkedin, youtube, whatsapp_number, created_by_admin_id, last_login_at FROM companies WHERE id = ? LIMIT 1',
+          [id]
+        );
+      } catch (err) {
+        if (err.code === 'ER_BAD_FIELD_ERROR') {
+          [rows] = await pool.query(
+            'SELECT id, full_name, email, phone, photo, portal_role, company_name, location, tenant_db, created_by_admin_id, last_login_at FROM companies WHERE id = ? LIMIT 1',
+            [id]
+          );
+        } else {
+          throw err;
+        }
+      }
+      const row = rows[0];
+      if (!row) return res.status(404).json({ message: 'Not found' });
+      return res.json({
+        data: {
+          id: row.id,
+          role,
+          name: row.full_name,
+          email: row.email,
+          phone: row.phone,
+          photo: row.photo,
+          portalRole: row.portal_role,
+          companyName: row.company_name,
+          location: row.location,
+          address: row.address,
+          storeName: row.store_name,
+          tenantDb: row.tenant_db,
+          documentType: row.document_type || null,
+          documentFront: row.document_front || null,
+          documentBack: row.document_back || null,
+          instagram: row.instagram,
+          facebook: row.facebook,
+          linkedin: row.linkedin,
+          youtube: row.youtube,
+          whatsappNumber: row.whatsapp_number,
           createdByAdminId: row.created_by_admin_id,
           lastLoginAt: row.last_login_at,
         },
@@ -470,7 +637,7 @@ export async function updateBrokerProfile(req, res) {
       return res.status(403).json({ message: 'Forbidden' });
     }
 
-    const { full_name, email, phone, license_no } = req.body || {};
+    const { full_name, email, phone, license_no, location, address, store_name, company_name, instagram, facebook, linkedin, youtube, whatsapp_number } = req.body || {};
     // If file upload present, map to photo URL
     let photo = undefined;
     if (req.files) {
@@ -550,6 +717,51 @@ export async function updateBrokerProfile(req, res) {
       params.push(documentType);
     }
 
+    if (address !== undefined) {
+      updates.push('address = ?');
+      params.push(isNonEmptyString(address) ? address : null);
+    }
+
+    if (store_name !== undefined) {
+      updates.push('store_name = ?');
+      params.push(isNonEmptyString(store_name) ? store_name : null);
+    }
+
+    if (location !== undefined) {
+      updates.push('location = ?');
+      params.push(isNonEmptyString(location) ? location : null);
+    }
+
+    if (company_name !== undefined) {
+      updates.push('company_name = ?');
+      params.push(isNonEmptyString(company_name) ? company_name : null);
+    }
+
+    if (instagram !== undefined) {
+      updates.push('instagram = ?');
+      params.push(isNonEmptyString(instagram) ? instagram : null);
+    }
+
+    if (facebook !== undefined) {
+      updates.push('facebook = ?');
+      params.push(isNonEmptyString(facebook) ? facebook : null);
+    }
+
+    if (linkedin !== undefined) {
+      updates.push('linkedin = ?');
+      params.push(isNonEmptyString(linkedin) ? linkedin : null);
+    }
+
+    if (youtube !== undefined) {
+      updates.push('youtube = ?');
+      params.push(isNonEmptyString(youtube) ? youtube : null);
+    }
+
+    if (whatsapp_number !== undefined) {
+      updates.push('whatsapp_number = ?');
+      params.push(isNonEmptyString(whatsapp_number) ? whatsapp_number : null);
+    }
+
     if (updates.length === 0) {
       return res.status(400).json({ message: 'No fields to update' });
     }
@@ -558,7 +770,7 @@ export async function updateBrokerProfile(req, res) {
     await pool.query(`UPDATE brokers SET ${updates.join(', ')} WHERE id = ?`, params);
 
       const [rows] = await pool.query(
-        'SELECT id, full_name, email, phone, photo, license_no, location, company_name, tenant_db, document_type, document_front, document_back, created_by_admin_id, last_login_at FROM brokers WHERE id = ? LIMIT 1',
+        'SELECT id, full_name, email, phone, photo, license_no, location, address, store_name, company_name, tenant_db, document_type, document_front, document_back, instagram, facebook, linkedin, youtube, whatsapp_number, created_by_admin_id, last_login_at FROM brokers WHERE id = ? LIMIT 1',
       [id]
     );
     const row = rows[0];
@@ -570,13 +782,187 @@ export async function updateBrokerProfile(req, res) {
         email: row.email,
         phone: row.phone,
         photo: row.photo,
-          licenseNo: row.license_no,
-          location: row.location,
-          companyName: row.company_name,
+        licenseNo: row.license_no,
+        location: row.location,
+        address: row.address,
+        storeName: row.store_name,
+        companyName: row.company_name,
         tenantDb: row.tenant_db,
         documentType: row.document_type,
         documentFront: row.document_front,
         documentBack: row.document_back,
+        instagram: row.instagram,
+        facebook: row.facebook,
+        linkedin: row.linkedin,
+        youtube: row.youtube,
+        whatsappNumber: row.whatsapp_number,
+        createdByAdminId: row.created_by_admin_id,
+        lastLoginAt: row.last_login_at,
+      },
+    });
+  } catch (err) {
+    const isProd = process.env.NODE_ENV === 'production';
+    return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
+  }
+}
+
+export async function updateCompanyProfile(req, res) {
+  try {
+    const { role, id } = req.user || {};
+    if (!role || role !== 'company' || !id) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    const { full_name, email, phone, location, address, store_name, instagram, facebook, linkedin, youtube, whatsapp_number } = req.body || {};
+    // If file upload present, map to photo URL
+    let photo = undefined;
+    if (req.files) {
+      if (req.files.photo && req.files.photo[0]) {
+        photo = `/${req.files.photo[0].destination.replace(/\\/g, '/').replace(/^public\//, '')}/${req.files.photo[0].filename}`;
+      }
+    } else if (req.file) {
+      photo = `/${req.file.destination.replace(/\\/g, '/').replace(/^public\//, '')}/${req.file.filename}`;
+    } else if (Object.prototype.hasOwnProperty.call(req.body, 'photo')) {
+      // allow JSON payload to set/reset photo as URL
+      photo = req.body.photo;
+    }
+
+    let documentFront = undefined;
+    let documentBack = undefined;
+    let documentType = undefined;
+    if (req.files) {
+      if (req.files.document_front && req.files.document_front[0]) {
+        documentFront = `/${req.files.document_front[0].destination.replace(/\\/g, '/').replace(/^public\//, '')}/${req.files.document_front[0].filename}`;
+      }
+      if (req.files.document_back && req.files.document_back[0]) {
+        documentBack = `/${req.files.document_back[0].destination.replace(/\\/g, '/').replace(/^public\//, '')}/${req.files.document_back[0].filename}`;
+      }
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'document_type')) {
+      if (req.body.document_type && ['aadhaar', 'pan_card', 'driving_license', 'voter_id', 'other'].includes(req.body.document_type)) {
+        documentType = req.body.document_type;
+      } else {
+        documentType = null;
+      }
+    }
+
+    const updates = [];
+    const params = [];
+
+    if (full_name !== undefined) {
+      if (!isNonEmptyString(full_name)) return res.status(400).json({ message: 'Invalid full_name' });
+      updates.push('full_name = ?');
+      params.push(sanitizeName(full_name));
+    }
+
+    if (email !== undefined) {
+      if (!validateEmail(email)) return res.status(400).json({ message: 'Invalid email' });
+      const [dupes] = await pool.query('SELECT id FROM companies WHERE email = ? AND id <> ? LIMIT 1', [email, id]);
+      if (dupes[0]) return res.status(409).json({ message: 'Email already exists' });
+      updates.push('email = ?');
+      params.push(email);
+    }
+
+    if (phone !== undefined) {
+      updates.push('phone = ?');
+      params.push(isNonEmptyString(phone) ? phone : null);
+    }
+
+    if (photo !== undefined) {
+      updates.push('photo = ?');
+      params.push(isNonEmptyString(photo) ? photo : null);
+    }
+
+    if (documentFront !== undefined) {
+      updates.push('document_front = ?');
+      params.push(isNonEmptyString(documentFront) ? documentFront : null);
+    }
+
+    if (documentBack !== undefined) {
+      updates.push('document_back = ?');
+      params.push(isNonEmptyString(documentBack) ? documentBack : null);
+    }
+
+    if (documentType !== undefined) {
+      updates.push('document_type = ?');
+      params.push(documentType);
+    }
+
+    if (address !== undefined) {
+      updates.push('address = ?');
+      params.push(isNonEmptyString(address) ? address : null);
+    }
+
+    if (store_name !== undefined) {
+      updates.push('store_name = ?');
+      params.push(isNonEmptyString(store_name) ? store_name : null);
+    }
+
+    if (location !== undefined) {
+      updates.push('location = ?');
+      params.push(isNonEmptyString(location) ? location : null);
+    }
+
+    if (instagram !== undefined) {
+      updates.push('instagram = ?');
+      params.push(isNonEmptyString(instagram) ? instagram : null);
+    }
+
+    if (facebook !== undefined) {
+      updates.push('facebook = ?');
+      params.push(isNonEmptyString(facebook) ? facebook : null);
+    }
+
+    if (linkedin !== undefined) {
+      updates.push('linkedin = ?');
+      params.push(isNonEmptyString(linkedin) ? linkedin : null);
+    }
+
+    if (youtube !== undefined) {
+      updates.push('youtube = ?');
+      params.push(isNonEmptyString(youtube) ? youtube : null);
+    }
+
+    if (whatsapp_number !== undefined) {
+      updates.push('whatsapp_number = ?');
+      params.push(isNonEmptyString(whatsapp_number) ? whatsapp_number : null);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ message: 'No fields to update' });
+    }
+
+    params.push(id);
+    await pool.query(`UPDATE companies SET ${updates.join(', ')} WHERE id = ?`, params);
+
+    const [rows] = await pool.query(
+      'SELECT id, full_name, email, phone, photo, portal_role, company_name, location, address, store_name, tenant_db, document_type, document_front, document_back, instagram, facebook, linkedin, youtube, whatsapp_number, created_by_admin_id, last_login_at FROM companies WHERE id = ? LIMIT 1',
+      [id]
+    );
+    const row = rows[0];
+    if (!row) return res.status(404).json({ message: 'Not found' });
+    return res.json({
+      data: {
+        id: row.id,
+        role: 'company',
+        name: row.full_name,
+        email: row.email,
+        phone: row.phone,
+        photo: row.photo,
+        portalRole: row.portal_role,
+        companyName: row.company_name,
+        location: row.location,
+        address: row.address,
+        storeName: row.store_name,
+        tenantDb: row.tenant_db,
+        documentType: row.document_type,
+        documentFront: row.document_front,
+        documentBack: row.document_back,
+        instagram: row.instagram,
+        facebook: row.facebook,
+        linkedin: row.linkedin,
+        youtube: row.youtube,
+        whatsappNumber: row.whatsapp_number,
         createdByAdminId: row.created_by_admin_id,
         lastLoginAt: row.last_login_at,
       },

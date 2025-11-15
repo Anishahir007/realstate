@@ -188,14 +188,14 @@ const propertyFieldConfig = {
     showBathrooms: true,
     showBalconies: true,
     showFloors: true,
-    showPropertyOnFloor: true,
+    showPropertyOnFloor: false,
     showFurnishing: true,
     showFacing: true,
     showFlooring: true,
     showAge: true,
     showAdditionalRooms: true,
     showPropertyTags: true,
-    mandatory: ['built_up_area', 'expected_price', 'sale_type', 'no_of_floors', 'availability', 'property_on_floor', 'rera_status'],
+    mandatory: ['built_up_area', 'expected_price', 'sale_type', 'no_of_floors', 'availability', 'rera_status'],
     conditionalMandatory: {
       possession_by: (f) => f.availability !== 'ready_to_move',
       rera_number: (f) => f.rera_status === 'registered',
@@ -515,18 +515,34 @@ export default function NewProperty() {
     }
 
     const num = Number(features.expected_price);
+    const area = Number(features.built_up_area);
+    
+    // Set complete price in English words
     if (Number.isFinite(num) && num > 0) {
-      const unit = features.area_unit || 'Sq.ft.';
-      const short = num >= 10000000
-        ? `${(num / 10000000).toFixed(2)} Cr`
-        : `${(num / 100000).toFixed(2)} Lac`;
-      setPriceShortText(`${short}/${unit}`);
       setPriceWords(numberToIndianWords(num));
     } else {
-      setPriceShortText('');
       setPriceWords('');
     }
-  }, [features.expected_price, features.area_unit]);
+    
+    // Calculate price per square foot
+    if (Number.isFinite(num) && num > 0 && Number.isFinite(area) && area > 0) {
+      const pricePerSqft = num / area;
+      const unit = features.area_unit || 'Sq.ft.';
+      let short = '';
+      if (pricePerSqft >= 10000000) {
+        short = `${(pricePerSqft / 10000000).toFixed(2)} Cr`;
+      } else if (pricePerSqft >= 100000) {
+        short = `${(pricePerSqft / 100000).toFixed(2)} Lac`;
+      } else if (pricePerSqft >= 1000) {
+        short = `${(pricePerSqft / 1000).toFixed(2)} K`;
+      } else {
+        short = pricePerSqft.toFixed(2);
+      }
+      setPriceShortText(`${short}/${unit}`);
+    } else {
+      setPriceShortText('');
+    }
+  }, [features.expected_price, features.built_up_area, features.area_unit]);
 
   const [highlights, setHighlights] = useState([]);
   const [amenities, setAmenities] = useState([]);
@@ -711,12 +727,9 @@ export default function NewProperty() {
   const step3Progress = useMemo(() => {
     let hasImages = false;
     let hasDescription = false;
-    const tabs = ['exterior','bedroom','bathroom','kitchen','floor_plan','location_map','other'];
-    for (const tab of tabs) {
-      if (files?.[tab] && files[tab].length > 0) {
-        hasImages = true;
-        break;
-      }
+    // Check if there are any images in the allImages array
+    if (files?.allImages && files.allImages.length > 0) {
+      hasImages = true;
     }
     if (basic.description?.trim()) hasDescription = true;
     const filled = (hasImages ? 1 : 0) + (hasDescription ? 1 : 0);
@@ -865,35 +878,33 @@ export default function NewProperty() {
       
       propertyId = created.id;
 
-      // Media uploads per tab - if any fails, rollback by deleting property
-      const tabs = ['exterior','bedroom','bathroom','kitchen','floor_plan','location_map','other'];
+      // Media uploads - upload all images at once with default category
       try {
-        for (const tab of tabs) {
-          const arr = files?.[tab] || [];
-          // eslint-disable-next-line no-restricted-syntax
-          for (const [idx, file] of arr.entries()) {
-            const fd = new FormData();
-            fd.append('file', file);
-            fd.append('media_type', 'image');
-            fd.append('category', tab);
-            // eslint-disable-next-line no-await-in-loop
-            const { data: mediaResp } = await axios.post(`${apiBase}/api/properties/${propertyId}/media`, fd, {
-              headers: { Authorization: `Bearer ${token}` },
-            });
-            // set primary if selected locally
-            if (files?.primary && files.primary.tab === tab && files.primary.idx === idx && mediaResp?.id) {
-              // eslint-disable-next-line no-await-in-loop
-              await axios.post(`${apiBase}/api/properties/setprimary/${propertyId}/${mediaResp.id}`, {}, {
-                headers: { Authorization: `Bearer ${token}` },
-              });
-            }
+        const allImages = files?.allImages || [];
+        let primaryMediaId = null;
+        const primaryIdx = files?.primaryIdx !== undefined ? files.primaryIdx : 0; // Default to first image
+        
+        // eslint-disable-next-line no-restricted-syntax
+        for (const [idx, file] of allImages.entries()) {
+          const fd = new FormData();
+          fd.append('file', file);
+          fd.append('media_type', 'image');
+          // Use 'exterior' for first image, 'other' for rest
+          fd.append('category', idx === 0 ? 'exterior' : 'other');
+          // eslint-disable-next-line no-await-in-loop
+          const { data: mediaResp } = await axios.post(`${apiBase}/api/properties/${propertyId}/media`, fd, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          // Store primary media ID if this is the selected primary image
+          if (idx === primaryIdx && mediaResp?.id) {
+            primaryMediaId = mediaResp.id;
           }
         }
         
-        // Video upload if provided
-        if (files?.youtube_url) {
-          await axios.post(`${apiBase}/api/properties/${propertyId}/video`, { url: files.youtube_url, category: 'video' }, {
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        // Set primary image after all uploads are complete
+        if (primaryMediaId) {
+          await axios.post(`${apiBase}/api/properties/setprimary/${propertyId}/${primaryMediaId}`, {}, {
+            headers: { Authorization: `Bearer ${token}` },
           });
         }
 
@@ -1437,9 +1448,7 @@ export default function NewProperty() {
             <div className="np-field" style={{ gridColumn: '1 / span 3' }}>
               <label>Which authority the property is approved by?</label>
               <div className="np-chips">
-                {['BDA','BMRDA','MUDA'].map(a => (
-                  <button key={a} type="button" className={`np-chip${features.approving_authority===a?' np-chip--active':''}`} onClick={() => setFeatures(prev=>({ ...prev, approving_authority: a }))}>{a}</button>
-                ))}
+                <button type="button" className={`np-chip${features.approving_authority==='Local authority'?' np-chip--active':''}`} onClick={() => setFeatures(prev=>({ ...prev, approving_authority: 'Local authority' }))}>Local authority</button>
               </div>
             </div>
           </div>
@@ -1520,60 +1529,51 @@ export default function NewProperty() {
         canEdit={isStep1Complete && isStep2Complete}
       >
         <div className="np-accordion-body">
-        <div className="np-tabs">
-          {['exterior','bedroom','bathroom','kitchen','floor_plan','location_map','other'].map(tab => (
-            <button key={tab} type="button" className={`np-chip${(files.activeTab||'exterior')===tab?' np-chip--active':''}`} onClick={() => setFiles(prev => ({ ...prev, activeTab: tab }))}>{tab.replaceAll('_',' ')}</button>
-          ))}
-          <button type="button" className={`np-chip${(files.activeTab||'')==='video'?' np-chip--active':''}`} onClick={() => setFiles(prev => ({ ...prev, activeTab: 'video' }))}>video</button>
-        </div>
-        { (files.activeTab||'exterior') !== 'video' ? (
-          <div className="np-mt-8">
-            <div className="np-media-grid">
-              <label className="np-upload-card">
-                <input type="file" multiple accept="image/*" style={{ display:'none' }} onChange={(e) => {
-                  const selected = Array.from(e.target.files || []);
-                  const tab = (files.activeTab || 'exterior');
-                  setFiles(prev => ({ ...prev, [tab]: (prev?.[tab]||[]).concat(selected) }));
-                }} />
-                <div className="cloud">⬆</div>
-                <div className="title">Add Multiple Images</div>
-                <div className="subtitle">click to browse</div>
-                <button type="button" className="np-upload-btn">Upload Photos Now</button>
-              </label>
-              {(files?.[(files.activeTab||'exterior')]||[]).map((f, idx) => (
-                <div key={idx} className="np-media-card">
-                  <img src={URL.createObjectURL(f)} alt="preview" />
-                  <div className="np-media-chip">Under Screening</div>
-                  <div className="np-media-actions">
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <input type="radio" name="np-primary" checked={Boolean(files?.primary && files.primary.tab === (files.activeTab || 'exterior') && files.primary.idx === idx)} onChange={()=>{
-                        const tab = files.activeTab || 'exterior';
-                        setFiles(prev=> ({ ...prev, primary: { tab, idx } }));
-                      }} />
-                      <span>Set as Default</span>
-                    </label>
-                    <button className="np-small-btn" onClick={()=>{
-                      const tab = files.activeTab || 'exterior';
-                      setFiles(prev=>{
-                        const list = (prev?.[tab]||[]).slice();
-                        list.splice(idx,1);
-                        return { ...prev, [tab]: list };
-                      });
-                    }}>Remove</button>
-                  </div>
-                  <div style={{ fontSize: 12 }}>
-                    <button className="np-small-btn" onClick={()=> window.open(URL.createObjectURL(f), '_blank')}>View/Edit</button>
-                  </div>
+        <div className="np-mt-8">
+          <div className="np-media-grid">
+            <label className="np-upload-card">
+              <input type="file" multiple accept="image/*" style={{ display:'none' }} onChange={(e) => {
+                const selected = Array.from(e.target.files || []);
+                setFiles(prev => ({ ...prev, allImages: (prev?.allImages||[]).concat(selected) }));
+              }} />
+              <div className="cloud">⬆</div>
+              <div className="title">Add Multiple Images</div>
+              <div className="subtitle">click to browse</div>
+              <button type="button" className="np-upload-btn">Upload Photos Now</button>
+            </label>
+            {(files?.allImages||[]).map((f, idx) => (
+              <div key={idx} className="np-media-card">
+                <img src={URL.createObjectURL(f)} alt="preview" />
+                <div className="np-media-chip">Under Screening</div>
+                <div className="np-media-actions">
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <input type="radio" name="np-primary" checked={Boolean(files?.primaryIdx === idx || (idx === 0 && !files?.primaryIdx))} onChange={()=>{
+                      setFiles(prev=> ({ ...prev, primaryIdx: idx }));
+                    }} />
+                    <span>Set as Default</span>
+                  </label>
+                  <button className="np-small-btn" onClick={()=>{
+                    setFiles(prev=>{
+                      const list = (prev?.allImages||[]).slice();
+                      list.splice(idx,1);
+                      // Adjust primaryIdx if needed
+                      let newPrimaryIdx = prev?.primaryIdx;
+                      if (newPrimaryIdx === idx) {
+                        newPrimaryIdx = 0; // Reset to first image
+                      } else if (newPrimaryIdx > idx) {
+                        newPrimaryIdx = newPrimaryIdx - 1; // Adjust index
+                      }
+                      return { ...prev, allImages: list, primaryIdx: newPrimaryIdx };
+                    });
+                  }}>Remove</button>
                 </div>
-              ))}
-            </div>
+                <div style={{ fontSize: 12 }}>
+                  <button className="np-small-btn" onClick={()=> window.open(URL.createObjectURL(f), '_blank')}>View/Edit</button>
+                </div>
+              </div>
+            ))}
           </div>
-        ) : (
-          <div className="np-grid-3 np-mt-8">
-            <input name="youtube_url" placeholder="Enter YouTube Video URL or ID" value={files.youtube_url || ''} onChange={(e)=> setFiles(prev=> ({ ...prev, youtube_url: e.target.value }))} />
-            <div className="np-muted">Example: https://youtu.be/Nt27xdVgifk</div>
-          </div>
-        )}
+        </div>
         <textarea name="description" rows="4" placeholder="Property Descriptions" value={basic.description} onChange={onChange(setBasic)} className="np-textarea" />
         <div className="np-step-actions">
           <button type="button" className="np-btn-continue" onClick={handleStep3Continue}>

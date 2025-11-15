@@ -1,0 +1,172 @@
+.companypanelnavbar-sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 260px;
+  height: 100vh;
+  background: linear-gradient(180deg, #1e3a8a 0%, #1e40af 100%);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+}
+
+.companypanelnavbar-brand {
+  padding: 24px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.companypanelnavbar-brand img {
+  width: 32px;
+  height: 32px;
+}
+
+.companypanelnavbar-brand span {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.companypanelnavbar-nav {
+  flex: 1;
+  padding: 16px 0;
+  overflow-y: auto;
+}
+
+.companypanelnavbar-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  transition: all 0.2s;
+  border-left: 3px solid transparent;
+}
+
+.companypanelnavbar-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.companypanelnavbar-link-active {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border-left-color: #60a5fa;
+}
+
+.companypanelnavbar-icon {
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.companypanelnavbar-item-wrapper {
+  position: relative;
+}
+
+.companypanelnavbar-link {
+  cursor: pointer;
+  position: relative;
+}
+
+.companypanelnavbar-dropdown-arrow {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+
+/* Dropdown styles */
+.companypanelnavbar-dropdown {
+  margin-left: 24px;
+  margin-top: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 6px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.companypanelnavbar-dropdown-item {
+  color: rgba(255, 255, 255, 0.9);
+  text-decoration: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.companypanelnavbar-dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+}
+
+.companypanelnavbar-dropdown-item-active {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.companypanelnavbar-profile {
+  padding: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.companypanelnavbar-profile-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.companypanelnavbar-profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.companypanelnavbar-profile-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.companypanelnavbar-profile-name {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.companypanelnavbar-profile-email {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 768px) {
+  .companypanelnavbar-sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+}
+

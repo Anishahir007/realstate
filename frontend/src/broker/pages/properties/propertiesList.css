@@ -125,7 +125,9 @@
 .brokerproperties-field input:disabled { color: #111827; cursor: not-allowed; }
 .brokerproperties-miniinputs { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 10px; }
 
-.brokerproperties-tableactions { display: flex; position: relative; }
+.brokerproperties-tableactions { display: flex; gap: 8px; position: relative; }
+.brokerproperties-post-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px; border: 1px solid #2563eb; background: #2563eb; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease; }
+.brokerproperties-post-btn:hover { background: #1d4ed8; border-color: #1d4ed8; box-shadow: 0 4px 10px rgba(37,99,235,0.3); }
 .brokerproperties-columns-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px; border: 1px solid #cbd5f5; background: #fff; color: #1f2937; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease; }
 .brokerproperties-columns-btn:hover { background: #f8faff; border-color: #a5b4fc; box-shadow: 0 4px 10px rgba(59,130,246,0.18); }
 .brokerproperties-colmenu { position: absolute; top: calc(100% + 8px); right: 0; width: 200px; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 18px 30px rgba(15,23,42,0.18); padding: 14px; display: grid; gap: 10px; z-index: 30; }

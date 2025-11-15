@@ -20,6 +20,9 @@
 .brokerpanelnavbar-brand span { font-weight: 700; color: #000; }
 
 .brokerpanelnavbar-nav { display: flex; flex-direction: column; margin-top: 18px; gap: 6px; flex: 1 1 auto; }
+.brokerpanelnavbar-item-wrapper {
+  position: relative;
+}
 .brokerpanelnavbar-link {
   color: #111;
   text-decoration: none;
@@ -28,10 +31,52 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  cursor: pointer;
+  position: relative;
+}
+.brokerpanelnavbar-dropdown-arrow {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
 }
 .brokerpanelnavbar-icon { width: 18px; display: inline-flex; align-items: center; justify-content: center; }
 .brokerpanelnavbar-link:hover { background: rgba(0,0,0,0.06); color: #000; }
 .brokerpanelnavbar-link-active { background: #111318; color: #fff; }
+
+/* Dropdown styles */
+.brokerpanelnavbar-dropdown {
+  margin-left: 24px;
+  margin-top: 4px;
+  background: #f9fafb;
+  border-radius: 6px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid rgba(0,0,0,0.05);
+}
+
+.brokerpanelnavbar-dropdown-item {
+  color: #374151;
+  text-decoration: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.brokerpanelnavbar-dropdown-item:hover {
+  background: rgba(0,0,0,0.05);
+  color: #000;
+}
+
+.brokerpanelnavbar-dropdown-item-active {
+  background: #111318;
+  color: #fff;
+}
 
 .brokerpanelnavbar-profile {
   margin-top: 16px;

@@ -124,6 +124,314 @@ export async function getPropertyById(req, res) {
   }
 }
 
+export async function getFeaturedProperties(req, res) {
+  try {
+    const tenantDb = getTenantDb(req);
+    if (!tenantDb) {
+      return res.status(400).json({ 
+        message: 'Missing tenant database identifier. Please provide x-tenant-db header or ensure you are authenticated.' 
+      });
+    }
+
+    const limit = Math.min(20, Math.max(1, parseInt(req.query.limit, 10) || 8));
+    const tenantPool = await getTenantPool(tenantDb);
+    const baseUrl = process.env.API_BASE_URL || req.protocol + '://' + req.get('host');
+
+    // Fetch properties with highest price (featured = highest priced properties)
+    const [rows] = await tenantPool.query(
+      `SELECT p.id, p.title, p.city, p.state, p.locality, p.sub_locality, p.address, 
+              p.property_type, p.building_type, p.property_for, p.status,
+              p.description, p.created_at,
+              pf.expected_price, pf.built_up_area, pf.area_unit, pf.carpet_area, pf.carpet_area_unit,
+              pf.super_area, pf.super_area_unit, pf.num_bedrooms, pf.num_bathrooms,
+              pf.sale_type, pf.availability, pf.furnishing_status, pf.facing
+       FROM properties p
+       LEFT JOIN property_features pf ON pf.property_id = p.id
+       WHERE p.status = 'active' AND pf.expected_price IS NOT NULL AND pf.expected_price > 0
+       ORDER BY pf.expected_price DESC
+       LIMIT ?`,
+      [limit]
+    );
+
+    // Fetch media for each property
+    const propertiesWithMedia = await Promise.all(
+      rows.map(async (r) => {
+        let image_url = null;
+        let primary_image = null;
+        let media = [];
+        
+        try {
+          const [mediaRows] = await tenantPool.query(
+            'SELECT id, file_url, is_primary, category, media_type FROM property_media WHERE property_id = ? ORDER BY is_primary DESC, id ASC',
+            [r.id]
+          );
+          
+          if (mediaRows && mediaRows.length > 0) {
+            media = mediaRows.map(m => {
+              const fileUrl = m.file_url || '';
+              const fullUrl = fileUrl.startsWith('http') ? fileUrl : (fileUrl.startsWith('/') ? `${baseUrl}${fileUrl}` : `${baseUrl}/${fileUrl}`);
+              return {
+                id: m.id,
+                file_url: fullUrl,
+                url: fullUrl,
+                is_primary: Boolean(m.is_primary),
+                category: m.category,
+                media_type: m.media_type
+              };
+            });
+            
+            const primary = media.find(m => m.is_primary) || media[0];
+            if (primary) {
+              image_url = primary.file_url;
+              primary_image = primary.file_url;
+            }
+          }
+        } catch (mediaErr) {
+          console.error(`Error fetching media for property ${r.id}:`, mediaErr);
+        }
+
+        return {
+          ...r,
+          image_url,
+          primary_image,
+          image: image_url,
+          media,
+          price: r.expected_price,
+          area: r.built_up_area,
+          areaUnit: r.area_unit,
+          type: r.property_type
+        };
+      })
+    );
+
+    return res.json({ data: propertiesWithMedia });
+  } catch (err) {
+    const isProd = process.env.NODE_ENV === 'production';
+    return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
+  }
+}
+
+export async function getPropertyFilters(req, res) {
+  try {
+    const tenantDb = getTenantDb(req);
+    if (!tenantDb) return res.status(400).json({ message: 'Missing tenant' });
+
+    const tenantPool = await getTenantPool(tenantDb);
+
+    // Debug: Check total properties first
+    const [totalCheck] = await tenantPool.query(`SELECT COUNT(*) as total FROM properties`);
+    const [activeCheck] = await tenantPool.query(`SELECT COUNT(*) as active FROM properties WHERE status = 'active'`);
+    const [nullStatusCheck] = await tenantPool.query(`SELECT COUNT(*) as null_status FROM properties WHERE status IS NULL OR status = ''`);
+    const [withCity] = await tenantPool.query(`SELECT COUNT(*) as with_city FROM properties WHERE city IS NOT NULL AND city != ''`);
+    const [withType] = await tenantPool.query(`SELECT COUNT(*) as with_type FROM properties WHERE property_type IS NOT NULL AND property_type != ''`);
+    console.log(`[getPropertyFilters] Tenant: ${tenantDb}, Total: ${totalCheck[0]?.total || 0}, Active: ${activeCheck[0]?.active || 0}, Null/Empty Status: ${nullStatusCheck[0]?.null_status || 0}, With City: ${withCity[0]?.with_city || 0}, With Type: ${withType[0]?.with_type || 0}`);
+
+    // Get unique cities with count - show all properties (not just active) for filters
+    const [cities] = await tenantPool.query(
+      `SELECT city, COUNT(*) as count 
+       FROM properties 
+       WHERE city IS NOT NULL AND city != ''
+       GROUP BY city 
+       ORDER BY count DESC, city ASC`
+    );
+
+    // Get unique property types with count
+    const [propertyTypes] = await tenantPool.query(
+      `SELECT property_type, COUNT(*) as count 
+       FROM properties 
+       WHERE property_type IS NOT NULL AND property_type != ''
+       GROUP BY property_type 
+       ORDER BY count DESC, property_type ASC`
+    );
+
+    // Get unique localities with count
+    const [localities] = await tenantPool.query(
+      `SELECT locality, COUNT(*) as count 
+       FROM properties 
+       WHERE locality IS NOT NULL AND locality != ''
+       GROUP BY locality 
+       ORDER BY count DESC, locality ASC
+       LIMIT 100`
+    );
+
+    return res.json({
+      data: {
+        cities: cities.map(c => ({ value: c.city, label: c.city, count: c.count })),
+        propertyTypes: propertyTypes.map(pt => ({ 
+          value: pt.property_type, 
+          label: pt.property_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+          count: pt.count 
+        })),
+        localities: localities.map(l => ({ value: l.locality, label: l.locality, count: l.count }))
+      }
+    });
+  } catch (err) {
+    const isProd = process.env.NODE_ENV === 'production';
+    return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
+  }
+}
+
+export async function searchPropertiesPublic(req, res) {
+  try {
+    const tenantDb = getTenantDb(req);
+    if (!tenantDb) return res.status(400).json({ message: 'Missing tenant' });
+
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+    const offset = (page - 1) * limit;
+
+    // Build WHERE conditions
+    const where = [];
+    const params = [];
+
+    // Status filter - show all properties except 'inactive' and 'deleted'
+    // This includes: 'active', NULL, empty string, or any other status
+    where.push('(p.status IS NULL OR p.status NOT IN (?, ?))');
+    params.push('inactive', 'deleted');
+
+    // Property_for filter - handle multiple possible values with case-insensitive matching
+    const property_for = (req.query.property_for || '').toString().toLowerCase().trim();
+    if (property_for) {
+      if (property_for === 'sale') {
+        // When user selects "Buy", search for: sale, buy, purchase, sell (case-insensitive)
+        where.push('LOWER(TRIM(p.property_for)) IN (?, ?, ?, ?)');
+        params.push('sale', 'buy', 'purchase', 'sell');
+      } else if (property_for === 'rent') {
+        // When user selects "Rent", search for: rent, rental, lease (case-insensitive)
+        where.push('LOWER(TRIM(p.property_for)) IN (?, ?, ?)');
+        params.push('rent', 'rental', 'lease');
+      } else {
+        // For any other value, do case-insensitive match
+        where.push('LOWER(TRIM(p.property_for)) = LOWER(TRIM(?))');
+        params.push(property_for);
+      }
+    }
+
+    const property_type = (req.query.property_type || '').toString();
+    if (property_type) { where.push('p.property_type = ?'); params.push(property_type); }
+
+    const city = (req.query.city || '').toString();
+    if (city) { where.push('p.city = ?'); params.push(city); }
+
+    const locality = (req.query.locality || '').toString();
+    if (locality) { where.push('p.locality LIKE ?'); params.push(`%${locality}%`); }
+
+    // General text search query parameter (searches across title, city, locality, address, state)
+    const q = (req.query.q || '').toString().trim();
+    if (q) {
+      where.push('(p.title LIKE ? OR p.city LIKE ? OR p.locality LIKE ? OR p.sub_locality LIKE ? OR p.address LIKE ? OR p.state LIKE ?)');
+      params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
+    }
+
+    const minPrice = parseFloat(req.query.min_price);
+    if (!isNaN(minPrice) && minPrice > 0) { 
+      where.push('pf.expected_price >= ?'); 
+      params.push(minPrice); 
+    }
+
+    const maxPrice = parseFloat(req.query.max_price);
+    if (!isNaN(maxPrice) && maxPrice > 0) { 
+      where.push('pf.expected_price <= ?'); 
+      params.push(maxPrice); 
+    }
+
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+    const tenantPool = await getTenantPool(tenantDb);
+    const baseUrl = process.env.API_BASE_URL || req.protocol + '://' + req.get('host');
+
+    const [rows] = await tenantPool.query(
+      `SELECT p.id, p.title, p.city, p.state, p.locality, p.sub_locality, p.address, 
+              p.property_type, p.building_type, p.property_for, p.status,
+              p.description, p.created_at,
+              pf.expected_price, pf.built_up_area, pf.area_unit, pf.carpet_area, pf.carpet_area_unit,
+              pf.super_area, pf.super_area_unit, pf.num_bedrooms, pf.num_bathrooms,
+              pf.sale_type, pf.availability, pf.furnishing_status, pf.facing
+       FROM properties p
+       LEFT JOIN property_features pf ON pf.property_id = p.id
+       ${whereSql}
+       ORDER BY p.id DESC
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
+
+    const [countRows] = await tenantPool.query(`SELECT COUNT(*) as total FROM properties p LEFT JOIN property_features pf ON pf.property_id = p.id ${whereSql}`, params);
+    
+    // Debug logging - check what's actually in the database
+    const [propertyForCheck] = await tenantPool.query(`SELECT DISTINCT property_for, COUNT(*) as count FROM properties GROUP BY property_for ORDER BY count DESC`);
+    const [statusCheck] = await tenantPool.query(`SELECT DISTINCT status, COUNT(*) as count FROM properties GROUP BY status`);
+    const [totalProps] = await tenantPool.query(`SELECT COUNT(*) as total FROM properties`);
+    
+    console.log(`[searchPropertiesPublic] Tenant: ${tenantDb}`);
+    console.log(`[searchPropertiesPublic] Filter applied: property_for="${property_for}"`);
+    console.log(`[searchPropertiesPublic] WHERE SQL: ${whereSql}`);
+    console.log(`[searchPropertiesPublic] WHERE Params:`, params);
+    console.log(`[searchPropertiesPublic] Results: ${rows.length} properties found, Total matching: ${countRows[0]?.total || 0}`);
+    console.log(`[searchPropertiesPublic] DB Stats - Total properties: ${totalProps[0]?.total || 0}`);
+    console.log(`[searchPropertiesPublic] DB Stats - property_for values:`, propertyForCheck);
+    console.log(`[searchPropertiesPublic] DB Stats - status values:`, statusCheck);
+
+    // Fetch media for each property
+    const propertiesWithMedia = await Promise.all(
+      rows.map(async (r) => {
+        let image_url = null;
+        let primary_image = null;
+        let media = [];
+        
+        try {
+          const [mediaRows] = await tenantPool.query(
+            'SELECT id, file_url, is_primary, category, media_type FROM property_media WHERE property_id = ? ORDER BY is_primary DESC, id ASC',
+            [r.id]
+          );
+          
+          if (mediaRows && mediaRows.length > 0) {
+            media = mediaRows.map(m => {
+              const fileUrl = m.file_url || '';
+              const fullUrl = fileUrl.startsWith('http') ? fileUrl : (fileUrl.startsWith('/') ? `${baseUrl}${fileUrl}` : `${baseUrl}/${fileUrl}`);
+              return {
+                id: m.id,
+                file_url: fullUrl,
+                url: fullUrl,
+                is_primary: Boolean(m.is_primary),
+                category: m.category,
+                media_type: m.media_type
+              };
+            });
+            
+            const primary = media.find(m => m.is_primary) || media[0];
+            if (primary) {
+              image_url = primary.file_url;
+              primary_image = primary.file_url;
+            }
+          }
+        } catch (mediaErr) {
+          console.error(`Error fetching media for property ${r.id}:`, mediaErr);
+        }
+
+        return {
+          ...r,
+          image_url,
+          primary_image,
+          image: image_url,
+          media,
+          price: r.expected_price,
+          area: r.built_up_area,
+          areaUnit: r.area_unit,
+          type: r.property_type
+        };
+      })
+    );
+
+    return res.json({ 
+      data: propertiesWithMedia, 
+      meta: { page, limit, total: countRows[0]?.total || 0 } 
+    });
+  } catch (err) {
+    const isProd = process.env.NODE_ENV === 'production';
+    return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
+  }
+}
+
 export async function createProperty(req, res) {
   try {
     const tenantDb = getTenantDb(req);
@@ -222,7 +530,7 @@ export async function updateProperty(req, res) {
     const id = parseInt(req.params.id, 10);
     if (!id) return res.status(400).json({ message: 'Invalid id' });
     const body = req.body || {};
-    const allowed = ['property_for','building_type','property_type','title','description','state','city','locality','sub_locality','society_name','address','status'];
+    const allowed = ['property_for','building_type','property_type','title','description','state','city','locality','sub_locality','society_name','address','status','is_featured'];
     const updates = [];
     const params = [];
     for (const f of allowed) {
@@ -600,13 +908,13 @@ export async function deleteProperty(req, res) {
     return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
   }
 }
-
 // ========== Super Admin: cross-tenant property listing ==========
 export async function listAllBrokerPropertiesAdmin(req, res) {
   try {
     // Remove limit or set it very high to return all properties (frontend will handle pagination)
     const limit = req.query.limit ? Math.max(1, Math.min(10000, parseInt(req.query.limit, 10))) : 10000;
     const [brokers] = await pool.query('SELECT id, full_name, tenant_db FROM brokers WHERE tenant_db IS NOT NULL');
+    const [companies] = await pool.query('SELECT id, full_name, company_name, tenant_db FROM companies WHERE tenant_db IS NOT NULL');
     const out = [];
     for (const br of brokers) {
       try {
@@ -669,6 +977,9 @@ export async function listAllBrokerPropertiesAdmin(req, res) {
             tenantDb: br.tenant_db,
             brokerId: br.id,
             brokerName: br.full_name,
+            companyId: null,
+            companyName: null,
+            sourceType: 'broker',
             title: r.title,
             property_type: r.property_type,
             type: r.property_type,
@@ -741,6 +1052,138 @@ export async function listAllBrokerPropertiesAdmin(req, res) {
         // ignore tenant failures
       }
     }
+    
+    // Fetch company properties
+    for (const comp of companies) {
+      try {
+        const tenantPool = await getTenantPool(comp.tenant_db);
+        const [rows] = await tenantPool.query(
+          `SELECT p.id, p.title, p.city, p.state, p.locality, p.sub_locality, p.address, p.property_type, p.building_type, p.property_for, p.status,
+                  p.description, p.created_at,
+                  pf.expected_price, pf.built_up_area, pf.area_unit, pf.carpet_area, pf.carpet_area_unit,
+                  pf.super_area, pf.super_area_unit, pf.num_bedrooms, pf.num_bathrooms,
+                  pf.sale_type, pf.availability, pf.approving_authority, pf.ownership, pf.rera_status, pf.rera_number,
+                  pf.no_of_floors, pf.property_on_floor, pf.furnishing_status, pf.facing, pf.flooring_type, pf.age_years,
+                  pf.booking_amount, pf.maintenance_charges, pf.possession_by
+           FROM properties p
+           LEFT JOIN property_features pf ON pf.property_id = p.id
+           ORDER BY p.id DESC`
+        );
+        for (const r of rows) {
+          // fetch first/primary image and all media
+          let image = null;
+          let imageUrl = null;
+          let primaryImage = null;
+          let media = [];
+          const baseUrl = process.env.API_BASE_URL || req.protocol + '://' + req.get('host');
+          try {
+            const [mediaRows] = await tenantPool.query(
+              'SELECT id, file_url, is_primary, category, media_type FROM property_media WHERE property_id = ? ORDER BY is_primary DESC, id ASC',
+              [r.id]
+            );
+            if (mediaRows && mediaRows.length > 0) {
+              media = mediaRows.map(m => {
+                const fileUrl = m.file_url || '';
+                const fullUrl = fileUrl.startsWith('http') ? fileUrl : (fileUrl.startsWith('/') ? `${baseUrl}${fileUrl}` : `${baseUrl}/${fileUrl}`);
+                return {
+                  id: m.id,
+                  file_url: fullUrl,
+                  url: fullUrl,
+                  is_primary: Boolean(m.is_primary),
+                  category: m.category,
+                  media_type: m.media_type
+                };
+              });
+              const primary = mediaRows.find(m => m.is_primary) || mediaRows[0];
+              const fileUrl = primary?.file_url || '';
+              const fullImageUrl = fileUrl.startsWith('http') ? fileUrl : (fileUrl.startsWith('/') ? `${baseUrl}${fileUrl}` : `${baseUrl}/${fileUrl}`);
+              image = fileUrl ? fullImageUrl : null;
+              imageUrl = fileUrl ? fullImageUrl : null;
+              primaryImage = fileUrl ? fullImageUrl : null;
+            }
+          } catch (mediaErr) {
+            // Ignore media errors
+          }
+          
+          out.push({
+            id: r.id,
+            tenantDb: comp.tenant_db,
+            brokerId: null,
+            brokerName: null,
+            companyId: comp.id,
+            companyName: comp.company_name || comp.full_name,
+            sourceType: 'company',
+            title: r.title,
+            property_type: r.property_type,
+            type: r.property_type,
+            building_type: r.building_type,
+            buildingType: r.building_type,
+            property_for: r.property_for,
+            propertyFor: r.property_for,
+            sale_type: r.sale_type,
+            saleType: r.sale_type,
+            availability: r.availability,
+            approvingAuthority: r.approving_authority,
+            ownership: r.ownership,
+            rera_status: r.rera_status,
+            reraStatus: r.rera_status,
+            rera_number: r.rera_number,
+            reraNumber: r.rera_number,
+            floors: r.no_of_floors,
+            no_of_floors: r.no_of_floors,
+            property_on_floor: r.property_on_floor,
+            propertyOnFloor: r.property_on_floor,
+            furnishing_status: r.furnishing_status,
+            furnishingStatus: r.furnishing_status,
+            facing: r.facing,
+            flooring_type: r.flooring_type,
+            flooringType: r.flooring_type,
+            age_years: r.age_years,
+            ageYears: r.age_years,
+            expected_price: r.expected_price,
+            price: r.expected_price,
+            built_up_area: r.built_up_area,
+            area: r.built_up_area,
+            area_unit: r.area_unit,
+            areaUnit: r.area_unit,
+            carpet_area: r.carpet_area,
+            carpetArea: r.carpet_area,
+            carpet_area_unit: r.carpet_area_unit,
+            carpetAreaUnit: r.carpet_area_unit,
+            super_area: r.super_area,
+            superArea: r.super_area,
+            super_area_unit: r.super_area_unit,
+            superAreaUnit: r.super_area_unit,
+            num_bedrooms: r.num_bedrooms,
+            bedrooms: r.num_bedrooms,
+            num_bathrooms: r.num_bathrooms,
+            bathrooms: r.num_bathrooms,
+            booking_amount: r.booking_amount,
+            bookingAmount: r.booking_amount,
+            maintenance_charges: r.maintenance_charges,
+            maintenanceCharges: r.maintenance_charges,
+            possession_by: r.possession_by,
+            possessionBy: r.possession_by,
+            description: r.description,
+            city: r.city,
+            state: r.state,
+            locality: r.locality,
+            sub_locality: r.sub_locality,
+            subLocality: r.sub_locality,
+            address: r.address,
+            image: image || null,
+            image_url: imageUrl || null,
+            primary_image: primaryImage || null,
+            media: media || [],
+            status: r.status || 'active',
+            created_at: r.created_at ? new Date(r.created_at).toISOString() : null,
+            createdAt: r.created_at ? new Date(r.created_at).toISOString() : null,
+          });
+        }
+      } catch (e) {
+        // ignore tenant failures
+      }
+    }
     out.sort((a, b) => {
       const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -802,6 +1245,7 @@ export async function getBrokerPropertyAdmin(req, res) {
 export async function getSuperAdminPropertyStats(req, res) {
   try {
     const [brokers] = await pool.query('SELECT id, tenant_db FROM brokers WHERE tenant_db IS NOT NULL');
+    const [companies] = await pool.query('SELECT id, tenant_db FROM companies WHERE tenant_db IS NOT NULL');
     let totalProperties = 0;
     let publishedProperties = 0;
     let highDemandProperties = 0;
@@ -842,6 +1286,37 @@ export async function getSuperAdminPropertyStats(req, res) {
         highDemandProperties += Number(highDemand?.count || 0);
         
         // Broker tenant leads (updated in last 24 hours)
+        try {
+          await ensureTenantLeadsTableExists(tenantPool);
+          const [[leads]] = await tenantPool.query('SELECT COUNT(*) as count FROM leads WHERE updated_at >= ?', [oneDayAgoStr]);
+          activeLeads += Number(leads?.count || 0);
+        } catch (e) {
+          // Ignore if leads table doesn't exist
+        }
+      } catch (e) {
+        // Ignore tenant errors
+      }
+    }
+    
+    // Company properties
+    for (const comp of companies) {
+      if (!comp.tenant_db) continue;
+      try {
+        const tenantPool = await getTenantPool(comp.tenant_db);
+        const [[total]] = await tenantPool.query('SELECT COUNT(*) as count FROM properties');
+        totalProperties += Number(total?.count || 0);
+        
+        const [[published]] = await tenantPool.query('SELECT COUNT(*) as count FROM properties WHERE (status != ? AND status != ?) OR status IS NULL', ['inactive', 'sold']);
+        publishedProperties += Number(published?.count || 0);
+        
+        const [[newWeek]] = await tenantPool.query('SELECT COUNT(*) as count FROM properties WHERE created_at >= ?', [oneWeekAgoStr]);
+        newThisWeek += Number(newWeek?.count || 0);
+        
+        // High demand: properties updated in last 24 hours (most active)
+        const [[highDemand]] = await tenantPool.query('SELECT COUNT(*) as count FROM properties WHERE updated_at >= ? AND (status = ? OR status IS NULL)', [oneDayAgoStr, 'active']);
+        highDemandProperties += Number(highDemand?.count || 0);
+        
+        // Company tenant leads (updated in last 24 hours)
         try {
           await ensureTenantLeadsTableExists(tenantPool);
           const [[leads]] = await tenantPool.query('SELECT COUNT(*) as count FROM leads WHERE updated_at >= ?', [oneDayAgoStr]);
@@ -996,3 +1471,4 @@ export async function getBrokerPropertyStats(req, res) {
     return res.status(500).json({ message: 'Server error' });
   }
 }
+

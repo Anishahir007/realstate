@@ -1,8 +1,11 @@
 import { Router } from 'express';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { listAdminLeads, createAdminLead, updateAdminLead, listBrokerLeads, createBrokerLead, updateBrokerLead, listAllSourcesLeads } from '../controllers/leadsController.js';
+import { listAdminLeads, createAdminLead, updateAdminLead, listBrokerLeads, createBrokerLead, updateBrokerLead, listCompanyLeads, createCompanyLead, updateCompanyLead, listAllSourcesLeads, createPublicLead } from '../controllers/leadsController.js';
 
 const router = Router();
+
+// Public lead creation (for broker/company websites - uses x-tenant-db header)
+router.post('/public', createPublicLead);
 
 // Admin-scoped leads (main website leads only)
 // GET /api/leads/admin -> list admin leads
@@ -18,7 +21,14 @@ router.get('/broker', requireAuth, requireRole('broker'), listBrokerLeads);
 router.post('/broker', requireAuth, requireRole('broker'), createBrokerLead);
 router.patch('/broker/:id', requireAuth, requireRole('broker'), updateBrokerLead);
 
-// Super admin combined view (admin + all brokers)
+// Company-scoped leads (company website tenant DB)
+// GET /api/leads/company -> list company leads
+// POST /api/leads/company -> create company lead
+router.get('/company', requireAuth, requireRole('company'), listCompanyLeads);
+router.post('/company', requireAuth, requireRole('company'), createCompanyLead);
+router.patch('/company/:id', requireAuth, requireRole('company'), updateCompanyLead);
+
+// Super admin combined view (admin + all brokers + all companies)
 // GET /api/leads/admin/all-sources
 router.get('/admin/all-sources', requireAuth, requireRole('super_admin'), listAllSourcesLeads);
 

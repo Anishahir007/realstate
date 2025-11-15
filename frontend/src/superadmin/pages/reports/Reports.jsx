@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import axios from 'axios';
 import { useSuperAdmin } from '../../../context/SuperAdminContext.jsx';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
@@ -26,11 +26,153 @@ const REPORT_TABS = [
   { id: 'analytics', label: 'Analytics', icon: '📈' },
 ];
 
-const QUICK_RANGES = [
-  { key: 'this-month', label: 'This Month' },
-  { key: 'this-year', label: 'This Year' },
-  { key: 'all', label: 'All Time' },
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DATE_DISPLAY = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+const QUICK_RANGE_OPTIONS = [
+  { key: 'this-month', label: 'This month' },
+  { key: 'this-year', label: 'This year' },
+  { key: 'all', label: 'All time' },
 ];
+
+const pad = (value) => String(value).padStart(2, '0');
+
+function parseDateValue(value) {
+  if (!value && value !== 0) return null;
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : new Date(value);
+  }
+  const str = value.toString();
+  if (str.includes('T')) {
+    const dt = new Date(str);
+    if (!Number.isNaN(dt.getTime())) return dt;
+  }
+  const parts = str.split('-').map((segment) => Number.parseInt(segment, 10));
+  if (parts.length >= 2 && parts.every((num) => Number.isFinite(num))) {
+    const [year, month, day = 1] = parts;
+    const dt = new Date(year, month - 1, day);
+    return Number.isNaN(dt.getTime()) ? null : dt;
+  }
+  const fallback = new Date(str);
+  return Number.isNaN(fallback.getTime()) ? null : fallback;
+}
+
+function formatDateInput(date) {
+  const dt = parseDateValue(date);
+  if (!dt) return '';
+  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+}
+
+function monthValueFromDate(date) {
+  const dt = parseDateValue(date) || new Date();
+  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}`;
+}
+
+function formatRangeLabel({ key, from, to, monthValue, yearValue }) {
+  if (key === 'this-month') return 'This month';
+  if (key === 'this-year') return 'This year';
+  if (key === 'all') return 'All time';
+  if (key === 'month' && monthValue) {
+    const [y, m] = monthValue.split('-');
+    const yearNum = Number.parseInt(y, 10);
+    const monthNum = Number.parseInt(m, 10);
+    if (Number.isFinite(yearNum) && Number.isFinite(monthNum)) {
+      return `${MONTH_NAMES[monthNum - 1] || 'Month'} ${yearNum}`;
+    }
+  }
+  if (key === 'year' && yearValue) {
+    return `Year ${yearValue}`;
+  }
+  const fromDate = parseDateValue(from);
+  const toDate = parseDateValue(to || from);
+  if (fromDate && toDate) {
+    const formattedFrom = DATE_DISPLAY.format(fromDate);
+    const formattedTo = DATE_DISPLAY.format(toDate);
+    return formattedFrom === formattedTo ? formattedFrom : `${formattedFrom} – ${formattedTo}`;
+  }
+  if (fromDate) return DATE_DISPLAY.format(fromDate);
+  return 'Custom range';
+}
+
+function buildFilter({ key, from, to, monthValue, yearValue }) {
+  const base = {
+    key,
+    from: from || null,
+    to: to || null,
+    monthValue: monthValue || null,
+    yearValue: yearValue || null,
+  };
+  return { ...base, label: formatRangeLabel(base) };
+}
+
+function createPresetFilter(key, referenceDate = new Date()) {
+  const ref = parseDateValue(referenceDate) || new Date();
+  if (key === 'this-month') {
+    const start = new Date(ref.getFullYear(), ref.getMonth(), 1);
+    const end = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate());
+    return buildFilter({
+      key,
+      from: formatDateInput(start),
+      to: formatDateInput(end),
+      monthValue: monthValueFromDate(ref),
+      yearValue: String(ref.getFullYear()),
+    });
+  }
+  if (key === 'this-year') {
+    const start = new Date(ref.getFullYear(), 0, 1);
+    const end = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate());
+    return buildFilter({
+      key,
+      from: formatDateInput(start),
+      to: formatDateInput(end),
+      yearValue: String(ref.getFullYear()),
+    });
+  }
+  if (key === 'all') {
+    return buildFilter({ key });
+  }
+  return buildFilter({ key });
+}
+
+function computeMonthRange(monthValue) {
+  const [y, m] = (monthValue || '').split('-');
+  const yearNum = Number.parseInt(y, 10);
+  const monthNum = Number.parseInt(m, 10) - 1;
+  if (!Number.isFinite(yearNum) || !Number.isFinite(monthNum) || monthNum < 0 || monthNum > 11) {
+    return null;
+  }
+  const start = new Date(yearNum, monthNum, 1);
+  const end = new Date(yearNum, monthNum + 1, 0);
+  return {
+    from: formatDateInput(start),
+    to: formatDateInput(end),
+    monthValue,
+    yearValue: String(yearNum),
+  };
+}
+
+function computeYearRange(yearValue) {
+  const yearNum = Number.parseInt(yearValue, 10);
+  if (!Number.isFinite(yearNum)) return null;
+  const start = new Date(yearNum, 0, 1);
+  const end = new Date(yearNum, 11, 31);
+  return {
+    from: formatDateInput(start),
+    to: formatDateInput(end),
+    yearValue: String(yearNum),
+  };
+}
+
+function getMonthParts(monthValue) {
+  const now = new Date();
+  const [y, m] = (monthValue || '').split('-');
+  let year = Number.parseInt(y, 10);
+  let monthIndex = Number.parseInt(m, 10) - 1;
+  if (!Number.isFinite(year)) year = now.getFullYear();
+  if (!Number.isFinite(monthIndex) || monthIndex < 0 || monthIndex > 11) monthIndex = now.getMonth();
+  return { year, monthIndex };
+}
+
+const DEFAULT_FILTER = createPresetFilter('all');
 
 const formatCurrency = (value) => {
   const num = Number(value);
@@ -72,18 +214,124 @@ const exportToCSV = (data, filename) => {
 export default function Reports() {
   const { token, apiBase } = useSuperAdmin();
   const [activeTab, setActiveTab] = useState('brokers');
-  const [dateRange, setDateRange] = useState('all');
+  const [filter, setFilter] = useState(() => DEFAULT_FILTER);
+  const [filterMenuOpen, setFilterMenuOpen] = useState(false);
+  const filterButtonRef = useRef(null);
+  const filterMenuRef = useRef(null);
+  const [monthDraft, setMonthDraft] = useState(() => DEFAULT_FILTER.monthValue || monthValueFromDate(new Date()));
+  const [yearDraft, setYearDraft] = useState(() => DEFAULT_FILTER.yearValue || String(new Date().getFullYear()));
+  const [customDraft, setCustomDraft] = useState(() => ({ from: DEFAULT_FILTER.from || '', to: DEFAULT_FILTER.to || '' }));
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
+  const monthParts = useMemo(() => getMonthParts(monthDraft), [monthDraft]);
+  const monthYearOptions = useMemo(() => {
+    const current = new Date().getFullYear();
+    const base = Array.from({ length: 9 }, (_, idx) => current + 4 - idx);
+    if (!base.includes(monthParts.year)) base.push(monthParts.year);
+    return Array.from(new Set(base)).sort((a, b) => b - a);
+  }, [monthParts.year]);
+  const monthValid = useMemo(() => /^\d{4}-\d{2}$/.test(monthDraft), [monthDraft]);
+  const yearValid = useMemo(() => {
+    if (!/^\d{4}$/.test(yearDraft)) return false;
+    const yearNum = Number.parseInt(yearDraft, 10);
+    return yearNum >= 2000 && yearNum <= 2100;
+  }, [yearDraft]);
+  const customRangeError = useMemo(() => {
+    if (!customDraft.from && !customDraft.to) return '';
+    if (!customDraft.from || !customDraft.to) return 'Select both start and end dates.';
+    if (customDraft.from > customDraft.to) return 'End date must be after start date.';
+    return '';
+  }, [customDraft.from, customDraft.to]);
+  const customRangeValid = Boolean(customDraft.from && customDraft.to && !customRangeError);
 
   const headers = useMemo(() => ({ Authorization: token ? `Bearer ${token}` : '' }), [token]);
+
+  useEffect(() => {
+    if (!filterMenuOpen) return undefined;
+    function handleClickOutside(event) {
+      if (!filterMenuRef.current || !filterButtonRef.current) return;
+      if (filterMenuRef.current.contains(event.target) || filterButtonRef.current.contains(event.target)) return;
+      setFilterMenuOpen(false);
+    }
+    function handleEsc(event) {
+      if (event.key === 'Escape') setFilterMenuOpen(false);
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEsc);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEsc);
+    };
+  }, [filterMenuOpen]);
+
+  const applyFilter = (nextFilter) => {
+    setFilter(nextFilter);
+    setCustomDraft({ from: nextFilter.from || '', to: nextFilter.to || '' });
+    if (nextFilter.monthValue) setMonthDraft(nextFilter.monthValue);
+    if (nextFilter.yearValue) setYearDraft(nextFilter.yearValue);
+    setFilterMenuOpen(false);
+  };
+
+  const handleSelectPreset = (key) => {
+    applyFilter(createPresetFilter(key));
+  };
+
+  const handleApplyMonth = () => {
+    if (!monthValid) return;
+    const range = computeMonthRange(monthDraft);
+    if (!range) return;
+    applyFilter(buildFilter({ key: 'month', ...range }));
+  };
+
+  const handleApplyYear = () => {
+    if (!yearValid) return;
+    const range = computeYearRange(yearDraft);
+    if (!range) return;
+    applyFilter(buildFilter({ key: 'year', ...range }));
+  };
+
+  const handleApplyCustom = () => {
+    if (!customRangeValid) return;
+    applyFilter(buildFilter({ key: 'custom', from: customDraft.from, to: customDraft.to }));
+  };
+
+  const handleYearInput = (event) => {
+    const safe = event.target.value.replace(/[^0-9]/g, '').slice(0, 4);
+    setYearDraft(safe);
+  };
+
+  const handleSelectMonth = (event) => {
+    const nextMonthIndex = Number.parseInt(event.target.value, 10);
+    if (!Number.isFinite(nextMonthIndex)) return;
+    const value = `${monthParts.year}-${pad(nextMonthIndex + 1)}`;
+    setMonthDraft(value);
+  };
+
+  const handleSelectMonthYear = (event) => {
+    const nextYear = Number.parseInt(event.target.value, 10);
+    if (!Number.isFinite(nextYear)) return;
+    const value = `${nextYear}-${pad(monthParts.monthIndex + 1)}`;
+    setMonthDraft(value);
+  };
+
+  const buildExportFilename = (prefix) => {
+    const key = filter?.key || 'all';
+    const dateStamp = new Date().toISOString().split('T')[0];
+    return `${prefix}-${key}-${dateStamp}.csv`;
+  };
 
   useEffect(() => {
     if (!token) return;
     setLoading(true);
     const endpoint = `/api/reports/${activeTab}`;
-    const params = { range: dateRange };
-    
+    const params = {};
+    if (filter.key) params.range = filter.key;
+    if (filter.from) params.from = filter.from;
+    if (filter.to) params.to = filter.to;
+    if (filter.key === 'month' && filter.monthValue) params.month = filter.monthValue;
+    if (filter.key === 'year' && filter.yearValue) params.year = filter.yearValue;
+    if ((filter.key === 'this-month' || filter.key === 'this-year') && filter.yearValue) params.year = filter.yearValue;
+
     axios.get(`${apiBase}${endpoint}`, { headers, params })
       .then(({ data: resData }) => {
         setData(resData?.data || null);
@@ -95,7 +343,7 @@ export default function Reports() {
       .finally(() => {
         setLoading(false);
       });
-  }, [activeTab, dateRange, apiBase, headers, token]);
+  }, [activeTab, apiBase, headers, token, filter]);
 
   // Export handlers
   const handleExportBrokers = () => {
@@ -114,7 +362,7 @@ export default function Reports() {
         'Brokers Added': b.propertyCount,
       })),
     ];
-    exportToCSV(exportData, `broker-reports-${dateRange}-${new Date().toISOString().split('T')[0]}.csv`);
+    exportToCSV(exportData, buildExportFilename('broker-reports'));
   };
 
   const handleExportProperties = () => {
@@ -139,7 +387,7 @@ export default function Reports() {
         'Properties Added': c.count,
       })),
     ];
-    exportToCSV(exportData, `property-reports-${dateRange}-${new Date().toISOString().split('T')[0]}.csv`);
+    exportToCSV(exportData, buildExportFilename('property-reports'));
   };
 
   const handleExportLeads = () => {
@@ -164,7 +412,7 @@ export default function Reports() {
         'Leads Generated': b.count,
       })),
     ];
-    exportToCSV(exportData, `leads-reports-${dateRange}-${new Date().toISOString().split('T')[0]}.csv`);
+    exportToCSV(exportData, buildExportFilename('leads-reports'));
   };
 
   const handleExportAnalytics = () => {
@@ -178,7 +426,7 @@ export default function Reports() {
       Leads: b.leads,
       'Conversion Rate (%)': b.conversionRate,
     }));
-    exportToCSV(exportData, `analytics-report-${dateRange}-${new Date().toISOString().split('T')[0]}.csv`);
+    exportToCSV(exportData, buildExportFilename('analytics-report'));
   };
 
   const renderBrokerReports = () => {
@@ -615,16 +863,103 @@ export default function Reports() {
           <div className="reports-subtitle">Comprehensive insights into your real estate platform</div>
         </div>
         <div className="reports-date-filter">
-          {QUICK_RANGES.map((range) => (
+          <div className="reports-filterwrap">
             <button
-              key={range.key}
               type="button"
-              className={`reports-range-btn ${dateRange === range.key ? 'active' : ''}`}
-              onClick={() => setDateRange(range.key)}
+              ref={filterButtonRef}
+              className="reports-filter"
+              aria-haspopup="menu"
+              aria-expanded={filterMenuOpen}
+              onClick={() => setFilterMenuOpen((open) => !open)}
             >
-              {range.label}
+              <span>{filter.label}</span>
+              <svg className="reports-filter-caret" viewBox="0 0 24 24" width="18" height="18" aria-hidden>
+                <path fill="currentColor" d="M7 10l5 5 5-5z" />
+              </svg>
             </button>
-          ))}
+            {filterMenuOpen && (
+              <div className="reports-filtermenu" ref={filterMenuRef} role="menu">
+                <div className="reports-filterheader">
+                  <div className="reports-filtertitle">Date range</div>
+                  <div className="reports-filtersubtitle">Currently showing {filter.label}</div>
+                </div>
+
+                <div className="reports-filtergroup">
+                  <div className="reports-filterheading">Quick ranges</div>
+                  <div className="reports-chiprow">
+                    {QUICK_RANGE_OPTIONS.map((option) => (
+                      <button
+                        type="button"
+                        key={option.key}
+                        className="reports-filterchip"
+                        aria-pressed={filter.key === option.key}
+                        onClick={() => handleSelectPreset(option.key)}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="reports-filtergroup">
+                  <div className="reports-filterheading">Month</div>
+                  <div className="reports-filterrow reports-filterrow-month">
+                    <select value={monthParts.monthIndex} onChange={handleSelectMonth} aria-label="Select month">
+                      {MONTH_NAMES.map((name, idx) => (
+                        <option key={name} value={idx}>{name}</option>
+                      ))}
+                    </select>
+                    <select value={monthParts.year} onChange={handleSelectMonthYear} aria-label="Select year for month">
+                      {monthYearOptions.map((yearValue) => (
+                        <option key={yearValue} value={yearValue}>{yearValue}</option>
+                      ))}
+                    </select>
+                    <button type="button" onClick={handleApplyMonth} disabled={!monthValid}>Apply</button>
+                  </div>
+                </div>
+
+                <div className="reports-filtergroup">
+                  <div className="reports-filterheading">Year</div>
+                  <div className="reports-filterrow reports-filterrow-year">
+                    <input
+                      type="number"
+                      min="2000"
+                      max="2100"
+                      value={yearDraft}
+                      onChange={handleYearInput}
+                      aria-label="Select year"
+                    />
+                    <button type="button" onClick={handleApplyYear} disabled={!yearValid}>Apply</button>
+                  </div>
+                </div>
+
+                <div className="reports-filtergroup">
+                  <div className="reports-filterheading">Custom range</div>
+                  <div className="reports-filterrow reports-filterrow-dates">
+                    <input
+                      type="date"
+                      value={customDraft.from}
+                      onChange={(event) => setCustomDraft((prev) => ({ ...prev, from: event.target.value }))}
+                      aria-label="Start date"
+                    />
+                    <span>to</span>
+                    <input
+                      type="date"
+                      value={customDraft.to}
+                      onChange={(event) => setCustomDraft((prev) => ({ ...prev, to: event.target.value }))}
+                      aria-label="End date"
+                    />
+                  </div>
+                  {customRangeError && (
+                    <div className="reports-filterhelp">{customRangeError}</div>
+                  )}
+                  <div className="reports-filterrow reports-filterrow-actions">
+                    <button type="button" onClick={handleApplyCustom} disabled={!customRangeValid}>Apply</button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

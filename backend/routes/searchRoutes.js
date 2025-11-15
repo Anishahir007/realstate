@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { superAdminSearch, brokerSearch } from '../controllers/searchController.js';
+import { superAdminSearch, brokerSearch, companySearch } from '../controllers/searchController.js';
 
 const router = Router();
 
@@ -9,6 +9,9 @@ router.get('/superadmin', requireAuth, requireRole('super_admin'), superAdminSea
 
 // Broker search
 router.get('/broker', requireAuth, requireRole('broker'), brokerSearch);
+
+// Company search
+router.get('/company', requireAuth, requireRole('company'), companySearch);
 
 export default router;
 

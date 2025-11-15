@@ -1,0 +1,79 @@
+.companynotification { position: relative; }
+.companynotification-btn { position: relative; }
+.companynotification-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.companynotification-menu { 
+  right: 0;
+  width: 360px;
+  max-height: 480px;
+  overflow-y: auto;
+}
+.companynotification-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.companynotification-item:last-child {
+  border-bottom: none;
+}
+.companynotification-item:hover {
+  background: #f8fafc;
+}
+.companynotification-item.companynotification-unread {
+  background: #f0f9ff;
+  border-left: 3px solid #2563eb;
+}
+.companynotification-title { 
+  font-weight: 600; 
+  color: #0f172a;
+  font-size: 14px;
+}
+.companynotification-sub { 
+  font-size: 13px; 
+  color: #64748b;
+  line-height: 1.4;
+}
+.companynotification-time {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+.companynotification-viewall {
+  border-top: 1px solid #e2e8f0;
+  padding: 4px;
+  margin-top: 4px;
+}
+.companynotification-viewall-btn {
+  width: 100%;
+  text-align: center;
+  font-weight: 600;
+  color: #2563eb;
+  background: transparent;
+  border: none;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.companynotification-viewall-btn:hover {
+  background: #eff6ff;
+}
+

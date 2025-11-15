@@ -195,8 +195,10 @@ export default function LeadDetail() {
 
   // Lead stages
   const stages = ['New Lead', 'Contacted', 'Qualified', 'Consideration', 'Negotiation', 'Won'];
+  const normalizedStatus = (lead.status || 'new').toString().toLowerCase();
+  const matchedStageIndex = stages.findIndex((stage) => stage.toLowerCase().includes(normalizedStatus));
   const currentStageIndex = Math.min(
-    stages.findIndex(s => s.toLowerCase().includes((lead.status || 'new').toLowerCase())),
+    matchedStageIndex >= 0 ? matchedStageIndex : 0,
     stages.length - 1
   );
 

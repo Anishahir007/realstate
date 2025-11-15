@@ -1,6 +1,7 @@
-import React from 'react';
-import { Link, useParams } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useParams, useOutletContext } from 'react-router-dom';
 import { getApiBase } from '../../../../../utils/apiBase.js';
+import EnquiryModal from '../findProperty/EnquiryModal.jsx';
 import './property.css';
 
 function formatPriceINR(num) {
@@ -12,8 +13,10 @@ function formatPriceINR(num) {
 }
 
 
-export default function PropertyCard({ property }) {
+export default function PropertyCard({ property, onEnquiry }) {
   const { slug } = useParams();
+  const ctx = useOutletContext?.() || {};
+  const site = ctx.site || {};
   
   // Console log property data for debugging
   console.log('PropertyCard - Full property data:', property);
@@ -29,6 +32,19 @@ export default function PropertyCard({ property }) {
   
   // Get API base URL (for constructing full image URLs)
   const apiBase = getApiBase() || window.location.origin;
+  
+  const tenantDb = site?.tenant_db || 
+                   site?.broker?.tenant_db || 
+                   ctx.site?.tenant_db || 
+                   ctx.site?.broker?.tenant_db ||
+                   ctx.tenant_db;
+  
+  const handleEnquiryClick = (e) => {
+    e.preventDefault();
+    if (onEnquiry) {
+      onEnquiry(property);
+    }
+  };
   
   // Get image from multiple possible fields
   let img = undefined;
@@ -100,8 +116,77 @@ export default function PropertyCard({ property }) {
       </div>
       <div className="pc-prop-actions">
         <Link to={to} state={{ property }} className="pc-prop-btn">View Details</Link>
+        <button 
+          onClick={handleEnquiryClick}
+          className="pc-prop-btn pc-prop-btn-enquiry"
+        >
+          Send Enquiry
+        </button>
       </div>
     </div>
+  );
+}
+
+export function PropertiesGrid({ properties, title = 'Latest Properties' }) {
+  const [selectedProperty, setSelectedProperty] = useState(null);
+  const [showEnquiryModal, setShowEnquiryModal] = useState(false);
+  const ctx = useOutletContext?.() || {};
+  const site = ctx.site || {};
+  
+  const tenantDb = site?.tenant_db || 
+                   site?.broker?.tenant_db || 
+                   ctx.site?.tenant_db || 
+                   ctx.site?.broker?.tenant_db ||
+                   ctx.tenant_db;
+  
+  const handleEnquiry = (property) => {
+    setSelectedProperty(property);
+    setShowEnquiryModal(true);
+  };
+
+  const handleCloseEnquiry = () => {
+    setShowEnquiryModal(false);
+    setSelectedProperty(null);
+  };
+
+  return (
+    <>
+      <div className="pc-prop-grid-header">
+        <div className="pc-prop-icon">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M24 4L6 18V42H18V28H30V42H42V18L24 4Z" fill="#1e40af" stroke="#1e40af" strokeWidth="2"/>
+            <rect x="20" y="24" width="8" height="8" fill="#f97316" stroke="#f97316" strokeWidth="1"/>
+            <line x1="20" y1="24" x2="28" y2="24" stroke="#1e40af" strokeWidth="1"/>
+            <line x1="20" y1="28" x2="28" y2="28" stroke="#1e40af" strokeWidth="1"/>
+            <line x1="24" y1="24" x2="24" y2="32" stroke="#1e40af" strokeWidth="1"/>
+          </svg>
+        </div>
+        <h2 className="pc-prop-grid-title">{title}</h2>
+      </div>
+      {properties.length === 0 ? (
+        <div>No properties yet.</div>
+      ) : (
+        <div className="pc-prop-grid">
+          {properties.map((p) => (
+            <PropertyCard 
+              key={p.id} 
+              property={p} 
+              onEnquiry={handleEnquiry}
+            />
+          ))}
+        </div>
+      )}
+      
+      {/* Enquiry Modal */}
+      {showEnquiryModal && selectedProperty && (
+        <EnquiryModal
+          property={selectedProperty}
+          site={site}
+          tenantDb={tenantDb}
+          onClose={handleCloseEnquiry}
+        />
+      )}
+    </>
   );
 }
 

@@ -1,0 +1,319 @@
+.pc-about {
+  width: 100%;
+  min-height: 100vh;
+  background: #ffffff;
+  padding: 0;
+  margin: 0;
+}
+
+.pc-about-container {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 80px 40px;
+}
+
+.pc-about-loading {
+  text-align: center;
+  padding: 60px 20px;
+  color: #666;
+  font-size: 1.1rem;
+}
+
+.pc-about-title {
+  font-size: 3rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 20px 0;
+  line-height: 1.2;
+  text-align: center;
+  padding-bottom: 24px;
+  border-bottom: 3px solid #e5e7eb;
+}
+
+.pc-about-subtitle {
+  font-size: 1.25rem;
+  color: #666;
+  margin: 0 0 40px 0;
+  text-align: center;
+  font-weight: 300;
+}
+
+.pc-about-images {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+  margin: 40px 0;
+}
+
+.pc-about-image-wrapper {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.pc-about-image-wrapper:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+}
+
+.pc-about-image {
+  width: 100%;
+  height: 300px;
+  object-fit: cover;
+  display: block;
+}
+
+.pc-about-image-caption {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+  color: #ffffff;
+  padding: 16px;
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.pc-about-section {
+  margin: 48px 0;
+}
+
+.pc-about-section-title {
+  font-size: 2rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0 0 24px 0;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.pc-about-text {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: #4a4a4a;
+  margin: 0;
+  text-align: justify;
+}
+
+.pc-about-vmv {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  margin: 60px 0;
+}
+
+.pc-about-vmv-card {
+  background: #ffffff;
+  padding: 48px;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.pc-about-vmv-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.pc-about-vmv-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.pc-about-vmv-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.pc-about-vision-icon {
+  background: #fef3c7;
+  color: #f59e0b;
+}
+
+.pc-about-mission-icon {
+  background: #fce7f3;
+  color: #ec4899;
+}
+
+.pc-about-values-icon {
+  background: #dbeafe;
+  color: #3b82f6;
+}
+
+.pc-about-vmv-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.pc-about-vmv-content {
+  margin-top: 20px;
+}
+
+/* Vision Styles */
+.pc-about-vision-quote {
+  font-size: 1.2rem;
+  line-height: 1.9;
+  color: #374151;
+  margin: 0;
+  padding: 20px 24px;
+  border-left: 5px solid #f59e0b;
+  background: #fffbeb;
+  border-radius: 8px;
+  font-style: italic;
+}
+
+/* Mission Styles */
+.pc-about-mission-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pc-about-mission-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: #374151;
+  padding: 12px;
+  background: #fdf2f8;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.pc-about-mission-bullet {
+  color: #ec4899;
+  font-size: 1.8rem;
+  line-height: 1;
+  margin-top: 2px;
+  flex-shrink: 0;
+  font-weight: 700;
+}
+
+/* Values Styles */
+.pc-about-values-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.pc-about-value-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 16px;
+  background: #eff6ff;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  transition: background 0.2s;
+}
+
+.pc-about-value-item:hover {
+  background: #dbeafe;
+}
+
+.pc-about-value-number {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #3b82f6;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+}
+
+.pc-about-value-content {
+  flex: 1;
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: #374151;
+}
+
+.pc-about-value-name {
+  color: #1a1a1a;
+  font-weight: 600;
+}
+
+.pc-about-value-desc {
+  color: #6b7280;
+}
+
+@media (max-width: 768px) {
+  .pc-about {
+    padding: 0;
+  }
+
+  .pc-about-container {
+    padding: 40px 20px;
+  }
+
+  .pc-about-title {
+    font-size: 2rem;
+  }
+
+  .pc-about-subtitle {
+    font-size: 1.1rem;
+  }
+
+  .pc-about-images {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .pc-about-vmv {
+    gap: 32px;
+  }
+
+  .pc-about-vmv-card {
+    padding: 28px;
+  }
+
+  .pc-about-vmv-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+  }
+
+  .pc-about-vmv-title {
+    font-size: 1.5rem;
+  }
+
+  .pc-about-vision-quote {
+    font-size: 1rem;
+    padding-left: 16px;
+  }
+
+  .pc-about-mission-item,
+  .pc-about-value-content {
+    font-size: 0.95rem;
+  }
+
+  .pc-about-text {
+    font-size: 1rem;
+    text-align: left;
+  }
+}
+

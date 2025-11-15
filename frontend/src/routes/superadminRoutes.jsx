@@ -16,6 +16,7 @@ import SearchResults from '../superadmin/pages/search/SearchResults.jsx';
 import { SuperAdminProvider, useSuperAdmin } from '../context/SuperAdminContext.jsx';
 import PortalRoleGate, { ROLE_FALLBACK_ROUTE, resolvePortalRole } from '../superadmin/components/PortalRoleGate.jsx';
 import UsersRole from '../superadmin/pages/usersrole/UsersRole.jsx';
+import SuperAdminCompany from '../superadmin/pages/company/Company.jsx';
 
 function SuperAdminLandingRedirect() {
   const superAdmin = useSuperAdmin();
@@ -61,6 +62,14 @@ export function SuperAdminRoutes() {
           element={(
             <PortalRoleGate allow={['super_admin']}>
               <SuperAdminBroker />
+            </PortalRoleGate>
+          )}
+        />
+        <Route
+          path="companies"
+          element={(
+            <PortalRoleGate allow={['super_admin']}>
+              <SuperAdminCompany />
             </PortalRoleGate>
           )}
         />

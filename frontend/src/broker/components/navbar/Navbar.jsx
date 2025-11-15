@@ -1,14 +1,18 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
-import { FiGrid, FiSettings, FiUsers, FiClipboard, FiHome, FiPlusSquare, FiLayout } from 'react-icons/fi';
+import React, { useState, useRef, useEffect } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
+import { FiGrid, FiSettings, FiUsers, FiClipboard, FiHome, FiLayout, FiChevronDown, FiUser, FiSliders } from 'react-icons/fi';
 import './navbar.css';
 import { useBroker } from '../../../context/BrokerContext.jsx';
 
 const BrokerPanelNavbar = () => {
   const broker = useBroker();
+  const location = useLocation();
   const name = broker?.name;
   const email = broker?.email;
   const photo = broker?.photo;
+  const [openDropdown, setOpenDropdown] = useState(null);
+  const dropdownRef = useRef(null);
+
   const initials = React.useMemo(() => {
     if (!name) return 'BR';
     const parts = String(name).trim().split(/\s+/);
@@ -16,6 +20,25 @@ const BrokerPanelNavbar = () => {
     const second = parts[1]?.[0] || '';
     return (first + second).toUpperCase() || 'BR';
   }, [name]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setOpenDropdown(null);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Check if any settings route is active
+  const isSettingsActive = location.pathname.startsWith('/broker/settings');
+
+  const handleSettingsClick = (e) => {
+    e.preventDefault();
+    setOpenDropdown(openDropdown === 'settings' ? null : 'settings');
+  };
 
   return (
     <aside className="brokerpanelnavbar-sidebar">
@@ -40,18 +63,42 @@ const BrokerPanelNavbar = () => {
           <span className="brokerpanelnavbar-icon"><FiHome /></span>
           <span>Properties</span>
         </NavLink>
-        <NavLink to="/broker/properties/new" className={({ isActive }) => `brokerpanelnavbar-link${isActive ? ' brokerpanelnavbar-link-active' : ''}`}>
-          <span className="brokerpanelnavbar-icon"><FiPlusSquare /></span>
-          <span>Post Property</span>
-        </NavLink>
         <NavLink to="/broker/templates" className={({ isActive }) => `brokerpanelnavbar-link${isActive ? ' brokerpanelnavbar-link-active' : ''}`}>
           <span className="brokerpanelnavbar-icon"><FiLayout /></span>
           <span>Templates</span>
         </NavLink>
-        <NavLink to="/broker/settings/view-profile" className={({ isActive }) => `brokerpanelnavbar-link${isActive ? ' brokerpanelnavbar-link-active' : ''}`}>
-          <span className="brokerpanelnavbar-icon"><FiSettings /></span>
-          <span>Settings</span>
-        </NavLink>
+        <div className="brokerpanelnavbar-item-wrapper" ref={dropdownRef}>
+          <div
+            onClick={handleSettingsClick}
+            className={`brokerpanelnavbar-link${isSettingsActive ? ' brokerpanelnavbar-link-active' : ''}`}
+          >
+            <span className="brokerpanelnavbar-icon"><FiSettings /></span>
+            <span>Settings</span>
+            <span className="brokerpanelnavbar-dropdown-arrow">
+              <FiChevronDown style={{ transform: openDropdown === 'settings' ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+            </span>
+          </div>
+          {openDropdown === 'settings' && (
+            <div className="brokerpanelnavbar-dropdown">
+              <NavLink
+                to="/broker/settings/view-profile"
+                className={({ isActive }) => `brokerpanelnavbar-dropdown-item${isActive ? ' brokerpanelnavbar-dropdown-item-active' : ''}`}
+                onClick={() => setOpenDropdown(null)}
+              >
+                <span className="brokerpanelnavbar-icon"><FiUser /></span>
+                <span>Profile</span>
+              </NavLink>
+              <NavLink
+                to="/broker/settings/customize"
+                className={({ isActive }) => `brokerpanelnavbar-dropdown-item${isActive ? ' brokerpanelnavbar-dropdown-item-active' : ''}`}
+                onClick={() => setOpenDropdown(null)}
+              >
+                <span className="brokerpanelnavbar-icon"><FiSliders /></span>
+                <span>Customize</span>
+              </NavLink>
+            </div>
+          )}
+        </div>
       </nav>
       <div className="brokerpanelnavbar-profile">
         <div className="brokerpanelnavbar-profile-avatar">

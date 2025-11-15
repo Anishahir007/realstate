@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import ejs from 'ejs';
 import { getTenantPool } from '../utils/tenant.js';
 import pool from '../config/database.js';
-import { generateSiteSlug, generateStableBrokerSlug, publishSite, listPublishedSitesForBroker, getSiteBySlug, setCustomDomainForSite, getSiteByDomain, markDomainVerified } from '../utils/sites.js';
+import { generateSiteSlug, generateStableBrokerSlug, generateStableCompanySlug, publishSite, listPublishedSitesForBroker, listPublishedSitesForCompany, getSiteBySlug, setCustomDomainForSite, getSiteByDomain, markDomainVerified } from '../utils/sites.js';
 import dns from 'dns/promises';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -372,10 +372,15 @@ export async function getPreviewContext(req, res) {
     const template = (req.params.template || '').toString();
     const user = req.user || null;
     const tenantDb = user?.tenant_db || '';
-    // basic broker object
-    const broker = user ? { id: user.id, full_name: user.name || user.full_name || 'Broker', email: user.email, tenant_db: user.tenant_db } : null;
+    // basic owner object (broker or company)
+    const owner = user ? { 
+      id: user.id, 
+      full_name: user.role === 'company' ? (user.companyName || user.name || user.full_name || 'Company') : (user.name || user.full_name || 'Broker'), 
+      email: user.email, 
+      tenant_db: user.tenant_db 
+    } : null;
     const properties = tenantDb ? await fetchBrokerAndProperties(tenantDb, req) : [];
-    return res.json({ site: { title: broker?.full_name ? `${broker.full_name} Real Estate` : 'Real Estate', broker, template }, properties });
+    return res.json({ site: { title: owner?.full_name ? `${owner.full_name} Real Estate` : 'Real Estate', broker: owner, template }, properties });
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';
     return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
@@ -387,10 +392,22 @@ export async function publishTemplateAsSite(req, res) {
     const template = (req.body?.template || '').toString();
     const siteTitle = (req.body?.siteTitle || '').toString();
     if (!template) return res.status(400).json({ message: 'template is required' });
-    if (!req.user || req.user.role !== 'broker') return res.status(403).json({ message: 'Forbidden' });
-    // Use a stable slug per broker so it replaces previous site
-    const slug = generateStableBrokerSlug({ brokerName: req.user.name || req.user.full_name || 'broker', brokerId: req.user.id });
-    const site = publishSite({ slug, brokerId: req.user.id, template, siteTitle });
+    if (!req.user || (req.user.role !== 'broker' && req.user.role !== 'company')) return res.status(403).json({ message: 'Forbidden' });
+    
+    let slug;
+    let site;
+    if (req.user.role === 'company') {
+      // Use a stable slug per company so it replaces previous site
+      const companyName = req.user.companyName || req.user.name || req.user.full_name || 'company';
+      slug = generateStableCompanySlug({ companyName, companyId: req.user.id });
+      site = publishSite({ slug, companyId: req.user.id, ownerType: 'company', template, siteTitle });
+    } else {
+      // Use a stable slug per broker so it replaces previous site
+      const brokerName = req.user.name || req.user.full_name || 'broker';
+      slug = generateStableBrokerSlug({ brokerName, brokerId: req.user.id });
+      site = publishSite({ slug, brokerId: req.user.id, ownerType: 'broker', template, siteTitle });
+    }
+    
     // Build a public URL that points through the frontend origin when available
     const origin = req.get('origin') || process.env.PUBLIC_ORIGIN || `${req.protocol}://${req.get('host')}`;
     const urlPath = `/site/${site.slug}`;
@@ -404,8 +421,10 @@ export async function publishTemplateAsSite(req, res) {
 
 export async function listMySites(req, res) {
   try {
-    if (!req.user || req.user.role !== 'broker') return res.status(403).json({ message: 'Forbidden' });
-    const sites = listPublishedSitesForBroker(req.user.id);
+    if (!req.user || (req.user.role !== 'broker' && req.user.role !== 'company')) return res.status(403).json({ message: 'Forbidden' });
+    const sites = req.user.role === 'company' 
+      ? listPublishedSitesForCompany(req.user.id)
+      : listPublishedSitesForBroker(req.user.id);
     const origin = req.get('origin') || process.env.PUBLIC_ORIGIN || `${req.protocol}://${req.get('host')}`;
     return res.json({ data: sites.map((s) => ({ ...s, url: `${origin}/site/${s.slug}`, urlPath: `/site/${s.slug}` })) });
   } catch (err) {
@@ -422,21 +441,65 @@ export async function serveSiteBySlug(req, res) {
     if (!site) return res.status(404).send('Site not found');
     const viewPath = getTemplateViewPath(site.template, view);
     if (!fs.existsSync(viewPath)) return res.status(404).send('Page not found');
-    // Look up broker name/email and tenant_db to pull properties
-    let broker = { id: site.brokerId, full_name: site.siteTitle || 'Broker Site' };
+    // Look up owner (broker or company) name/email and tenant_db to pull properties
+    const ownerType = site.ownerType || 'broker'; // default to broker for backward compatibility
+    let owner = { id: ownerType === 'company' ? site.companyId : site.brokerId, full_name: site.siteTitle || (ownerType === 'company' ? 'Company Site' : 'Broker Site') };
     let properties = [];
     try {
-      const [rows] = await pool.query('SELECT id, full_name, email, phone, photo, tenant_db FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
-      const row = rows?.[0];
-      if (row) {
-        broker = { id: row.id, full_name: row.full_name || broker.full_name, email: row.email, phone: row.phone, photo: row.photo, tenant_db: row.tenant_db };
-        if (row.tenant_db) {
-          properties = await fetchBrokerAndProperties(row.tenant_db, req);
+      if (ownerType === 'company') {
+        const [rows] = await pool.query('SELECT id, full_name, name, email, phone, photo, tenant_db, location, address, store_name, company_name, instagram, facebook, linkedin, youtube, whatsapp_number FROM companies WHERE id = ? LIMIT 1', [site.companyId]);
+        const row = rows?.[0];
+        if (row) {
+          owner = { 
+            id: row.id, 
+            full_name: row.full_name || row.name || owner.full_name, 
+            email: row.email, 
+            phone: row.phone, 
+            photo: row.photo, 
+            tenant_db: row.tenant_db,
+            location: row.location,
+            address: row.address,
+            store_name: row.store_name,
+            company_name: row.company_name,
+            instagram: row.instagram,
+            facebook: row.facebook,
+            linkedin: row.linkedin,
+            youtube: row.youtube,
+            whatsapp_number: row.whatsapp_number
+          };
+          if (row.tenant_db) {
+            properties = await fetchBrokerAndProperties(row.tenant_db, req);
+          }
+        }
+      } else {
+        const [rows] = await pool.query('SELECT id, full_name, email, phone, photo, tenant_db, location, address, store_name, company_name, instagram, facebook, linkedin, youtube, whatsapp_number FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
+        const row = rows?.[0];
+        if (row) {
+          owner = { 
+            id: row.id, 
+            full_name: row.full_name || owner.full_name, 
+            email: row.email, 
+            phone: row.phone, 
+            photo: row.photo, 
+            tenant_db: row.tenant_db,
+            location: row.location,
+            address: row.address,
+            store_name: row.store_name,
+            company_name: row.company_name,
+            instagram: row.instagram,
+            facebook: row.facebook,
+            linkedin: row.linkedin,
+            youtube: row.youtube,
+            whatsapp_number: row.whatsapp_number
+          };
+          if (row.tenant_db) {
+            properties = await fetchBrokerAndProperties(row.tenant_db, req);
+          }
         }
       }
     } catch {}
     const nav = { home: `/site/${slug}`, properties: `/site/${slug}/properties`, about: `/site/${slug}/about`, contact: `/site/${slug}/contact` };
-    const context = buildSiteContext({ broker, properties, page: view, nav });
+    const context = buildSiteContext({ broker: owner, properties, page: view, nav });
     const html = await ejs.renderFile(viewPath, context, { async: true, root: getTemplatesRoot() });
     return res.set('Content-Type', 'text/html').send(html);
   } catch (err) {
@@ -445,30 +508,125 @@ export async function serveSiteBySlug(req, res) {
   }
 }
 
-// JSON context for frontend templates (broker + properties)
+// JSON context for frontend templates (broker/company + properties)
 export async function getSiteContext(req, res) {
   try {
     const slug = (req.params.slug || '').toString();
     const site = getSiteBySlug(slug);
     if (!site) return res.status(404).json({ message: 'Site not found' });
-    let broker = { id: site.brokerId, full_name: site.siteTitle || 'Broker Site' };
+    
+    const ownerType = site.ownerType || 'broker';
+    let owner = { id: ownerType === 'company' ? site.companyId : site.brokerId, full_name: site.siteTitle || (ownerType === 'company' ? 'Company Site' : 'Broker Site') };
     let properties = [];
+    let tenantDb = null;
+    
     try {
-      const [rows] = await pool.query('SELECT id, full_name, email, phone, photo, tenant_db FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
-      const row = rows?.[0];
-      if (row) {
-        broker = { id: row.id, full_name: row.full_name || broker.full_name, email: row.email, phone: row.phone, photo: row.photo, tenant_db: row.tenant_db };
-        if (row.tenant_db) {
-          properties = await fetchBrokerAndProperties(row.tenant_db, req);
+      if (ownerType === 'company') {
+        // Try to select all columns first, fallback to base columns if migration not run
+        let rows;
+        try {
+          [rows] = await pool.query('SELECT id, full_name, name, email, phone, photo, tenant_db, location, address, store_name, company_name, instagram, facebook, linkedin, youtube, whatsapp_number FROM companies WHERE id = ? LIMIT 1', [site.companyId]);
+        } catch (colErr) {
+          // If columns don't exist, use base query without optional columns
+          if (colErr.code === 'ER_BAD_FIELD_ERROR') {
+            [rows] = await pool.query('SELECT id, full_name, name, email, phone, photo, tenant_db, location, company_name FROM companies WHERE id = ? LIMIT 1', [site.companyId]);
+          } else {
+            throw colErr;
+          }
+        }
+        const row = rows?.[0];
+        if (row) {
+          owner = { 
+            id: row.id, 
+            full_name: row.full_name || row.name || owner.full_name, 
+            email: row.email, 
+            phone: row.phone, 
+            photo: row.photo, 
+            tenant_db: row.tenant_db,
+            location: row.location || null,
+            address: row.address || null,
+            store_name: row.store_name || null,
+            company_name: row.company_name || null,
+            instagram: row.instagram || null,
+            facebook: row.facebook || null,
+            linkedin: row.linkedin || null,
+            youtube: row.youtube || null,
+            whatsapp_number: row.whatsapp_number || null
+          };
+          tenantDb = row.tenant_db;
+          if (row.tenant_db) {
+            properties = await fetchBrokerAndProperties(row.tenant_db, req);
+          }
+        }
+      } else {
+        // Try to select all columns first, fallback to base columns if migration not run
+        let rows;
+        try {
+          [rows] = await pool.query('SELECT id, full_name, email, phone, photo, tenant_db, location, address, store_name, company_name, instagram, facebook, linkedin, youtube, whatsapp_number FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
+        } catch (colErr) {
+          // If columns don't exist, use base query without optional columns
+          if (colErr.code === 'ER_BAD_FIELD_ERROR') {
+            [rows] = await pool.query('SELECT id, full_name, email, phone, photo, tenant_db, location, company_name FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
+          } else {
+            throw colErr;
+          }
+        }
+        const row = rows?.[0];
+        if (row) {
+          owner = { 
+            id: row.id, 
+            full_name: row.full_name || owner.full_name, 
+            email: row.email, 
+            phone: row.phone, 
+            photo: row.photo, 
+            tenant_db: row.tenant_db,
+            location: row.location || null,
+            address: row.address || null,
+            store_name: row.store_name || null,
+            company_name: row.company_name || null,
+            instagram: row.instagram || null,
+            facebook: row.facebook || null,
+            linkedin: row.linkedin || null,
+            youtube: row.youtube || null,
+            whatsapp_number: row.whatsapp_number || null
+          };
+          tenantDb = row.tenant_db;
+          if (row.tenant_db) {
+            properties = await fetchBrokerAndProperties(row.tenant_db, req);
+          }
         }
       }
-    } catch {}
-    return res.json({ site: { broker, title: broker?.full_name ? `${broker.full_name} Real Estate` : 'Real Estate' }, properties, template: site.template });
+    } catch (err) {
+      console.error('getSiteContext error fetching owner:', err);
+    }
+    
+    // Construct logo URL if logo exists
+    const baseUrl = process.env.API_BASE_URL || req.protocol + '://' + req.get('host');
+    let logoData = null;
+    if (site.logo) {
+      logoData = {
+        ...site.logo,
+        image_url: site.logo.image_url?.startsWith('http') 
+          ? site.logo.image_url 
+          : `${baseUrl}${site.logo.image_url?.startsWith('/') ? site.logo.image_url : `/${site.logo.image_url}`}`
+      };
+    }
+    
+    return res.json({ 
+      site: { 
+        ...site, 
+        logo: logoData,
+        broker: owner, 
+        tenant_db: tenantDb 
+      }, 
+      properties 
+    });
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';
     return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
   }
 }
+
 
 // Site context by custom domain (Host header) for SPA clean URLs
 export async function getDomainSiteContext(req, res) {
@@ -477,19 +635,115 @@ export async function getDomainSiteContext(req, res) {
     const host = (override || req.headers['x-forwarded-host'] || req.headers.host || '').toString().split(',')[0].trim();
     const site = getSiteByDomain(host);
     if (!site) return res.status(404).json({ message: 'Site not found' });
-    let broker = { id: site.brokerId, full_name: site.siteTitle || 'Broker Site' };
+    const ownerType = site.ownerType || 'broker';
+    let owner = { id: ownerType === 'company' ? site.companyId : site.brokerId, full_name: site.siteTitle || (ownerType === 'company' ? 'Company Site' : 'Broker Site') };
     let properties = [];
+    let tenantDb = null;
+    
     try {
-      const [rows] = await pool.query('SELECT id, full_name, email, phone, photo, tenant_db FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
-      const row = rows?.[0];
-      if (row) {
-        broker = { id: row.id, full_name: row.full_name || broker.full_name, email: row.email, phone: row.phone, photo: row.photo, tenant_db: row.tenant_db };
-        if (row.tenant_db) {
-          properties = await fetchBrokerAndProperties(row.tenant_db, req);
+      if (ownerType === 'company') {
+        // Try to select all columns first, fallback to base columns if migration not run
+        let rows;
+        try {
+          [rows] = await pool.query('SELECT id, full_name, name, email, phone, photo, tenant_db, location, address, store_name, company_name, instagram, facebook, linkedin, youtube, whatsapp_number FROM companies WHERE id = ? LIMIT 1', [site.companyId]);
+        } catch (colErr) {
+          // If columns don't exist, use base query without optional columns
+          if (colErr.code === 'ER_BAD_FIELD_ERROR') {
+            [rows] = await pool.query('SELECT id, full_name, name, email, phone, photo, tenant_db, location, company_name FROM companies WHERE id = ? LIMIT 1', [site.companyId]);
+          } else {
+            throw colErr;
+          }
+        }
+        const row = rows?.[0];
+        if (row) {
+          owner = { 
+            id: row.id, 
+            full_name: row.full_name || row.name || owner.full_name, 
+            email: row.email, 
+            phone: row.phone, 
+            photo: row.photo, 
+            tenant_db: row.tenant_db,
+            location: row.location || null,
+            address: row.address || null,
+            store_name: row.store_name || null,
+            company_name: row.company_name || null,
+            instagram: row.instagram || null,
+            facebook: row.facebook || null,
+            linkedin: row.linkedin || null,
+            youtube: row.youtube || null,
+            whatsapp_number: row.whatsapp_number || null
+          };
+          tenantDb = row.tenant_db;
+          if (row.tenant_db) {
+            properties = await fetchBrokerAndProperties(row.tenant_db, req);
+          }
+        }
+      } else {
+        // Try to select all columns first, fallback to base columns if migration not run
+        let rows;
+        try {
+          [rows] = await pool.query('SELECT id, full_name, email, phone, photo, tenant_db, location, address, store_name, company_name, instagram, facebook, linkedin, youtube, whatsapp_number FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
+        } catch (colErr) {
+          // If columns don't exist, use base query without optional columns
+          if (colErr.code === 'ER_BAD_FIELD_ERROR') {
+            [rows] = await pool.query('SELECT id, full_name, email, phone, photo, tenant_db, location, company_name FROM brokers WHERE id = ? LIMIT 1', [site.brokerId]);
+          } else {
+            throw colErr;
+          }
+        }
+        const row = rows?.[0];
+        if (row) {
+          owner = { 
+            id: row.id, 
+            full_name: row.full_name || owner.full_name, 
+            email: row.email, 
+            phone: row.phone, 
+            photo: row.photo, 
+            tenant_db: row.tenant_db,
+            location: row.location || null,
+            address: row.address || null,
+            store_name: row.store_name || null,
+            company_name: row.company_name || null,
+            instagram: row.instagram || null,
+            facebook: row.facebook || null,
+            linkedin: row.linkedin || null,
+            youtube: row.youtube || null,
+            whatsapp_number: row.whatsapp_number || null
+          };
+          tenantDb = row.tenant_db;
+          if (row.tenant_db) {
+            properties = await fetchBrokerAndProperties(row.tenant_db, req);
+          }
         }
       }
-    } catch {}
-    return res.json({ site: { broker, title: broker?.full_name ? `${broker.full_name} Real Estate` : 'Real Estate' }, properties, slug: site.slug, template: site.template });
+    } catch (err) {
+      console.error('getDomainSiteContext error fetching owner:', err);
+    }
+    
+    // Construct logo URL if logo exists
+    const baseUrl = process.env.API_BASE_URL || req.protocol + '://' + req.get('host');
+    let logoData = null;
+    if (site.logo) {
+      logoData = {
+        ...site.logo,
+        image_url: site.logo.image_url?.startsWith('http') 
+          ? site.logo.image_url 
+          : `${baseUrl}${site.logo.image_url?.startsWith('/') ? site.logo.image_url : `/${site.logo.image_url}`}`
+      };
+    }
+    
+    return res.json({ 
+      site: { 
+        ...site, 
+        logo: logoData,
+        broker: owner, 
+        tenant_db: tenantDb,
+        title: owner?.full_name ? `${owner.full_name} Real Estate` : 'Real Estate' 
+      }, 
+      properties, 
+      slug: site.slug, 
+      template: site.template 
+    });
   } catch (err) {
     const isProd = process.env.NODE_ENV === 'production';
     return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
@@ -517,13 +771,19 @@ async function isDomainPointingToTarget(domain) {
 
 export async function connectCustomDomain(req, res) {
   try {
-    if (!req.user || req.user.role !== 'broker') return res.status(403).json({ message: 'Forbidden' });
+    if (!req.user || (req.user.role !== 'broker' && req.user.role !== 'company')) return res.status(403).json({ message: 'Forbidden' });
     const slug = (req.body?.slug || '').toString();
     const domain = (req.body?.domain || '').toString();
     if (!slug) return res.status(400).json({ message: 'slug is required' });
     if (!domain) return res.status(400).json({ message: 'domain is required' });
     const site = getSiteBySlug(slug);
-    if (!site || String(site.brokerId) !== String(req.user.id)) return res.status(404).json({ message: 'Site not found' });
+    if (!site) return res.status(404).json({ message: 'Site not found' });
+    // Verify ownership
+    const siteOwnerType = site.ownerType || 'broker'; // default to broker for backward compatibility
+    const siteOwnerId = siteOwnerType === 'company' ? site.companyId : site.brokerId;
+    if (String(siteOwnerId) !== String(req.user.id) || siteOwnerType !== req.user.role) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
     const updated = setCustomDomainForSite(slug, domain);
     const instructions = `Set an A record for ${updated.customDomain} to ${TARGET_A}`;
     return res.json({ data: { ...updated, instructions } });

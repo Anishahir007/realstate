@@ -15,11 +15,18 @@ function mapBrokerRow(row) {
     photo: row.photo,
     licenseNo: row.license_no,
     location: row.location,
+    address: row.address,
+    storeName: row.store_name,
     companyName: row.company_name,
     tenantDb: row.tenant_db,
     documentType: row.document_type,
     documentFront: row.document_front,
     documentBack: row.document_back,
+    instagram: row.instagram,
+    facebook: row.facebook,
+    linkedin: row.linkedin,
+    youtube: row.youtube,
+    whatsappNumber: row.whatsapp_number,
     createdByAdminId: row.created_by_admin_id,
     lastLoginAt: row.last_login_at,
     createdAt: row.created_at,
@@ -80,7 +87,7 @@ export async function getMyBrokerProfile(req, res) {
     if (!brokerId) return res.status(401).json({ message: 'Unauthorized' });
 
     const [rows] = await pool.query(
-      'SELECT id, full_name, email, phone, photo, license_no, location, company_name, tenant_db, document_type, document_front, document_back, status, created_by_admin_id, last_login_at, created_at FROM brokers WHERE id = ? LIMIT 1',
+      'SELECT id, full_name, email, phone, photo, license_no, location, address, store_name, company_name, tenant_db, document_type, document_front, document_back, instagram, facebook, linkedin, youtube, whatsapp_number, status, created_by_admin_id, last_login_at, created_at FROM brokers WHERE id = ? LIMIT 1',
       [brokerId]
     );
     const row = rows[0];
@@ -98,7 +105,7 @@ export async function getBrokerById(req, res) {
     if (!id) return res.status(400).json({ message: 'Invalid id' });
 
     const [rows] = await pool.query(
-      'SELECT id, full_name, email, phone, photo, license_no, location, company_name, tenant_db, document_type, document_front, document_back, status, created_by_admin_id, last_login_at, created_at FROM brokers WHERE id = ? LIMIT 1',
+      'SELECT id, full_name, email, phone, photo, license_no, location, address, store_name, company_name, tenant_db, document_type, document_front, document_back, instagram, facebook, linkedin, youtube, whatsapp_number, status, created_by_admin_id, last_login_at, created_at FROM brokers WHERE id = ? LIMIT 1',
       [id]
     );
     const row = rows[0];
@@ -112,7 +119,7 @@ export async function getBrokerById(req, res) {
 
 export async function createBroker(req, res) {
   try {
-    const { full_name, email, phone, password, license_no, status, location, company_name } = req.body || {};
+    const { full_name, email, phone, password, license_no, status, location, address, store_name, company_name, instagram, facebook, linkedin, youtube, whatsapp_number } = req.body || {};
     if (!isNonEmptyString(full_name) || !validateEmail(email) || !validatePassword(password)) {
       return res.status(400).json({ message: 'Invalid input' });
     }
@@ -152,12 +159,12 @@ export async function createBroker(req, res) {
 
     const normalizedStatus = (status && ['active', 'suspended'].includes(String(status).toLowerCase())) ? String(status).toLowerCase() : undefined;
     const [result] = await pool.query(
-      `INSERT INTO brokers (full_name, email, phone, photo, password_hash, license_no, location, company_name, tenant_db, document_type, document_front, document_back, created_by_admin_id${normalizedStatus ? ', status' : ''}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?${normalizedStatus ? ', ?' : ''})`,
-      [safeName, email, phone || null, photoPath, password_hash, license_no || null, location || null, company_name || null, tenant_db, documentType, documentFront, documentBack, req.user?.id || null, ...(normalizedStatus ? [normalizedStatus] : [])]
+      `INSERT INTO brokers (full_name, email, phone, photo, password_hash, license_no, location, address, store_name, company_name, tenant_db, document_type, document_front, document_back, instagram, facebook, linkedin, youtube, whatsapp_number, created_by_admin_id${normalizedStatus ? ', status' : ''}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?${normalizedStatus ? ', ?' : ''})`,
+      [safeName, email, phone || null, photoPath, password_hash, license_no || null, location || null, address || null, store_name || null, company_name || null, tenant_db, documentType, documentFront, documentBack, instagram || null, facebook || null, linkedin || null, youtube || null, whatsapp_number || null, req.user?.id || null, ...(normalizedStatus ? [normalizedStatus] : [])]
     );
     const id = result.insertId;
     const [rows] = await pool.query(
-      'SELECT id, full_name, email, phone, photo, license_no, location, company_name, tenant_db, document_type, document_front, document_back, status, created_by_admin_id, last_login_at FROM brokers WHERE id = ? LIMIT 1',
+      'SELECT id, full_name, email, phone, photo, license_no, location, address, store_name, company_name, tenant_db, document_type, document_front, document_back, instagram, facebook, linkedin, youtube, whatsapp_number, status, created_by_admin_id, last_login_at FROM brokers WHERE id = ? LIMIT 1',
       [id]
     );
     // Notify super admin - broker created
@@ -186,7 +193,7 @@ export async function updateBroker(req, res) {
     const id = parseInt(req.params.id, 10);
     if (!id) return res.status(400).json({ message: 'Invalid id' });
 
-    const { full_name, email, phone, license_no, status, location, company_name } = req.body || {};
+    const { full_name, email, phone, license_no, status, location, address, store_name, company_name, instagram, facebook, linkedin, youtube, whatsapp_number } = req.body || {};
     const updates = [];
     const params = [];
 
@@ -244,9 +251,37 @@ export async function updateBroker(req, res) {
       updates.push('location = ?');
       params.push(isNonEmptyString(location) ? location : null);
     }
+    if (address !== undefined) {
+      updates.push('address = ?');
+      params.push(isNonEmptyString(address) ? address : null);
+    }
+    if (store_name !== undefined) {
+      updates.push('store_name = ?');
+      params.push(isNonEmptyString(store_name) ? store_name : null);
+    }
     if (company_name !== undefined) {
       updates.push('company_name = ?');
       params.push(isNonEmptyString(company_name) ? company_name : null);
+    }
+    if (instagram !== undefined) {
+      updates.push('instagram = ?');
+      params.push(isNonEmptyString(instagram) ? instagram : null);
+    }
+    if (facebook !== undefined) {
+      updates.push('facebook = ?');
+      params.push(isNonEmptyString(facebook) ? facebook : null);
+    }
+    if (linkedin !== undefined) {
+      updates.push('linkedin = ?');
+      params.push(isNonEmptyString(linkedin) ? linkedin : null);
+    }
+    if (youtube !== undefined) {
+      updates.push('youtube = ?');
+      params.push(isNonEmptyString(youtube) ? youtube : null);
+    }
+    if (whatsapp_number !== undefined) {
+      updates.push('whatsapp_number = ?');
+      params.push(isNonEmptyString(whatsapp_number) ? whatsapp_number : null);
     }
     if (status !== undefined) {
       const normalized = String(status).toLowerCase();

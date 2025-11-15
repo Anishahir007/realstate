@@ -282,7 +282,7 @@ const Header = () => {
               {/* Add Property Button */}
               <Link
                 className="add-property-btn d-xxs-none"
-                to="/property/single"
+                to="/brokers/auth"
               >
                 <i className="fas fa-user" />
                 <span className="login-text">

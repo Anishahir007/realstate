@@ -31,12 +31,20 @@ const COLUMN_OPTIONS = [
   { id: 'possessionBy', label: 'Possession By' },
   { id: 'location', label: 'Location' },
   { id: 'broker', label: 'Broker' },
+  { id: 'company', label: 'Company' },
   { id: 'status', label: 'Status' },
   { id: 'date', label: 'Date' },
   { id: 'actions', label: 'Actions' },
 ];
 
-const DEFAULT_COLUMN_IDS = ['type', 'price', 'location', 'broker', 'status', 'date', 'actions'];
+const DEFAULT_COLUMN_IDS = ['type', 'price', 'location', 'broker', 'company', 'status', 'date', 'actions'];
+
+const truncateTitle = (title, maxWords = 20) => {
+  if (!title) return 'Untitled property';
+  const words = title.trim().split(/\s+/);
+  if (words.length <= maxWords) return title;
+  return words.slice(0, maxWords).join(' ') + '...';
+};
 
 const formatCurrency = (value) => {
   const num = Number(value);
@@ -142,6 +150,7 @@ export default function SuperAdminProperties() {
       flooringType: [...new Set(items.map(x => x.flooringType).filter(Boolean))].sort(),
       location: [...new Set(items.map(x => [x.locality, x.city, x.state].filter(Boolean).join(', ')).filter(Boolean))].sort(),
       broker: [...new Set(items.map(x => x.brokerName).filter(Boolean))].sort(),
+      company: [...new Set(items.map(x => x.companyName).filter(Boolean))].sort(),
       status: [...new Set(items.map(x => x.status).filter(Boolean))].sort(),
       price: [], // Range filter would be complex, skip for now
     };
@@ -164,6 +173,7 @@ export default function SuperAdminProperties() {
       case 'flooringType': return p.flooringType;
       case 'location': return [p.locality, p.city, p.state].filter(Boolean).join(', ');
       case 'broker': return p.brokerName;
+      case 'company': return p.companyName;
       case 'status': return p.status;
       default: return null;
     }
@@ -191,7 +201,7 @@ export default function SuperAdminProperties() {
       }
       
       if (!q) return true;
-      return `${x.title} ${x.brokerName} ${x.city} ${x.state}`.toLowerCase().includes(q);
+      return `${x.title} ${x.brokerName || ''} ${x.companyName || ''} ${x.city} ${x.state}`.toLowerCase().includes(q);
     });
   }, [items, query, typeFilter, columnFilters]);
 
@@ -284,7 +294,7 @@ export default function SuperAdminProperties() {
         const area = p.builtArea ? formatArea(p.builtArea, p.areaUnit) : '—';
         const date = p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '—';
         return [
-          p.title || '—',
+          truncateTitle(p.title),
           p.type || '—',
           p.buildingType || '—',
           p.propertyFor || '—',
@@ -371,6 +381,7 @@ export default function SuperAdminProperties() {
       case 'possessionBy': return p.possessionBy || '—';
       case 'location': return location;
       case 'broker': return p.brokerName || '—';
+      case 'company': return p.companyName || '—';
       case 'status':
         return (
           <span className={`status-pill ${statusColorClass(p.status)}`}>
@@ -625,7 +636,7 @@ export default function SuperAdminProperties() {
                             </div>
                           </div>
                           <div className="property-meta">
-                            <div className="property-title">{p.title || 'Untitled property'}</div>
+                            <div className="property-title">{truncateTitle(p.title)}</div>
                             <div className="property-sub">{formatArea(p.builtArea || p.area, p.areaUnit || p.builtAreaUnit)}</div>
                           </div>
                         </div>

@@ -4,12 +4,15 @@ import {
   loginSuperAdmin,
   signupBroker,
   loginBroker,
+  signupCompany,
+  loginCompany,
   signupUser,
   loginUser,
   createBrokerByAdmin,
   whoami,
   updateSuperAdminProfile,
   updateBrokerProfile,
+  updateCompanyProfile,
 } from '../controllers/authController.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { upload } from '../middleware/multer.js';
@@ -36,6 +39,16 @@ router.put('/broker/profile', requireAuth, requireRole('broker'), upload.fields(
   { name: 'document_front', folderPath: 'documents' },
   { name: 'document_back', folderPath: 'documents' }
 ]), updateBrokerProfile);
+
+// Company
+router.post('/company/signup', signupCompany);
+router.post('/company/login', loginCompany);
+// Company self profile update (JSON or multipart)
+router.put('/company/profile', requireAuth, requireRole('company'), upload.fields([
+  { name: 'photo', folderPath: 'profiles' },
+  { name: 'document_front', folderPath: 'documents' },
+  { name: 'document_back', folderPath: 'documents' }
+]), updateCompanyProfile);
 
 // User
 router.post('/user/signup', signupUser);
