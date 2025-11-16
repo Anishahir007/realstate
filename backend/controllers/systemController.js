@@ -209,8 +209,13 @@ export async function getSuperAdminDashboardStats(req, res) {
       },
     });
   } catch (err) {
-    const isProd = process.env.NODE_ENV === 'production';
-    return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
+    // eslint-disable-next-line no-console
+    console.error('[getSuperAdminDashboardStats] error:', err);
+    return res.status(500).json({
+      message: 'Server error',
+      error: err?.message || null,
+      code: err?.code || null,
+    });
   }
 }
 

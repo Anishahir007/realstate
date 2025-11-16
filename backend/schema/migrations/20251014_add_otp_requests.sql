@@ -12,5 +12,3 @@ CREATE TABLE IF NOT EXISTS otp_requests (
   KEY ix_otp_requests_phone (phone),
   KEY ix_otp_requests_exp (expires_at)
 );
-
-

@@ -1199,7 +1199,14 @@ export async function listAllBrokerPropertiesAdmin(req, res) {
     } : 'No properties');
     return res.json({ data: sliced, meta: { total: out.length, returned: sliced.length } });
   } catch (err) {
-    return res.status(500).json({ message: 'Server error' });
+    // Surface more details to help diagnose 500s in admin panel
+    // eslint-disable-next-line no-console
+    console.error('[listAllBrokerPropertiesAdmin] error:', err);
+    return res.status(500).json({
+      message: 'Server error',
+      error: err?.message || null,
+      code: err?.code || null,
+    });
   }
 }
 
@@ -1339,7 +1346,13 @@ export async function getSuperAdminPropertyStats(req, res) {
       }
     });
   } catch (err) {
-    return res.status(500).json({ message: 'Server error' });
+    // eslint-disable-next-line no-console
+    console.error('[getSuperAdminPropertyStats] error:', err);
+    return res.status(500).json({
+      message: 'Server error',
+      error: err?.message || null,
+      code: err?.code || null,
+    });
   }
 }
 
