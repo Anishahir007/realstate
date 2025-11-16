@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './admincrm.css';
@@ -67,14 +67,7 @@ function calculateLeadScore(lead) {
 }
 
 export default function SuperAdminAdmincrm() {
-  const superAdmin = useSuperAdmin();
-  const { token, apiBase } = superAdmin || {};
-  const portalRole = superAdmin?.portalRole || 'super_admin';
-  const currentUserId = superAdmin?.profile?.id || null;
-  const currentUserName = superAdmin?.name || superAdmin?.profile?.name || '';
-  const currentUserEmail = superAdmin?.email || superAdmin?.profile?.email || '';
-  const isSalesUser = portalRole === 'sales';
-  const canManageLeads = portalRole === 'super_admin';
+  const { token, apiBase } = useSuperAdmin();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
@@ -113,10 +106,7 @@ export default function SuperAdminAdmincrm() {
     message: '',
     assigned_to: '',
   });
-  const [assignableUsers, setAssignableUsers] = useState([]);
-  const [formAddAssigneeId, setFormAddAssigneeId] = useState('');
-  const [formEditAssigneeId, setFormEditAssigneeId] = useState('');
-  const [formEditManualAssignee, setFormEditManualAssignee] = useState('');
+
   const [formEdit, setFormEdit] = useState({
     id: null,
     full_name: '',
@@ -132,59 +122,13 @@ export default function SuperAdminAdmincrm() {
 
   const headers = useMemo(() => ({ Authorization: token ? `Bearer ${token}` : '' }), [token]);
 
-  useEffect(() => {
-    if (!token || portalRole !== 'super_admin') return undefined;
-    let cancelled = false;
-    async function loadUsers() {
-      try {
-        const { data } = await axios.get(`${apiBase}/api/super-admin/users`, { headers });
-        if (cancelled) return;
-        const rows = Array.isArray(data?.data) ? data.data : [];
-        const activeSales = rows.filter((user) => String(user.status).toLowerCase() === 'active' && user.portalRole === 'sales');
-        setAssignableUsers(activeSales);
-      } catch {
-        if (!cancelled) setAssignableUsers([]);
-      }
-    }
-    loadUsers();
-    return () => { cancelled = true; };
-  }, [apiBase, headers, token, portalRole]);
-
-  const belongsToCurrentUser = useCallback((lead) => {
-    if (!isSalesUser) return true;
-    const parsed = parseAssignee(lead?.assigned_to);
-    if (!parsed) return false;
-    if (parsed.id && currentUserId) return Number(parsed.id) === Number(currentUserId);
-    if (parsed.email && currentUserEmail) return parsed.email.toLowerCase() === currentUserEmail.toLowerCase();
-    if (parsed.name && currentUserName) return parsed.name.trim().toLowerCase() === currentUserName.trim().toLowerCase();
-    return false;
-  }, [isSalesUser, currentUserEmail, currentUserId, currentUserName]);
-
-  const limitLeadsToCurrentUser = useCallback((list) => {
-    if (!isSalesUser) return list;
-    return list.filter(belongsToCurrentUser);
-  }, [belongsToCurrentUser, isSalesUser]);
-
-  const scopedAdminLeads = useMemo(
-    () => limitLeadsToCurrentUser(adminLeads),
-    [adminLeads, limitLeadsToCurrentUser]
-  );
-  const scopedBrokerLeads = useMemo(
-    () => limitLeadsToCurrentUser(brokerLeads),
-    [brokerLeads, limitLeadsToCurrentUser]
-  );
-  const scopedCompanyLeads = useMemo(
-    () => limitLeadsToCurrentUser(companyLeads),
-    [companyLeads, limitLeadsToCurrentUser]
-  );
-
   // Combine all leads with calculated scores
   const allLeads = useMemo(() => {
-    const admin = scopedAdminLeads.map(l => ({ ...l, lead_score: calculateLeadScore(l) }));
-    const broker = scopedBrokerLeads.map(l => ({ ...l, lead_score: calculateLeadScore(l) }));
-    const company = scopedCompanyLeads.map(l => ({ ...l, lead_score: calculateLeadScore(l) }));
+    const admin = adminLeads.map(l => ({ ...l, lead_score: calculateLeadScore(l) }));
+    const broker = brokerLeads.map(l => ({ ...l, lead_score: calculateLeadScore(l) }));
+    const company = companyLeads.map(l => ({ ...l, lead_score: calculateLeadScore(l) }));
     return [...admin, ...broker, ...company];
-  }, [scopedAdminLeads, scopedBrokerLeads, scopedCompanyLeads]);
+  }, [adminLeads, brokerLeads, companyLeads]);
 
   // Calculate metrics
   const metrics = useMemo(() => {
@@ -213,16 +157,16 @@ export default function SuperAdminAdmincrm() {
 
   // Separate broker, admin, and company leads with scores
   const brokerLeadsWithScores = useMemo(() => 
-    scopedBrokerLeads.map(l => ({ ...l, lead_score: calculateLeadScore(l) })), 
-    [scopedBrokerLeads]
+    brokerLeads.map(l => ({ ...l, lead_score: calculateLeadScore(l) })), 
+    [brokerLeads]
   );
   const adminLeadsWithScores = useMemo(() => 
-    scopedAdminLeads.map(l => ({ ...l, lead_score: calculateLeadScore(l) })), 
-    [scopedAdminLeads]
+    adminLeads.map(l => ({ ...l, lead_score: calculateLeadScore(l) })), 
+    [adminLeads]
   );
   const companyLeadsWithScores = useMemo(() => 
-    scopedCompanyLeads.map(l => ({ ...l, lead_score: calculateLeadScore(l) })), 
-    [scopedCompanyLeads]
+    companyLeads.map(l => ({ ...l, lead_score: calculateLeadScore(l) })), 
+    [companyLeads]
   );
 
   // Filter broker, admin, and company leads separately
@@ -377,8 +321,6 @@ export default function SuperAdminAdmincrm() {
 
   function openAdd() {
     setFormAdd({ full_name: '', email: '', phone: '', city: '', property_interest: '', source: 'website', status: 'new', message: '', assigned_to: '' });
-    setFormAddAssigneeId('');
-    setFormAddManualAssignee('');
     setShowAdd(true);
   }
 
@@ -402,56 +344,8 @@ export default function SuperAdminAdmincrm() {
       message: lead.message || '',
       assigned_to: lead.assigned_to || '',
     });
-    const parsed = parseAssignee(lead.assigned_to);
-    if (parsed?.id) {
-      setFormEditAssigneeId(String(parsed.id));
-      setFormEditManualAssignee('');
-    } else {
-      setFormEditAssigneeId('');
-      setFormEditManualAssignee(parsed?.name || '');
-    }
     setShowEdit(true);
   }
-
-  const buildAssigneePayload = useCallback((userId) => {
-    if (!userId) return '';
-    const match = assignableUsers.find((user) => String(user.id) === String(userId));
-    if (!match) return '';
-    return JSON.stringify({
-      id: match.id,
-      name: match.name || match.full_name || match.fullName || '',
-      email: match.email || '',
-      role: match.portalRole || '',
-    });
-  }, [assignableUsers]);
-
-  const handleAddAssigneeSelect = (event) => {
-    const value = event.target.value;
-    setFormAddAssigneeId(value);
-    setFormAddManualAssignee('');
-    setFormAdd((prev) => ({ ...prev, assigned_to: value ? buildAssigneePayload(value) : '' }));
-  };
-
-  const handleEditAssigneeSelect = (event) => {
-    const value = event.target.value;
-    setFormEditAssigneeId(value);
-    setFormEditManualAssignee('');
-    setFormEdit((prev) => ({ ...prev, assigned_to: value ? buildAssigneePayload(value) : '' }));
-  };
-
-  const handleAddManualAssigneeChange = (event) => {
-    const value = event.target.value;
-    setFormAddManualAssignee(value);
-    if (value) setFormAddAssigneeId('');
-    setFormAdd((prev) => ({ ...prev, assigned_to: value }));
-  };
-
-  const handleEditManualAssigneeChange = (event) => {
-    const value = event.target.value;
-    setFormEditManualAssignee(value);
-    if (value) setFormEditAssigneeId('');
-    setFormEdit((prev) => ({ ...prev, assigned_to: value }));
-  };
 
   async function submitAdd(e) {
     e?.preventDefault?.();
@@ -483,10 +377,7 @@ export default function SuperAdminAdmincrm() {
     const headersCsv = ['id','full_name','email','phone','city','property_interest','source','status','assigned_to','lead_score','created_at','broker_name','company_name','lead_source_type'];
     const csv = [
       headersCsv.join(','), 
-      ...allLeads.map((r) => headersCsv.map((h) => {
-        const value = h === 'assigned_to' ? formatAssigneeLabel(r.assigned_to) : r[h];
-        return toCsv(String(value ?? ''));
-      }).join(','))
+      ...allLeads.map(r => headersCsv.map(h => toCsv(String(r[h] ?? ''))).join(','))
     ].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -506,11 +397,9 @@ export default function SuperAdminAdmincrm() {
         </div>
         <div className="superadminadmincrm-actions">
           <button className="superadminadmincrm-btn" onClick={exportCsv}>Export</button>
-          {canManageLeads && (
-            <button className="superadminadmincrm-btn primary" onClick={openAdd}>
-              <span style={{ marginRight: '6px' }}>+</span>Add New Lead
-            </button>
-          )}
+          <button className="superadminadmincrm-btn primary" onClick={openAdd}>
+            <span style={{ marginRight: '6px' }}>+</span>Add New Lead
+          </button>
         </div>
       </div>
 
@@ -712,7 +601,7 @@ export default function SuperAdminAdmincrm() {
                       case 'city':
                         return <td key={col.id}>{l.city || '-'}</td>;
                       case 'assignedTo':
-                        return <td key={col.id}>{formatAssigneeLabel(l.assigned_to)}</td>;
+                        return <td key={col.id}>{l.assigned_to || '-'}</td>;
                       case 'createdAt':
                         return (
                           <td key={col.id}>
@@ -866,7 +755,7 @@ export default function SuperAdminAdmincrm() {
                       case 'city':
                         return <td key={col.id}>{l.city || '-'}</td>;
                       case 'assignedTo':
-                        return <td key={col.id}>{formatAssigneeLabel(l.assigned_to)}</td>;
+                        return <td key={col.id}>{l.assigned_to || '-'}</td>;
                       case 'createdAt':
                         return (
                           <td key={col.id}>
@@ -1020,7 +909,7 @@ export default function SuperAdminAdmincrm() {
                       case 'city':
                         return <td key={col.id}>{l.city || '-'}</td>;
                       case 'assignedTo':
-                        return <td key={col.id}>{formatAssigneeLabel(l.assigned_to)}</td>;
+                        return <td key={col.id}>{l.assigned_to || '-'}</td>;
                       case 'createdAt':
                         return (
                           <td key={col.id}>
@@ -1092,21 +981,7 @@ export default function SuperAdminAdmincrm() {
                 <option value="closed">Closed</option>
                 <option value="lost">Lost</option>
               </select>
-              {assignableUsers.length > 0 && (
-                <select value={formAddAssigneeId} onChange={handleAddAssigneeSelect}>
-                  <option value="">Assign to sales user (optional)</option>
-                  {assignableUsers.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.name} ({labelize(user.portalRole)})
-                    </option>
-                  ))}
-                </select>
-              )}
-              <input
-                placeholder="Manual assignee (optional)"
-                value={formAddManualAssignee}
-                onChange={handleAddManualAssigneeChange}
-              />
+              <input placeholder="Assigned to" value={formAdd.assigned_to} onChange={(e) => setFormAdd({ ...formAdd, assigned_to: e.target.value })} />
               <textarea placeholder="Message" value={formAdd.message} onChange={(e) => setFormAdd({ ...formAdd, message: e.target.value })} rows={3} />
               <div className="superadminadmincrm-modal-actions">
                 <button type="button" className="btn-light" onClick={() => setShowAdd(false)}>Cancel</button>
@@ -1144,21 +1019,7 @@ export default function SuperAdminAdmincrm() {
                 <option value="closed">Closed</option>
                 <option value="lost">Lost</option>
               </select>
-              {assignableUsers.length > 0 && (
-                <select value={formEditAssigneeId} onChange={handleEditAssigneeSelect}>
-                  <option value="">Assign to sales user (optional)</option>
-                  {assignableUsers.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.name} ({labelize(user.portalRole)})
-                    </option>
-                  ))}
-                </select>
-              )}
-              <input
-                placeholder="Manual assignee (optional)"
-                value={formEditManualAssignee}
-                onChange={handleEditManualAssigneeChange}
-              />
+              <input placeholder="Assigned to" value={formEdit.assigned_to} onChange={(e) => setFormEdit({ ...formEdit, assigned_to: e.target.value })} />
               <textarea placeholder="Message" value={formEdit.message} onChange={(e) => setFormEdit({ ...formEdit, message: e.target.value })} rows={3} />
               <div className="superadminadmincrm-modal-actions">
                 <button type="button" className="btn-light" onClick={() => setShowEdit(false)}>Cancel</button>
@@ -1184,8 +1045,7 @@ function filterLeads(list, q, status) {
       l.city, 
       l.property_interest,
       l.broker_name,
-      l.source,
-      formatAssigneeLabel(l.assigned_to)
+      l.source
     ].some((v) => String(v || '').toLowerCase().includes(term));
     const matchesStatus = !byStatus || byStatus === 'all status' || String(l.status || '').toLowerCase() === byStatus;
     return matchesQ && matchesStatus;
@@ -1207,32 +1067,6 @@ function toCsv(v) {
     return `"${v.replace(/"/g, '""')}"`;
   }
   return v;
-}
-
-function parseAssignee(value) {
-  if (!value) return null;
-  if (typeof value === 'object' && value !== null) return value;
-  if (typeof value !== 'string') return null;
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-  if (trimmed.startsWith('{')) {
-    try {
-      const parsed = JSON.parse(trimmed);
-      if (parsed && typeof parsed === 'object') return parsed;
-    } catch {
-      return null;
-    }
-  }
-  return { name: trimmed };
-}
-
-function formatAssigneeLabel(value) {
-  const parsed = parseAssignee(value);
-  if (!parsed) return '—';
-  if (parsed.name && parsed.role) return `${parsed.name} (${labelize(parsed.role)})`;
-  if (parsed.name) return parsed.name;
-  if (typeof value === 'string') return value;
-  return '—';
 }
 
 
