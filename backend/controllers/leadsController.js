@@ -605,7 +605,13 @@ export async function listAllSourcesLeads(req, res) {
 
     return res.json({ data: [...adminLeads, ...brokerLeads, ...companyLeads] });
   } catch (err) {
-    return res.status(500).json({ message: 'Server error' });
+    // eslint-disable-next-line no-console
+    console.error('[listAllSourcesLeads] error:', err);
+    return res.status(500).json({
+      message: 'Server error',
+      error: err?.message || null,
+      code: err?.code || null,
+    });
   }
 }
 

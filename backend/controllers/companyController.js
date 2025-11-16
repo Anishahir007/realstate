@@ -395,8 +395,13 @@ export async function getCompanyMonthlyTrends(req, res) {
 
     return res.json({ data, meta: { year, range: req.query.range || null, from: startDate ? startDate.toISOString() : null, to: endDate ? endDate.toISOString() : null } });
   } catch (err) {
-    const isProd = process.env.NODE_ENV === 'production';
-    return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
+    // eslint-disable-next-line no-console
+    console.error('[getCompanyMonthlyTrends] error:', err);
+    return res.status(500).json({
+      message: 'Server error',
+      error: err?.message || null,
+      code: err?.code || null,
+    });
   }
 }
 
@@ -458,8 +463,13 @@ export async function listCompaniesWithStats(req, res) {
 
     return res.json({ data, meta: { page, limit, total: countRows[0]?.total || 0 } });
   } catch (err) {
-    const isProd = process.env.NODE_ENV === 'production';
-    return res.status(500).json({ message: 'Server error', error: isProd ? undefined : String(err?.message || err) });
+    // eslint-disable-next-line no-console
+    console.error('[listCompaniesWithStats] error:', err);
+    return res.status(500).json({
+      message: 'Server error',
+      error: err?.message || null,
+      code: err?.code || null,
+    });
   }
 }
 
