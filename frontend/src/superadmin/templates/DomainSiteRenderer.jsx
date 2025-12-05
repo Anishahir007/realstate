@@ -16,11 +16,19 @@ export default function DomainSiteRenderer() {
     async function load() {
       try {
         const host = window.location.host;
-        const { data } = await axios.get(`${apiBase}/api/templates/domain/context`, {
+        const url = `${apiBase}/api/templates/domain/context`;
+        console.log('[DomainSiteRenderer] Fetching site context for host:', host, 'from:', url);
+        const { data } = await axios.get(url, {
           headers: { 'x-site-host': host },
           withCredentials: false,
         });
         if (mounted) setCtx(data);
+      } catch (error) {
+        console.error('[DomainSiteRenderer] Error loading site context:', error);
+        if (mounted) {
+          // Still set loading to false so error state is shown
+          setLoading(false);
+        }
       } finally {
         if (mounted) setLoading(false);
       }
