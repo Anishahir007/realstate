@@ -126,8 +126,7 @@ function normalizeDomain(input) {
     .trim()
     .toLowerCase()
     .replace(/^https?:\/\//, '')
-    .replace(/\/$/, '')
-    .replace(/:\d+$/, ''); // Remove port numbers (e.g., :443, :80, :3000)
+    .replace(/\/$/, '');
 }
 
 export function setCustomDomainForSite(slug, domain) {

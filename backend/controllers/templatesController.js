@@ -633,17 +633,12 @@ export async function getDomainSiteContext(req, res) {
   try {
     const override = (req.query.host || req.query.domain || req.headers['x-site-host'] || '').toString().split(',')[0].trim();
     const host = (override || req.headers['x-forwarded-host'] || req.headers.host || '').toString().split(',')[0].trim();
-    console.log('[getDomainSiteContext] Looking up domain:', host, 'override:', override, 'headers:', { 'x-site-host': req.headers['x-site-host'], 'x-forwarded-host': req.headers['x-forwarded-host'], host: req.headers.host });
     const site = getSiteByDomain(host);
-    if (!site) {
-      console.log('[getDomainSiteContext] Site not found for domain:', host);
-      return res.status(404).json({ message: 'Site not found', domain: host });
-    }
-    console.log('[getDomainSiteContext] Found site:', site.slug, 'for domain:', host);
+    if (!site) return res.status(404).json({ message: 'Site not found' });
     const ownerType = site.ownerType || 'broker';
     let owner = { id: ownerType === 'company' ? site.companyId : site.brokerId, full_name: site.siteTitle || (ownerType === 'company' ? 'Company Site' : 'Broker Site') };
     let properties = [];
-    let tenantDb = null;
+    let tenantDb = null;  
     
     try {
       if (ownerType === 'company') {
